@@ -1228,7 +1228,7 @@ const toastEl=document.getElementById('toast');
     if(e.target.closest('.apl')){ if(a.paused){ const pr=a.play(); if(pr&&pr.catch) pr.catch(()=>{}); } else a.pause(); return; }
     if(e.target.closest('.amt')){ const b=e.target.closest('.amt'), ic=b.querySelector('.material-symbols-outlined'); a.muted=!a.muted; if(ic) ic.textContent=a.muted?'volume_off':'volume_up'; b.title=a.muted?'Unmute':'Mute'; return; }
     if(e.target.closest('.aspd')){ spdOpen(e.target.closest('.aspd'),a); return; }
-    if(e.target.closest('.aop')){ if(!a.paused) a.pause(); if(window.audPlayOpen) window.audPlayOpen(a.getAttribute('src'),{id:c.dataset.bid||a.getAttribute('src'),dur:+c.dataset.dur||0,menu:true}); return; }
+    if(e.target.closest('.aop')){ if(!a.paused) a.pause(); if(window.audPlayOpen) window.audPlayOpen(a.getAttribute('src'),{id:c.dataset.bid||a.getAttribute('src'),dur:+c.dataset.dur||0,menu:true,xm:!!c.closest('#ehList')}); return; }
   });
   // seek bar: হাত দিয়ে টেনে / চেপে নিজের মতো সরানো যায় (pointer দিয়ে, touch-action ঝামেলা ছাড়া)
   const seekTo=(c,a,e)=>{ const sk=c.querySelector('.aseek'), r=sk.getBoundingClientRect(), f=Math.max(0,Math.min(1,(e.clientX-r.left)/(r.width||1))), t=tot(c,a); fill(c,f); if(t){ try{ a.currentTime=f*t; }catch(_){} } c.querySelector('.atm').textContent=tf(f*t); };
@@ -1266,9 +1266,10 @@ const toastEl=document.getElementById('toast');
   };
 })();
 function toast(m){ toastEl.textContent=m; toastEl.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>toastEl.classList.remove('show'),2500); }
-function setMic(on){ listening=on; ['sMic'].forEach(id=>document.getElementById(id).classList.toggle('on',on)); }
+function hideListen(){ if(toastEl.textContent==='Listening…'){ clearTimeout(tt); toastEl.classList.remove('show'); } }   // mic বন্ধ হলেই "Listening…" লেখা সরে যায়
+function setMic(on){ listening=on; ['sMic'].forEach(id=>document.getElementById(id).classList.toggle('on',on)); if(!on) hideListen(); }
 function listen(){
-  if(listening && rec){ rec.stop(); return; }
+  if(listening && rec){ hideListen(); rec.stop(); return; }
   if(!SR){ sInput.focus(); toast('এই ব্রাউজারে ভয়েস সাপোর্ট নেই, কিবোর্ডের মাইক ব্যবহার করুন'); return; }
   rec=new SR(); rec.lang=navigator.language||'en-US'; rec.interimResults=true;
   let text='';
@@ -1494,7 +1495,7 @@ window.attachPinch=function(stage,el,max,sizeFn){
    +'.uppv .upx{position:absolute;left:16px;top:16px;width:52px;height:52px;border-radius:50%;border:0;background:#212121;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}'
    +'.uppv .upx span{font-size:28px}'
    +'.uppv .upx.upmore{left:auto;right:16px}'
-   +'.uppv .uppop{position:absolute;top:76px;right:16px;min-width:200px;background:#212121;border-radius:16px;padding:8px 0;z-index:3;box-shadow:0 4px 24px rgba(0,0,0,.5);display:none}'
+   +'.uppv .uppop{position:absolute;top:76px;right:16px;min-width:200px;background:#212121;border-radius:16px;padding:8px 0;z-index:8;box-shadow:0 4px 24px rgba(0,0,0,.5);display:none}'
    +'.uppv .uppop.show{display:block}'
    +'.uppv .uppop button{display:flex;align-items:center;gap:22px;width:100%;padding:16px 20px;background:none;border:0;color:#fff;font-size:17px;text-align:left;cursor:pointer}'
    +'.uppv .uppop button:active{background:#333}'
@@ -1556,7 +1557,9 @@ window.attachPinch=function(stage,el,max,sizeFn){
   seek.addEventListener('input',()=>{ seeking=true; const t=total(); if(t) vid.currentTime=seek.value/1000*t; cur.textContent=tfmt(vid.currentTime||0); seek.style.setProperty('--p',(seek.value/10)+'%'); });
   seek.addEventListener('change',()=>{ seeking=false; paint(); });
   // ---- comment-এর video দেখার mode: একই player (pinch / seek / mute); ৩ ডট মেনুতে Copy link / Share link / Save to Device / Save to Watch later ----
-  const editPopV=pop.innerHTML; let vmode=false, vctx=null, vSeq=null, vBusy=false, vNB=-1;
+  const editPopV=pop.innerHTML; let vmode=false, vctx=null, vSeq=null, vBusy=false, vNB=-1, vOne=null;
+  const goHtml=(m,cls)=>m&&m.go&&!m.xm?'<button type="button" data-k="go"><span class="material-symbols-outlined">'+(m.lbl==='Show in replies'?'forum':'comment')+'</span>'+m.lbl+'</button><div class="vdiv'+(cls?' '+cls:'')+'" style="height:1px;background:var(--line,#3a3a3a);margin:6px 0"></div>':'';
+  const vMetaCur=()=>vSeq?vSeq.list[vSeq.at]:vOne;
   const vCss=document.createElement('style'); vCss.textContent='#cvsBack.show,#cvqBack.show{z-index:110}'; document.head.appendChild(vCss);
   const bindEditPop=()=>pop.querySelectorAll('button').forEach(b=>b.onclick=e=>{ e.stopPropagation(); popClose(); });
   const vPopHtml='<button type="button" data-k="spd"><span class="material-symbols-outlined">slow_motion_video</span>Playback speed<span class="material-symbols-outlined" style="margin-left:auto">chevron_right</span></button>'
@@ -1571,34 +1574,37 @@ window.attachPinch=function(stage,el,max,sizeFn){
   let vSp=1, vQ='Auto';   // Playback speed / Quality (এই video player-এর বর্তমান পছন্দ)
   const vPaintSub=()=>{ const bs=pop.querySelector('[data-k="spd"]'), bq=pop.querySelector('[data-k="qual"]'); if(bs) bs.classList.toggle('blue',vSp!==1); if(bq) bq.classList.toggle('blue',vQ!=='Auto'); pop.querySelectorAll('[data-sp]').forEach(b=>b.classList.toggle('on',+b.dataset.sp===vSp)); pop.querySelectorAll('[data-qv]').forEach(b=>b.classList.toggle('on',b.dataset.qv===vQ)); };
   const vKey=()=>vctx?String(vctx.bid||vctx.src):'';
-  function vReset(){ vSp=1; vQ='Auto'; try{ vid.playbackRate=1; }catch(_){} pop.classList.remove('subshow'); vmode=false; vctx=null; vSeq=null; vSeqHide(); pv.classList.remove('cmv'); moreB.style.display=''; pop.innerHTML=editPopV; bindEditPop(); }
+  function vReset(){ vSp=1; vQ='Auto'; try{ vid.playbackRate=1; }catch(_){} pop.classList.remove('subshow'); vmode=false; vctx=null; vSeq=null; vOne=null; vSeqHide(); pv.classList.remove('cmv'); moreB.style.display=''; moreB.querySelector('span').textContent='more_vert'; pop.innerHTML=editPopV; bindEditPop(); }
   function vClose(){ vid.pause(); vid.removeAttribute('src'); vid.removeAttribute('poster'); try{ vid.load(); }catch(e){} vPz.reset(); popClose(); pv.classList.remove('show'); vReset(); }
   // ---- comment-এর video: ডান / বাম swipe করে ক্রম অনুযায়ী আগের / পরের video (Add content-এর photo viewer-এর মতোই: টানলে পরেরটা পাশ থেকে ঢোকে, 22% বা জোরে টানলে বদলায়, শেষের পর আর যায় না) ----
   const vid2=document.createElement('video'); vid2.muted=true; vid2.playsInline=true; vid2.preload='metadata'; vid2.style.cssText='position:absolute;left:0;top:0;display:none;pointer-events:none;opacity:0'; vStage.appendChild(vid2);
-  const vid2Show=()=>{ vid2.style.opacity='1'; }; vid2.addEventListener('loadeddata',vid2Show); vid2.addEventListener('seeked',vid2Show);   // প্রথম frame তৈরি হওয়ার আগে খালি (গোলাপি/সবুজ glow-এর) frame দেখানো হয় না
+  const vid2Show=()=>{ vid2.style.opacity='1'; }; vid2.addEventListener('loadeddata',vid2Show); vid2.addEventListener('seeked',vid2Show);
+  // photo + video একসাথে swipe: পাশের item ছবি হলে এই <img> দিয়ে দেখানো হয়
+  const img2v=document.createElement('img'); img2v.alt=''; img2v.draggable=false; img2v.style.cssText='position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain;display:none;pointer-events:none;background:#000'; vStage.appendChild(img2v);   // প্রথম frame তৈরি হওয়ার আগে খালি (গোলাপি/সবুজ glow-এর) frame দেখানো হয় না
   const vCntEl=document.createElement('div'); vCntEl.style.cssText='position:absolute;top:24px;left:50%;transform:translateX(-50%);background:rgba(33,33,33,.92);color:#fff;font-size:15px;padding:6px 14px;border-radius:16px;z-index:2;display:none;pointer-events:none'; pv.appendChild(vCntEl);
   const vSeqPaint=()=>{ if(vSeq){ vCntEl.textContent=(vSeq.at+1)+' / '+vSeq.list.length; vCntEl.style.display='block'; } else vCntEl.style.display='none'; };
-  const vSeqHide=()=>{ vCntEl.style.display='none'; vid2.style.display='none'; vid2.removeAttribute('src'); vNB=-1; vid.style.translate=''; vid.style.transition=''; vid2.style.transition=''; vBusy=false; };
+  const vSeqHide=()=>{ vCntEl.style.display='none'; vid2.style.display='none'; vid2.removeAttribute('src'); img2v.style.display='none'; img2v.removeAttribute('src'); img2v.style.transition=''; vNB=-1; vid.style.translate=''; vid.style.transition=''; vid2.style.transition=''; vBusy=false; };
   const vW=()=>vStage.clientWidth||1;
   function vPlace(dx,dir){
     vid.style.translate=dx?dx+'px 0':'';
-    if(!dir){ vid2.style.display='none'; return; }
-    const ni=vSeq.at+dir; if(vNB!==ni){ vid2.style.opacity='0'; vid2.src=vSeq.list[ni].src+'#t=0.1'; vNB=ni; }
-    vid2.style.display='block'; vid2.style.translate=(dx+dir*vW())+'px 0';
+    if(!dir){ vid2.style.display='none'; img2v.style.display='none'; return; }
+    const ni=vSeq.at+dir, it=vSeq.list[ni], ph=it.k==='photo';
+    if(vNB!==ni){ if(ph){ vid2.style.display='none'; vid2.removeAttribute('src'); img2v.src=it.src; } else { img2v.style.display='none'; img2v.removeAttribute('src'); vid2.style.opacity='0'; vid2.src=it.src+'#t=0.1'; } vNB=ni; }
+    const n=ph?img2v:vid2; n.style.display='block'; n.style.translate=(dx+dir*vW())+'px 0';
   }
   function vSettle(dir,commit){
-    vBusy=true; const w=vW(), t='translate .22s ease'; vid.style.transition=t; vid2.style.transition=t;
-    if(commit){ vid.style.translate=(-dir*w)+'px 0'; vid2.style.translate='0px 0'; }
-    else{ vid.style.translate='0px 0'; vid2.style.translate=(dir*w)+'px 0'; }
+    vBusy=true; const w=vW(), t='translate .22s ease', ni0=vSeq.at+dir, ph=!!(vSeq.list[ni0]&&vSeq.list[ni0].k==='photo'), n=ph?img2v:vid2; vid.style.transition=t; n.style.transition=t;
+    if(commit){ vid.style.translate=(-dir*w)+'px 0'; n.style.translate='0px 0'; }
+    else{ vid.style.translate='0px 0'; n.style.translate=(dir*w)+'px 0'; }
     setTimeout(()=>{
-      vid.style.transition=''; vid2.style.transition='';
-      if(!commit){ vid.style.translate=''; vid2.style.display='none'; vNB=-1; vBusy=false; return; }
+      vid.style.transition=''; n.style.transition='';
+      if(!commit){ vid.style.translate=''; vid2.style.display='none'; img2v.style.display='none'; vNB=-1; vBusy=false; return; }
+      if(ph){ const L=vSeq.list; vid.pause(); window.__phMixOpen(L,ni0); setTimeout(()=>{ vClose(); },220); return; }   // পরেরটা ছবি: photo viewer খোলে, video viewer বন্ধ হয়
       vSeq.at+=dir; const it=vSeq.list[vSeq.at]; vctx={src:it.src,dur:it.dur||0,bid:it.bid||''};
-      vPz.reset(); vid.pause(); vid.poster=''; vid.src=it.src; seek.value=0; seek.style.setProperty('--p','0%'); cur.textContent='0:00'; tot.textContent=tfmt(vctx.dur); vSeqPaint();
+      vPz.reset(); vid.pause(); vid.poster=''; vid.src=it.src+(String(it.src).indexOf('#')<0?'#t=0.1':''); seek.value=0; seek.style.setProperty('--p','0%'); cur.textContent='0:00'; tot.textContent=tfmt(vctx.dur); vSeqPaint();
       try{ vid.playbackRate=vSp; }catch(_){}
-      let fin=false; const done=()=>{ if(fin) return; fin=true; vid.style.translate=''; vid2.style.display='none'; vid2.removeAttribute('src'); vNB=-1; vBusy=false; };
-      vid.addEventListener('playing',()=>{ if(vid.requestVideoFrameCallback){ try{ vid.requestVideoFrameCallback(()=>done()); }catch(_){ done(); } } else done(); },{once:true}); setTimeout(done,1500);   // নতুন video-র প্রথম frame আঁকা হলে তবেই আগেরটার (vid2) জায়গায় দেখায়
-      const pr=vid.play(); if(pr&&pr.catch) pr.catch(()=>{ vid.muted=true; vid.play().catch(()=>{}); });
+      let fin=false; const done=()=>{ if(fin) return; fin=true; vid.style.translate=''; vid2.style.display='none'; vid2.removeAttribute('src'); img2v.style.display='none'; vNB=-1; vBusy=false; };
+      const onr=()=>requestAnimationFrame(done); vid.addEventListener('loadeddata',onr,{once:true}); vid.addEventListener('seeked',onr,{once:true}); setTimeout(done,1500);   // নতুন video-র প্রথম frame আঁকা হলে তবেই আগেরটার (vid2) জায়গায় দেখায়; autoplay নেই
     },230);
   }
   let vsw=null, vnP=0;
@@ -1627,19 +1633,30 @@ window.attachPinch=function(stage,el,max,sizeFn){
   vStage.addEventListener('pointerup',e=>vEnd(e,false)); vStage.addEventListener('pointercancel',e=>vEnd(e,true));
   window.openVideoViewer=(src,dur,bid,menu,seq)=>{
     if(!src) return; vmode=true; vctx={src:src,dur:dur||0,bid:bid||''}; pv.classList.add('cmv');
-    vSeqHide(); vSeq=(seq&&Array.isArray(seq.list)&&seq.list.length>1)?{list:seq.list.slice(),at:Math.max(0,Math.min(seq.list.length-1,seq.at||0))}:null; vSeqPaint();
+    vSeqHide(); vSeq=(seq&&Array.isArray(seq.list)&&seq.list.length>1)?{list:seq.list.slice(),at:Math.max(0,Math.min(seq.list.length-1,seq.at||0))}:null; vOne=(!vSeq&&seq&&Array.isArray(seq.list)&&seq.list.length===1)?seq.list[0]:null; vSeqPaint(); moreB.querySelector('span').textContent='more_horiz';
     pop.innerHTML=vPopHtml; pop.classList.remove('subshow'); vSp=1; vQ='Auto'; vid.playbackRate=1; moreB.style.display=menu===false?'none':''; popClose();
-    vPz.reset(); vid.loop=true; vid.muted=false; mSync(); vid.poster=''; vid.src=src; seek.value=0; seek.style.setProperty('--p','0%'); cur.textContent='0:00'; tot.textContent=tfmt(vctx.dur);
-    pv.classList.add('show');
-    const pr=vid.play(); if(pr&&pr.catch) pr.catch(()=>{ vid.muted=true; vid.play().catch(()=>{}); });
+    vPz.reset(); vid.loop=true; vid.muted=false; mSync(); vid.poster=''; vid.src=src+(String(src).indexOf('#')<0?'#t=0.1':''); seek.value=0; seek.style.setProperty('--p','0%'); cur.textContent='0:00'; tot.textContent=tfmt(vctx.dur);
+    pv.classList.add('show');   // autoplay নেই: প্রথম frame দেখায়, tap করলে চলে
   };
+  // ---- Video viewer (See attachments / My attachments / Comments / Replies / Edit history / My comments / Comments in this channel & post): video pause থাকলে মাঝখানে overlay play button ----
+  { const ov=document.createElement('button'); ov.type='button'; ov.id='vPlayOv'; ov.setAttribute('aria-label','Play'); ov.innerHTML='<span class="material-symbols-outlined">play_arrow</span>';
+    ov.style.cssText='position:absolute;left:50%;top:50%;width:72px;height:72px;margin:-36px 0 0 -36px;border:0;padding:0;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:none;align-items:center;justify-content:center;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent';
+    ov.firstChild.style.fontSize='48px'; vStage.appendChild(ov);
+    const sync=()=>{ ov.style.display=(vmode&&pv.classList.contains('show')&&vid.paused&&!(vsw&&vsw.lock)&&!pop.classList.contains('show'))?'flex':'none'; };
+    ['play','pause','ended','loadstart','loadeddata','emptied','seeked'].forEach(n=>vid.addEventListener(n,sync));
+    new MutationObserver(sync).observe(pv,{attributes:true,attributeFilter:['class']}); new MutationObserver(sync).observe(pop,{attributes:true,attributeFilter:['class']});   // 3 dot menu খোলা থাকলে play icon লুকায়; menu সবসময় উপরে
+    ov.addEventListener('click',e=>{ e.stopPropagation(); if(Date.now()-(vStage._pz||0)<400) return; vTog(); });
+    vStage.addEventListener('pointermove',()=>{ if(vsw&&vsw.lock) ov.style.display='none'; });   // swipe চলাকালীন লুকানো থাকে
+    ['pointerup','pointercancel'].forEach(n=>vStage.addEventListener(n,()=>setTimeout(sync,300)));
+    window.__vPlaySync=sync; }
   // দেখানো ক্রমে (DOM order) সব video-র তালিকা নিয়ে player খোলে; ডান / বাম swipe-এ আগের / পরের video
   window.__openVidSeq=(root,vv,flt)=>{
     const pr=[...root.querySelectorAll('.cmatt.cmvid')].filter(x=>x.getClientRects().length&&(!flt||flt(x))).map(x=>{ const v=x.querySelector('video'); return {el:x,o:{src:String((v&&v.getAttribute('src'))||'').split('#')[0],dur:+x.dataset.dur||(v&&v.duration)||0,bid:x.dataset.bid||''}}; }).filter(p=>p.o.src);
     const at=Math.max(0,pr.findIndex(p=>p.el===vv)), it=pr[at]; if(!it) return;
     window.openVideoViewer(it.o.src,it.o.dur,it.o.bid,undefined,{list:pr.map(p=>p.o),at:at});
   };
-  moreB.addEventListener('click',()=>{ if(vmode){ vPaintSub(); if(window.WL) window.WL.paint(pop.querySelector('[data-k="wl"]'),'cv',vKey()); } });
+  window.__vMixOpen=(list,at)=>{ const it=list&&list[at]; if(!it) return; window.openVideoViewer(it.src,+it.dur||0,it.bid||'',undefined,{list:list,at:at}); };
+  moreB.addEventListener('click',()=>{ if(vmode){ { const g=pop.querySelector('[data-k="go"]'); if(g) g.remove(); const d=pop.querySelector('.vdiv.vgo'); if(d) d.remove(); const h=goHtml(vMetaCur(),'vgo'); if(h) pop.insertAdjacentHTML('afterbegin',h); } vPaintSub(); if(window.WL) window.WL.paint(pop.querySelector('[data-k="wl"]'),'cv',vKey()); { const xm=(vMetaCur()||{}).xm; pop.querySelectorAll('[data-k="copy"],[data-k="share"],[data-k="wl"],[data-k="go"],.vdiv.vgo').forEach(b=>b.style.display=xm?'none':''); } } });
   async function vSaveBlob(b,name){
     let dl=null; try{ dl=(window.claude&&window.claude.use)?await window.claude.use('downloads'):null; }catch(e){ dl=null; }
     if(dl){ try{ await dl.save({filename:name,data:b}); return true; }catch(e){ if(e&&e.code==='declined') return false; throw e; } }
@@ -1675,6 +1692,7 @@ window.attachPinch=function(stage,el,max,sizeFn){
   window.__vSaveQuality=vSaveQuality;
   pop.addEventListener('click',async e=>{
     const b=e.target.closest('button'); if(!b||!vmode) return; e.stopPropagation();
+    if(b.dataset.k==='go'){ const m=vMetaCur(); popClose(); if(m&&m.go){ vClose(); m.go(); } return; }   // Show in comments / replies
     if(b.dataset.k==='spd'||b.dataset.k==='qual'){ pop.querySelectorAll('.vsub').forEach(z=>z.classList.toggle('cur',z.dataset.s===b.dataset.k)); vPaintSub(); pop.classList.add('subshow'); pop.scrollTop=0; return; }   // ডান পাশ থেকে সরে এসে অপশন দেখায়
     if(b.dataset.sp){ vSp=+b.dataset.sp; vid.playbackRate=vSp; popClose(); return; }
     if(b.dataset.qv){ vQ=b.dataset.qv; popClose(); toast('Quality: '+vQ); if(typeof window.onVideoQuality==='function'){ try{ window.onVideoQuality({kind:'comment-video',id:vKey(),src:vctx&&vctx.src,quality:vQ}); }catch(_){} } return; }
@@ -1702,7 +1720,7 @@ window.attachPinch=function(stage,el,max,sizeFn){
     if(upDraft){ try{ URL.revokeObjectURL(upDraft.url); }catch(e){} if(!keep&&window.plDropVid&&!upDraft.isS) window.plDropVid(upDraft.id); }
     upDraft=null;
   };
-  const ask=()=>{ if(vmode){ vClose(); return; } if(!upDraft) return; vid.pause(); askDelete(upDraft.isS?'Discard this short?':'Discard this video?',()=>window.upClose(false),'Discard'); };
+  const ask=()=>{ if(vmode){ const bm=vMetaCur(); vClose(); if(bm&&bm.back) bm.back(); return; } if(!upDraft) return; vid.pause(); askDelete(upDraft.isS?'Discard this short?':'Discard this video?',()=>window.upClose(false),'Discard'); };
   document.getElementById('upX').onclick=ask;
   document.getElementById('upNext').onclick=()=>{
     if(!upDraft) return; vid.pause(); popClose();
@@ -1736,13 +1754,16 @@ window.attachPinch=function(stage,el,max,sizeFn){
   document.body.appendChild(pv);
   const stage=document.getElementById('phStage'), img=document.getElementById('phImg'), img2=document.getElementById('phImg2');
   const pa=document.getElementById('phPA'), pb=document.getElementById('phPB'), cnt=document.getElementById('phCount');
+  const vid2p=document.createElement('video'); vid2p.muted=true; vid2p.playsInline=true; vid2p.preload='metadata'; vid2p.style.display='none'; pb.appendChild(vid2p);   // photo + video swipe: পাশের item video হলে এখানে প্রথম frame দেখায়
   const pop=document.getElementById('phPop'), moreB=document.getElementById('phMore');
-  let pics=[], idx=0, busy=false, nB=-1;
+  let pics=[], idx=0, busy=false, nB=-1, kinds=null, mixList=null, pMeta=null;
+  const goHtml=(m,cls)=>m&&m.go&&!m.xm?'<button type="button" data-k="go"><span class="material-symbols-outlined">'+(m.lbl==='Show in replies'?'forum':'comment')+'</span>'+m.lbl+'</button><div class="vdiv'+(cls?' '+cls:'')+'" style="height:1px;background:var(--line,#3a3a3a);margin:6px 0"></div>':'';
+  const curMeta=()=>mixList?mixList[idx]:(pMeta?pMeta[idx]:null);
   const popClose=()=>pop.classList.remove('show');
-  moreB.onclick=e=>{ e.stopPropagation(); pop.classList.toggle('show'); };
+  moreB.onclick=e=>{ e.stopPropagation(); if(viewMode){ const g=pop.querySelector('[data-k="go"]'); if(g){ g.remove(); const d=pop.querySelector('.vdiv'); if(d) d.remove(); } const h=goHtml(curMeta()); if(h) pop.insertAdjacentHTML('afterbegin',h); { const xm=(curMeta()||{}).xm; pop.querySelectorAll('[data-k="copy"],[data-k="share"]').forEach(b=>b.style.display=xm?'none':''); } } pop.classList.toggle('show'); };
   const editPop=pop.innerHTML; let viewMode=false, pvEdit=null;
   pop.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; e.stopPropagation(); popClose();
-    if(viewMode){ const k=b.dataset.k; if(k==='copy'){ if(window.copyMediaLink) window.copyMediaLink(phObj()); } else if(k==='share'){ if(window.openShare) window.openShare(phObj(),'post',{noTitle:true}); } else if(k==='save') savePhoto(); } else if(b.dataset.k==='crop') openPvCrop(); });
+    if(viewMode){ const k=b.dataset.k; if(k==='copy'){ if(window.copyMediaLink) window.copyMediaLink(phObj()); } else if(k==='share'){ if(window.openShare) window.openShare(phObj(),'post',{noTitle:true}); } else if(k==='save') savePhoto(); else if(k==='go'){ const m=curMeta(); if(m&&m.go){ window.phClose(); m.go(); } } } else if(b.dataset.k==='crop') openPvCrop(); });
   pv.addEventListener('click',e=>{ if(!pop.contains(e.target)) popClose(); });
 
   // preview-র Crop: সীমা ছাড়া free crop (comment-এর photo-র মতো)
@@ -1761,7 +1782,7 @@ window.attachPinch=function(stage,el,max,sizeFn){
   function place(dx,dir){
     pa.style.transform=dx?'translateX('+dx+'px)':'';
     if(!dir){ pb.style.display='none'; return; }
-    if(nB!==idx+dir){ img2.src=pics[idx+dir]; nB=idx+dir; }
+    if(nB!==idx+dir){ const ni=idx+dir; if(kinds&&kinds[ni]==='video'){ img2.style.display='none'; vid2p.style.display='block'; vid2p.src=pics[ni]+'#t=0.1'; } else { vid2p.style.display='none'; vid2p.removeAttribute('src'); img2.style.display=''; img2.src=pics[ni]; } nB=ni; }
     pb.style.display='flex'; pb.style.transform='translateX('+(dx+dir*W())+'px)';
   }
   function settle(dir,commit){
@@ -1770,11 +1791,13 @@ window.attachPinch=function(stage,el,max,sizeFn){
     if(commit){ pa.style.transform='translateX('+(-dir*w)+'px)'; pb.style.transform='translateX(0px)'; }
     else{ pa.style.transform='translateX(0px)'; pb.style.transform='translateX('+(dir*w)+'px)'; }
     setTimeout(()=>{
+      if(commit&&kinds&&kinds[idx+dir]==='video'){ const L=mixList, ni=idx+dir; window.__vMixOpen(L,ni); setTimeout(mixHideP,220); return; }   // পরেরটা video: video viewer খোলে, photo viewer বন্ধ হয়
       const done=()=>{ pa.style.transition='none'; pb.style.transition='none'; pa.style.transform=''; pb.style.display='none'; nB=-1; busy=false; };
       if(commit){ idx+=dir; reset(); img.src=pics[idx]; paintCnt(); (img.decode?img.decode().catch(()=>{}):Promise.resolve()).then(done); }
       else done();
     },230);
   }
+  function mixHideP(){ pv.classList.remove('show','cmv'); viewMode=false; kinds=null; mixList=null; pMeta=null; popClose(); img.removeAttribute('src'); img2.removeAttribute('src'); vid2p.removeAttribute('src'); vid2p.style.display='none'; img2.style.display=''; pics=[]; idx=0; nB=-1; busy=false; pb.style.display='none'; pa.style.transition='none'; pa.style.transform=''; pb.style.transition='none'; pb.style.transform=''; window.__phRestore=null; reset(); }
   function step(dir){
     if(busy||pics.length<2||idx+dir<0||idx+dir>=pics.length||pzP.scale()>1) return;
     pa.style.transition='none'; pb.style.transition='none'; place(0,dir); void pb.offsetWidth; settle(dir,true);
@@ -1808,18 +1831,18 @@ window.attachPinch=function(stage,el,max,sizeFn){
   stage.addEventListener('pointercancel',e=>end(e,true));
 
   window.openPhotoPreview=src=>{
-    pvEdit=null; viewMode=false; pv.classList.remove('cmv'); pop.innerHTML=editPop;
+    kinds=null; mixList=null; pMeta=null; pvEdit=null; viewMode=false; pv.classList.remove('cmv'); pop.innerHTML=editPop;
     pics=(Array.isArray(src)?src:[src]).filter(Boolean); idx=0; busy=false; nB=-1;
     pa.style.transition='none'; pa.style.transform=''; pb.style.display='none';
     img.src=pics[0]||''; reset(); popClose(); paintCnt();
     pv.classList.add('show'); document.body.classList.add('upflow');
   };
-  window.phClose=()=>{ window.__phRestore=null; pvEdit=null; viewMode=false; pv.classList.remove('cmv'); popClose(); pv.classList.remove('show'); document.body.classList.remove('upflow'); img.removeAttribute('src'); img2.removeAttribute('src'); pics=[]; idx=0; nB=-1; pendingPic=''; pendingPics=[]; pb.style.display='none'; pa.style.transform=''; reset(); };
-  const ask=()=>{ if(!pv.classList.contains('show')) return; { const cw=document.getElementById('cropWin'); if(cw&&cw.style.display==='flex') return; } if(pvEdit){ const c=pvEdit; pvEdit=null; const out=pics.slice(), at=idx; if(window.__phRestore){ const r=window.__phRestore; window.__phRestore=null; r(); } c(out,at); return; } if(viewMode){ if(window.__phRestore){ const r=window.__phRestore; window.__phRestore=null; r(); } else window.phClose(); return; } askDelete('Discard this post?',()=>window.phClose(),'Discard'); };
+  window.phClose=()=>{ window.__phRestore=null; kinds=null; mixList=null; pMeta=null; vid2p.removeAttribute('src'); vid2p.style.display='none'; img2.style.display=''; pvEdit=null; viewMode=false; pv.classList.remove('cmv'); popClose(); pv.classList.remove('show'); document.body.classList.remove('upflow'); img.removeAttribute('src'); img2.removeAttribute('src'); pics=[]; idx=0; nB=-1; pendingPic=''; pendingPics=[]; pb.style.display='none'; pa.style.transform=''; reset(); };
+  const ask=()=>{ if(!pv.classList.contains('show')) return; { const cw=document.getElementById('cropWin'); if(cw&&cw.style.display==='flex') return; } if(pvEdit){ const c=pvEdit; pvEdit=null; const out=pics.slice(), at=idx; if(window.__phRestore){ const r=window.__phRestore; window.__phRestore=null; r(); } c(out,at); return; } if(viewMode){ const bm=curMeta(); if(window.__phRestore){ const r=window.__phRestore; window.__phRestore=null; r(); } else window.phClose(); if(bm&&bm.back) bm.back(); return; } askDelete('Discard this post?',()=>window.phClose(),'Discard'); };
   // comment-এর photo দেখার mode: একই viewer (swipe/pinch), শুধু ৩ ডট মেনুতে Share ও Save to Device
-  window.openPhotoViewer=(src,list,at)=>{
-    if(Array.isArray(list)&&list.length>1){ window.openPhotoList(list,at); return; }   // আশেপাশের ছবি swipe করে দেখা যায়
-    pvEdit=null; pics=[src]; idx=0; busy=false; nB=-1; viewMode=true; pv.classList.add('cmv');
+  window.openPhotoViewer=(src,list,at,metas)=>{
+    if(Array.isArray(list)&&list.length>1){ window.openPhotoList(list,at,metas); return; }   // আশেপাশের ছবি swipe করে দেখা যায়
+    kinds=null; mixList=null; pMeta=(metas&&metas[0])?[metas[0]]:null; pvEdit=null; pics=[src]; idx=0; busy=false; nB=-1; viewMode=true; pv.classList.add('cmv');
     pop.innerHTML='<button type="button" data-k="copy"><span class="material-symbols-outlined">link</span>Copy link</button><button type="button" data-k="share"><span class="material-symbols-outlined">share</span>Share</button><button type="button" data-k="save"><span class="material-symbols-outlined">download</span>Save to Device</button>';
     pa.style.transition='none'; pa.style.transform=''; pb.style.display='none';
     img.src=src; reset(); popClose(); paintCnt(); pv.classList.add('show');
@@ -1832,10 +1855,36 @@ window.attachPinch=function(stage,el,max,sizeFn){
     const at=Math.max(0,pr.findIndex(p=>p.im===el)); if(!pr[at]) return;
     window.openPhotoViewer(pr[at].s,pr.map(p=>p.s),at);
   };
-  window.openPhotoList=(list,at)=>{
+  // ---- Photo + Video একসাথে: Comments / Replies / Edit history / My comments / Comments in this channel & post ----
+  // list = [{k:'photo'|'video', src, dur, bid}] দেখানোর ক্রমে; ডান / বাম swipe-এ আগের / পরের item (ছবি হলে photo viewer, video হলে video player — নিজ নিজ interface-এ)
+  window.__phMixOpen=(list,at)=>{
+    list=(list||[]).filter(x=>x&&x.src); if(!list.length) return;
+    mixList=list; kinds=list.map(x=>x.k==='video'?'video':'photo'); pvEdit=null; pics=list.map(x=>x.src); idx=Math.max(0,Math.min(pics.length-1,at||0)); busy=false; nB=-1; viewMode=true; pv.classList.add('cmv');
+    pop.innerHTML='<button type="button" data-k="copy"><span class="material-symbols-outlined">link</span>Copy link</button><button type="button" data-k="share"><span class="material-symbols-outlined">share</span>Share</button><button type="button" data-k="save"><span class="material-symbols-outlined">download</span>Save to Device</button>';
+    pa.style.transition='none'; pa.style.transform=''; pb.style.display='none'; vid2p.style.display='none'; img2.style.display='';
+    img.src=pics[idx]; reset(); popClose(); paintCnt(); pv.classList.add('show'); window.__phRestore=null;
+  };
+  window.__openMixList=(list,at)=>{
+    list=(list||[]).filter(x=>x&&x.src); const it=list[at]; if(!it) return;
+    if(list.every(x=>x.k!=='video')){ window.openPhotoViewer(it.src,list.map(x=>x.src),at,list); return; }
+    if(list.every(x=>x.k==='video')){ window.openVideoViewer(it.src,+it.dur||0,it.bid||'',undefined,{list:list,at:at}); return; }
+    if(it.k==='video') window.__vMixOpen(list,at); else window.__phMixOpen(list,at);
+  };
+  // viewer থেকে back করলে window-এ ওই photo / video / GIF-এর জায়গায় থাকে (সরে গেলে সেখানে scroll); কোনো নীল highlight বা selection থাকে না
+  window.__scrollBack=el=>{ try{ const g=window.getSelection&&window.getSelection(); if(g) g.removeAllRanges(); }catch(_){}
+    try{ if(!el||!el.isConnected) return; const r=el.getBoundingClientRect(); if(r.top>=56&&r.bottom<=innerHeight-8) return; el.scrollIntoView({block:'center'}); }catch(_){} };
+  { const st=document.createElement('style'); st.textContent='.cmatt.cmvid,.cmatt.cmgif,.cmatt img[data-pv],.atl,.atl *{-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}.cmatt.cmvid::selection,.cmatt.cmgif::selection,.cmatt img::selection,.atl::selection,.atl *::selection,.cmatt.cmvid *::selection,.cmatt.cmgif *::selection{background:transparent}'; document.head.appendChild(st); }
+  window.__openMixSeq=(root,el,flt,metaFn)=>{
+    const out=[]; root.querySelectorAll('.cmatt img[data-pv], .cmatt.cmvid').forEach(n=>{ if(!n.getClientRects().length||(flt&&!flt(n))) return;
+      if(n.classList.contains('cmvid')){ const v=n.querySelector('video'), sr=String((v&&v.getAttribute('src'))||'').split('#')[0]; const m=metaFn?metaFn(n):null; if(sr) out.push({k:'video',src:sr,dur:+n.dataset.dur||(v&&v.duration)||0,bid:n.dataset.bid||'',lbl:m&&m.lbl,go:m&&m.go,xm:m&&m.xm,back:()=>window.__scrollBack(n),_el:n}); }
+      else{ const sr=n._orig||n.currentSrc||n.src, m=metaFn?metaFn(n):null; if(sr) out.push({k:'photo',src:sr,lbl:m&&m.lbl,go:m&&m.go,xm:m&&m.xm,back:()=>window.__scrollBack(n),_el:n}); } });
+    const at=out.findIndex(x=>x._el===el); if(at<0) return;
+    window.__openMixList(out.map(x=>({k:x.k,src:x.src,dur:x.dur,bid:x.bid,lbl:x.lbl,go:x.go,xm:x.xm,back:x.back})),at);
+  };
+  window.openPhotoList=(list,at,metas)=>{
     list=(list||[]).filter(Boolean); if(!list.length) return;
     const prev={pics:pics.slice(),idx,show:pv.classList.contains('show'),vm:viewMode,cmv:pv.classList.contains('cmv'),pop:pop.innerHTML,src:img.getAttribute('src')};
-    pvEdit=null; pics=list.slice(); idx=Math.max(0,Math.min(pics.length-1,at||0)); busy=false; nB=-1; viewMode=true; pv.classList.add('cmv');
+    kinds=null; mixList=null; pMeta=(Array.isArray(metas)&&metas.length===list.length)?metas:null; pvEdit=null; pics=list.slice(); idx=Math.max(0,Math.min(pics.length-1,at||0)); busy=false; nB=-1; viewMode=true; pv.classList.add('cmv');
     pop.innerHTML='<button type="button" data-k="copy"><span class="material-symbols-outlined">link</span>Copy link</button><button type="button" data-k="share"><span class="material-symbols-outlined">share</span>Share</button><button type="button" data-k="save"><span class="material-symbols-outlined">download</span>Save to Device</button>';
     pa.style.transition='none'; pa.style.transform=''; pb.style.display='none';
     img.src=pics[idx]; reset(); popClose(); paintCnt(); pv.classList.add('show');
@@ -1850,7 +1899,7 @@ window.attachPinch=function(stage,el,max,sizeFn){
   window.openPhotoEdit=(list,at,done)=>{
     list=(list||[]).filter(Boolean); if(!list.length) return;
     const prev={pics:pics.slice(),idx,show:pv.classList.contains('show'),vm:viewMode,cmv:pv.classList.contains('cmv'),pop:pop.innerHTML,src:img.getAttribute('src')};
-    pics=list.slice(); idx=Math.max(0,Math.min(pics.length-1,at||0)); busy=false; nB=-1; viewMode=false; pv.classList.add('cmv');   // cmv = Next লুকানো
+    kinds=null; mixList=null; pMeta=null; pics=list.slice(); idx=Math.max(0,Math.min(pics.length-1,at||0)); busy=false; nB=-1; viewMode=false; pv.classList.add('cmv');   // cmv = Next লুকানো
     pop.innerHTML=editPop; pvEdit=done||function(){};
     pa.style.transition='none'; pa.style.transform=''; pb.style.display='none';
     img.src=pics[idx]; reset(); popClose(); paintCnt(); pv.classList.add('show');
@@ -2535,14 +2584,14 @@ const EXTRA_VIEWS=0;       // লিস্টে নেই এমন পুর�
   const cropUI=(function(){
     const root=document.createElement('div'); root.id='cropWin';
     root.style.cssText='position:fixed;top:0;bottom:0;left:0;right:0;margin:0 auto;width:100%;max-width:600px;background:#000;z-index:55;display:none;flex-direction:column;touch-action:none;user-select:none;-webkit-user-select:none';
-    root.innerHTML='<div class="abar" style="background:#000"><span class="material-symbols-outlined" id="crX">close</span><span class="ttl2">Crop photo</span><button class="evsave" id="crOk">Done</button></div>'
+    root.innerHTML='<div class="abar" style="background:#000"><span class="material-symbols-outlined" id="crX">close</span><span class="ttl2">Crop photo</span><div id="crTools" style="display:none"><button type="button" id="crRR" aria-label="Rotate"><span class="material-symbols-outlined">rotate_right</span></button><button type="button" id="crFl" aria-label="Flip"><span class="material-symbols-outlined">flip</span></button></div><button class="evsave" id="crOk">Done</button></div>'
       +'<div id="crStage" style="position:relative;flex:1;overflow:hidden;touch-action:none"><img id="crImg" alt="" draggable="false" style="position:absolute;left:50%;top:50%;max-width:none;max-height:none;transform-origin:0 0;will-change:transform;pointer-events:none"><div id="crFrame" style="position:absolute;left:50%;top:50%;box-shadow:0 0 0 9999px rgba(0,0,0,.65);border:2px solid #fff;pointer-events:none;box-sizing:border-box"></div></div>'
       +'<div style="display:flex;align-items:center;gap:14px;padding:14px 22px calc(18px + env(safe-area-inset-bottom,0px))"><span class="material-symbols-outlined" style="font-size:20px">image</span><input id="crZoom" type="range" min="1" max="4" step="0.01" value="1" style="flex:1;accent-color:#fff"><span class="material-symbols-outlined" style="font-size:30px">image</span></div>';
     document.body.appendChild(root);
     root.addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});   // pull-to-refresh আটকানো
     const q=i=>root.querySelector(i), st=q('#crStage'), img=q('#crImg'), fr=q('#crFrame'), zm=q('#crZoom');
-    let im,ratio=1,outW=512,onDone,onClose,iw=1,ih=1,fw=1,fh=1,min=1,z=1,cx=0,cy=0,isOpen=false,free=false,cr=null,fs=1,bx0=0,by0=0,opts=null,base=null;
-    const crOk=q('#crOk');
+    let im,ratio=1,outW=512,onDone,onClose,iw=1,ih=1,fw=1,fh=1,min=1,z=1,cx=0,cy=0,isOpen=false,free=false,cr=null,fs=1,bx0=0,by0=0,opts=null,base=null,work=null,rot=0,fine=0,fl=false;
+    const crOk=q('#crOk'), tl=q('#crTools');
     const clamp=()=>{ const s=min*z, mx=Math.max(0,(iw*s-fw)/2), my=Math.max(0,(ih*s-fh)/2); cx=Math.max(-mx,Math.min(mx,cx)); cy=Math.max(-my,Math.min(my,cy)); };
     const render=()=>{ clamp(); const s=min*z; img.style.transform='translate('+(cx-iw*s/2)+'px,'+(cy-ih*s/2)+'px) scale('+s+')'; zm.value=z; };
     const layout=()=>{ if(free){ layoutFree(); return; } const r=st.getBoundingClientRect(), aw=Math.max(60,r.width-40), ah=Math.max(60,r.height-40);
@@ -2573,9 +2622,19 @@ const EXTRA_VIEWS=0;       // লিস্টে নেই এমন পুর�
     // ---- Free crop (সীমা নেই): পুরো ছবি দেখায়, 8টি handle দিয়ে যেকোনো মাপে crop করা যায় ----
     { const sty=document.createElement('style'); sty.textContent='#crFrame .crh{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;touch-action:none}#crFrame .crh::after{content:"";position:absolute;left:50%;top:50%;background:#fff;border-radius:3px;transform:translate(-50%,-50%);box-shadow:0 0 0 1px rgba(0,0,0,.35)}#crFrame .crh-n::after,#crFrame .crh-s::after{width:28px;height:5px}#crFrame .crh-e::after,#crFrame .crh-w::after{width:5px;height:28px}#crFrame .crh-nw::after,#crFrame .crh-ne::after,#crFrame .crh-sw::after,#crFrame .crh-se::after{width:16px;height:16px;border-radius:50%}#crFrame .crh-nw{left:0;top:0}#crFrame .crh-n{left:50%;top:0}#crFrame .crh-ne{left:100%;top:0}#crFrame .crh-e{left:100%;top:50%}#crFrame .crh-se{left:100%;top:100%}#crFrame .crh-s{left:50%;top:100%}#crFrame .crh-sw{left:0;top:100%}#crFrame .crh-w{left:0;top:50%}'; document.head.appendChild(sty); }
     const freeBuild=()=>{ fr.innerHTML=''; ['n','e','s','w','nw','ne','se','sw'].forEach(h=>{ const d=document.createElement('div'); d.className='crh crh-'+h; d.dataset.h=h; fr.appendChild(d); }); };
-    const dirtyFree=()=>{ if(!cr||!base) return false; const t=2/(fs||1); return Math.abs(cr.x-base.x)>t||Math.abs(cr.y-base.y)>t||Math.abs(cr.w-base.w)>t||Math.abs(cr.h-base.h)>t; };
+    // rotate (90° ডান) ও flip: ছবি canvas-এ বসিয়ে (work) crop frame তার উপর চলে
+    const buildWork=()=>{ const ow=im.naturalWidth||im.width, oh=im.naturalHeight||im.height;
+      if(!rot&&!fine&&!fl){ work=null; iw=ow; ih=oh; img.style.width=iw+'px'; img.style.height=ih+'px'; img.src=im.src; return; }
+      const k=Math.min(1,2000/Math.max(ow,oh)), w0=ow*k, h0=oh*k, th=(rot*90+fine)*Math.PI/180, c=Math.abs(Math.cos(th)), sn=Math.abs(Math.sin(th));
+      const W=Math.max(1,Math.round(w0*c+h0*sn)), H=Math.max(1,Math.round(w0*sn+h0*c)), cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+      const g=cv.getContext('2d'); g.imageSmoothingQuality='high'; g.fillStyle='#fff'; g.fillRect(0,0,W,H); g.translate(W/2,H/2); g.rotate(th); if(fl) g.scale(-1,1); g.drawImage(im,-w0/2,-h0/2,w0,h0);
+      work=cv; iw=W; ih=H; img.style.width=iw+'px'; img.style.height=ih+'px'; img.src=cv.toDataURL('image/jpeg',.9); };
+    const applyT=()=>{ if(!free) return; buildWork(); cr={x:0,y:0,w:iw,h:ih}; layoutFree(); };
+    q('#crRR').onclick=()=>{ rot=(rot+1)%4; applyT(); }; q('#crFl').onclick=()=>{ fl=!fl; applyT(); };
+    { const sty=document.createElement('style'); sty.textContent='#crTools{margin-left:auto;display:flex;align-items:center;gap:8px}#crTools button{width:40px;height:40px;border-radius:50%;border:0;background:rgba(60,60,60,.88);color:#fff;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}#crTools button:active{background:#555}'; document.head.appendChild(sty); }
+    const dirtyFree=()=>{ if(!cr||!base) return false; if(rot!==base.rot||fl!==base.fl||Math.abs(fine-base.fine)>.25) return true; const t=2/(fs||1); return Math.abs(cr.x-base.x)>t||Math.abs(cr.y-base.y)>t||Math.abs(cr.w-base.w)>t||Math.abs(cr.h-base.h)>t; };
     const paintFree=()=>{ fr.style.left=(bx0+cr.x*fs)+'px'; fr.style.top=(by0+cr.y*fs)+'px'; fr.style.width=(cr.w*fs)+'px'; fr.style.height=(cr.h*fs)+'px'; fr.style.marginLeft='0'; fr.style.marginTop='0'; if(opts&&opts.edit) crOk.disabled=!dirtyFree(); };
-    const layoutFree=()=>{ const r=st.getBoundingClientRect(); fs=Math.min(Math.max(60,r.width-40)/iw,Math.max(60,r.height-40)/ih); const dw=iw*fs, dh=ih*fs; bx0=(r.width-dw)/2; by0=(r.height-dh)/2;
+    const layoutFree=()=>{ const r=st.getBoundingClientRect(); const aw=Math.max(60,r.width-40); fs=Math.min(aw/iw,Math.max(60,r.height-40)/ih); const dw=iw*fs, dh=ih*fs; bx0=20+(aw-dw)/2; by0=(r.height-dh)/2;
       img.style.transform='translate('+(bx0-r.width/2)+'px,'+(by0-r.height/2)+'px) scale('+fs+')'; paintFree(); };
     let fd=null;
     fr.addEventListener('pointerdown',e=>{ if(!free) return; e.stopPropagation(); e.preventDefault(); fd={h:(e.target.dataset&&e.target.dataset.h)||'move',x:e.clientX,y:e.clientY,c:{x:cr.x,y:cr.y,w:cr.w,h:cr.h},id:e.pointerId}; try{ fr.setPointerCapture(e.pointerId); }catch(_){} });
@@ -2587,10 +2646,10 @@ const EXTRA_VIEWS=0;       // লিস্টে নেই এমন পুর�
     ['pointerup','pointercancel'].forEach(t=>fr.addEventListener(t,e=>{ if(fd&&fd.id===e.pointerId) fd=null; }));
     const doneFree=()=>{
       try{
-        const sw=cr.w, sh=cr.h, rc={x:cr.x,y:cr.y,w:cr.w,h:cr.h}; let k=Math.min(1,1280/Math.max(sw,sh)), url='';
+        const sw=cr.w, sh=cr.h, rc={x:cr.x,y:cr.y,w:cr.w,h:cr.h,rot:rot,fine:fine,fl:fl}; let k=Math.min(1,1280/Math.max(sw,sh)), url='';
         for(let t=0;t<6;t++){   // ছবি সেভ রাখার সীমার ভেতরে থাকতে দরকারে মাপ/মান কমায়
           const W=Math.max(1,Math.round(sw*k)), H=Math.max(1,Math.round(sh*k)), c=document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.fillStyle='#fff'; g.fillRect(0,0,W,H);
-          g.drawImage(im,cr.x,cr.y,sw,sh,0,0,W,H); url=c.toDataURL('image/jpeg',t<2?.88:.78); if(url.length<=560000) break; k*=.8; }
+          g.drawImage(work||im,cr.x,cr.y,sw,sh,0,0,W,H); url=c.toDataURL('image/jpeg',t<2?.88:.78); if(url.length<=560000) break; k*=.8; }
         const d=onDone; onDone=null; close(); if(d) d(url,rc);
       }catch(err){ toast('ছবি সেভ করা গেল না'); close(); }
     };
@@ -2606,8 +2665,10 @@ const EXTRA_VIEWS=0;       // লিস্টে নেই এমন পুর�
     return { open(image,r,w,round,done,closed,isFree,o){
       im=image; ratio=r; outW=w; onDone=done; onClose=closed; iw=im.naturalWidth||im.width; ih=im.naturalHeight||im.height; z=1; cx=cy=0;
       free=!!isFree; opts=o||null; crOk.textContent=(opts&&opts.edit)?'Save':'Done'; crOk.disabled=!!(opts&&opts.edit);   // Edit window: Save, বদল না করলে disabled
-      zm.parentNode.style.display=free?'none':'flex'; fr.style.pointerEvents=free?'auto':'none'; fr.innerHTML=''; if(free){ const rr=opts&&opts.rect; cr=(rr&&rr.w>0&&rr.h>0&&rr.x+rr.w<=iw+1&&rr.y+rr.h<=ih+1)?{x:rr.x,y:rr.y,w:rr.w,h:rr.h}:{x:0,y:0,w:iw,h:ih}; base={x:cr.x,y:cr.y,w:cr.w,h:cr.h}; freeBuild(); }
-      fr.style.borderRadius=round?'50%':'0'; img.style.width=iw+'px'; img.style.height=ih+'px'; img.src=im.src;
+      zm.parentNode.style.display=free?'none':'flex'; fr.style.pointerEvents=free?'auto':'none'; fr.innerHTML=''; work=null; rot=0; fine=0; fl=false; tl.style.display=free?'flex':'none'; crOk.style.marginLeft=free?'10px':'';
+      if(free){ const rr=opts&&opts.rect; if(rr&&(rr.rot||rr.fl)){ rot=((rr.rot|0)%4+4)%4; fine=0; fl=!!rr.fl; buildWork(); }
+        cr=(rr&&rr.w>0&&rr.h>0&&rr.x+rr.w<=iw+1&&rr.y+rr.h<=ih+1)?{x:rr.x,y:rr.y,w:rr.w,h:rr.h}:{x:0,y:0,w:iw,h:ih}; base={x:cr.x,y:cr.y,w:cr.w,h:cr.h,rot:rot,fine:fine,fl:fl}; freeBuild(); }
+      fr.style.borderRadius=round?'50%':'0'; img.style.width=iw+'px'; img.style.height=ih+'px'; if(!work) img.src=im.src;
       root.style.display='flex'; isOpen=true; layout(); } };
   })();
 
@@ -3781,7 +3842,7 @@ function askDelete(title,cb,yesLabel,slideSel){
       const short=x.txt.length>90&&!x.open, t=short?pLinkEsc(pCut(x.txt)||x.txt.slice(0,90))+'…<span class="rm">Read more</span>':pLinkEsc(x.txt);
       return '<div class="post'+(x.priv&&!x.pic?' priv':'')+'" data-id="'+x.id+'"><div class="ph"><div class="avatar pav"></div><div class="nm"><div><span class="pnm">'+NAME+'</span></div><div><span class="ago" data-ts="'+x.posted+'">'+timeAgo(x.posted)+'</span>'+(pHist[x.id]&&pHist[x.id].v&&pHist[x.id].v.length?' <span class="edd">(edited)</span>':'')+(PINS.has('p',x.id)?'<span class="material-symbols-outlined ppin">push_pin</span>':'')+'</div></div>'+(vw?'':'<span class="material-symbols-outlined pmore" style="cursor:pointer">more_horiz</span>')+'</div>'
       +'<div class="ptx">'+t+'</div>'+(!x.pic?'':pList(x)?(vw?pPager(x,pList(x)):pGrid(x,pList(x))):vw?'<div class="pimg pn pvstage'+(x.priv?' priv':'')+'"><div class="pvin pn"><img src="'+pSrc(x)+'" alt="" draggable="false"></div></div>':'<div class="pimg pn'+(x.priv?' priv':'')+'"><img src="'+pSrc(x)+'" alt="" draggable="false"></div>')
-      +'<div class="pact"><span class="material-symbols-outlined" data-a="like" style="'+(lkOffOf(x)?'opacity:.4;cursor:default;':'cursor:pointer;')+fill(x.my==='like')+'">thumb_up</span><span data-a="rxl" style="'+(lkOffOf(x)?'cursor:default;':'cursor:pointer;')+'padding:6px 4px;'+((x.l+(x.my==='like'?1:0))>0?'color:#3ea6ff':'')+'">'+kfmt(x.l+(x.my==='like'?1:0))+'</span><span class="gap"></span><span class="material-symbols-outlined" data-a="dislike" style="'+(dlOffOf(x)?'opacity:.4;cursor:default;':'cursor:pointer;')+fill(x.my==='dislike')+'">thumb_down</span><span data-a="rxd" style="'+(dlOffOf(x)?'cursor:default;':'cursor:pointer;')+'padding:6px 4px;'+((x.dl+(x.my==='dislike'?1:0))>0?'color:#3ea6ff':'')+'">'+kfmt(x.dl+(x.my==='dislike'?1:0))+'</span><span class="sp"></span><span class="material-symbols-outlined" data-a="sh" style="'+(shOffOf(x)?'opacity:.4;cursor:default;':'cursor:pointer')+'">share</span><span data-a="shn" style="'+(shOffOf(x)?'cursor:default;':'cursor:pointer;')+'padding:6px 4px;'+(shc(x)>0?'color:#3ea6ff':'')+'">'+kfmt(shc(x))+'</span><span class="gap" style="width:10px"></span><span class="material-symbols-outlined" data-a="cm" style="'+(x.cmOff?'opacity:.4;cursor:default;':'cursor:pointer')+'">chat</span><span data-a="cmn" style="'+(x.cmOff?'cursor:default;':'cursor:pointer;')+'padding:6px 4px;'+((x.cmts?x.cmts.filter(c=>!c.del).length:0)>0?'color:#3ea6ff':'')+'">'+kfmt(x.cmts?x.cmts.filter(c=>!c.del).length:0)+'</span></div>'
+      +'<div class="pact"><span class="material-symbols-outlined" data-a="like" style="'+(lkOffOf(x)?'opacity:.4;cursor:default;':'cursor:pointer;')+fill(x.my==='like')+'">thumb_up</span><span data-a="rxl" style="'+(x.lkOff?'cursor:default;':'cursor:pointer;')+'padding:6px 4px;'+((x.l+(x.my==='like'?1:0))>0?'color:#3ea6ff':'')+'">'+kfmt(x.l+(x.my==='like'?1:0))+'</span><span class="gap"></span><span class="material-symbols-outlined" data-a="dislike" style="'+(dlOffOf(x)?'opacity:.4;cursor:default;':'cursor:pointer;')+fill(x.my==='dislike')+'">thumb_down</span><span data-a="rxd" style="'+(dlOffOf(x)?'cursor:default;':'cursor:pointer;')+'padding:6px 4px;'+((x.dl+(x.my==='dislike'?1:0))>0?'color:#3ea6ff':'')+'">'+kfmt(x.dl+(x.my==='dislike'?1:0))+'</span><span class="sp"></span><span class="material-symbols-outlined" data-a="sh" style="'+(shOffOf(x)?'opacity:.4;cursor:default;':'cursor:pointer')+'">share</span><span data-a="shn" style="'+(shOffOf(x)?'cursor:default;':'cursor:pointer;')+'padding:6px 4px;'+(shc(x)>0?'color:#3ea6ff':'')+'">'+kfmt(shc(x))+'</span><span class="gap" style="width:10px"></span><span class="material-symbols-outlined" data-a="cm" style="'+(x.cmOff?'opacity:.4;cursor:default;':'cursor:pointer')+'">chat</span><span data-a="cmn" style="'+(x.cmOff?'cursor:default;':'cursor:pointer;')+'padding:6px 4px;'+((x.cmts?x.cmts.filter(c=>!c.del).length:0)>0?'color:#3ea6ff':'')+'">'+kfmt(x.cmts?x.cmts.filter(c=>!c.del).length:0)+'</span></div>'
       +'<div style="height:18px"></div></div>';
   }
   function drawPosts(){
@@ -4008,7 +4069,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     }
     const a=e.target.closest('[data-a]'); if(!a) return;
     { const px0=postOf(a), da=a.dataset.a;
-      if((lkOffOf(px0)&&(da==='like'||da==='rxl'))||(dlOffOf(px0)&&(da==='dislike'||da==='rxd'))){
+      if((lkOffOf(px0)&&da==='like')||(dlOffOf(px0)&&da==='dislike')||(px0.lkOff&&da==='rxl')||(px0.dlOff&&da==='rxd')){
         if((da==='like'||da==='dislike')&&px0.my===da){ px0.my=null; px0.myAt=null; savePosts(); drawPosts(); toast(da==='like'?'Like removed':'Dislike removed'); }
         return; } }
     if(a.dataset.a==='rxl'||a.dataset.a==='rxd'){ openRx(postOf(a).id,a.dataset.a==='rxl'?'like':'dislike'); return; }
@@ -4192,12 +4253,14 @@ function askDelete(title,cb,yesLabel,slideSel){
 
   // ---- Edit history window (comment / reply / post) ----
   const ehCss=document.createElement('style');
-  ehCss.textContent='.cmdel{color:#ff4d4d;font-style:normal}#ehPage .ehi .mcatt .cmatt{margin-top:8px}body:has(#ehPage.show) #cmAudPlay{z-index:120}#ehPage{z-index:95}#ehPage .ehi{padding:14px 16px;border-bottom:1px solid var(--line)}#ehPage .ehi small{display:block;color:var(--sub);font-size:13px;margin-bottom:6px}#ehPage .ehi .eht{white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.4}#ehPage .ehi .ehd{color:#aaa;font-size:13px;line-height:1.4;margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere}#ehPage .ehi .ehm{color:var(--sub);font-weight:600;cursor:pointer;margin-left:4px}#ehPage .ehi .ehp{width:min(100%,240px);aspect-ratio:1/1;border-radius:10px;margin-top:8px;background-size:cover;background-position:center}';
+  ehCss.textContent='.cmdel{color:#ff4d4d;font-style:normal}.cmhid{color:#aaa;font-style:italic}#ehPage .ehi .mcatt .cmatt{margin-top:8px}body:has(#ehPage.show) #cmAudPlay{z-index:120}#ehPage{z-index:95}#ehPage .ehi{padding:14px 16px;border-bottom:1px solid var(--line)}#ehPage .ehi small{display:block;color:var(--sub);font-size:13px;margin-bottom:6px}#ehPage .ehi .eht{white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.4}#ehPage .ehi .ehd{color:#aaa;font-size:13px;line-height:1.4;margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere}#ehPage .ehi .ehm{color:var(--sub);font-weight:600;cursor:pointer;margin-left:4px}#ehPage .ehi .ehp{width:min(100%,240px);aspect-ratio:1/1;border-radius:10px;margin-top:8px;background-size:cover;background-position:center}';
   document.head.appendChild(ehCss);
   const eh=document.createElement('div'); eh.className='about'; eh.id='ehPage';
   eh.innerHTML='<div class="abar"><span class="material-symbols-outlined" id="ehBack" style="cursor:pointer">arrow_back</span><span class="ttl2">Edit history</span></div><div id="ehList"></div>';
   document.body.appendChild(eh); $('ehBack').onclick=()=>eh.classList.remove('show');
-  function ehOpen(a){   // a: newest first [{txt,pic,att,at,cur,del,delTxt}]
+  let ehCtx=null;
+  const ehMeta=n=>ehCtx?{xm:1,lbl:ehCtx.r?'Show in replies':'Show in comments',go:()=>{ eh.classList.remove('show'); window.__cmShowIn({c:ehCtx.c,r:ehCtx.r,id:ehCtx.id}); }}:null;
+  function ehOpen(a,ctx){ ehCtx=ctx||null;   // a: newest first [{txt,pic,att,at,cur,del,delTxt}]
     const box=$('ehList'); box.innerHTML='';
     const AL={link:'Link',photo:'Photo',video:'Video',gif:'GIF',sticker:'Sticker',voice:'Audio',poll:'Poll'}, AK=z=>z?(z.bid||z.src||''):'', AN=z=>(z&&z.k==='poll'&&z.poll&&z.poll.quiz)?'Quiz':(AL[z&&z.k]||'Attachment');
     a.forEach((v,i)=>{ const d=document.createElement('div'); d.className='ehi'; const s=document.createElement('small'); const o=a[i+1];
@@ -4215,7 +4278,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   }
 
   // ---- Video / Short / Live Edit history (Post-এর Edit history window-এর মতো; ছবির জায়গায় Thumbnail) ----
-  function ehMedia(a,short){
+  function ehMedia(a,short){ ehCtx=null;
     const box=$('ehList'); box.innerHTML='';
     a.forEach((v,i)=>{ const d=document.createElement('div'); d.className='ehi'; const s=document.createElement('small'); const o=a[i+1];
       let note=''; if(o){ const dn=(v.desc||''),do_=(o.desc||''); if(dn!==do_) note=dn?(do_?' \u2022 Description changed':' \u2022 Description added'):' \u2022 Description removed'; if(v.cust&&!o.cust) note+=' • Thumbnail added'; else if(!v.cust&&o.cust) note+=' • Thumbnail removed'; else if(v.cust&&o.cust&&v.img!==o.img) note+=' • Thumbnail changed'; }
@@ -4246,9 +4309,9 @@ function askDelete(title,cb,yesLabel,slideSel){
     $('ehList').querySelectorAll('.cmatt.cmvid,.cmatt.cmgif').forEach(cmStop);
     $('ehList').querySelectorAll('audio').forEach(x=>{ try{ x.pause(); }catch(_){} }); }).observe(eh,{attributes:true,attributeFilter:['class']});
   $('ehList').onclick=e=>{
-    { const pvI=e.target.closest('.cmatt img[data-pv]'); if(pvI&&!pvI.closest('.cmgif')){ if(window.openPhotoViewer) window.openPhotoViewer(pvI._orig||pvI.currentSrc||pvI.src); return; } }
-    { const gf=e.target.closest('.cmatt.cmgif'); if(gf){ const im=gf.querySelector('img'); if(im&&window.openPhotoViewer) window.openPhotoViewer(im._orig||im.src); return; } }
-    { const vv=e.target.closest('.cmatt.cmvid'); if(vv){ const v=vv.querySelector('video'); if(v&&window.openVideoViewer) window.openVideoViewer(String(v.getAttribute('src')||'').split('#')[0],+vv.dataset.dur||v.duration||0,vv.dataset.bid||''); return; } }
+    { const pvI=e.target.closest('.cmatt img[data-pv]'); if(pvI&&!pvI.closest('.cmgif')){ window.__openMixSeq($('ehList'),pvI,null,ehMeta); return; } }
+    { const gf=e.target.closest('.cmatt.cmgif'); if(gf){ const im=gf.querySelector('img'); if(im) window.__openMixSeq($('ehList'),im,null,ehMeta); return; } }
+    { const vv=e.target.closest('.cmatt.cmvid'); if(vv){ window.__openMixSeq($('ehList'),vv,null,ehMeta); return; } }
   };
   new MutationObserver(()=>{ if(pp.classList.contains('show')){ const h=pHist[curPost], b=pp.querySelector('[data-k="hist"]'); if(b) b.style.display=(h&&h.v.length)?'':'none'; const px=posts.find(y=>y.id===curPost), sv=pp.querySelector('[data-k="save"]'); if(sv) sv.style.display=(px&&px.pic)?'':'none'; } }).observe(pp,{attributes:true,attributeFilter:['class']});
   pp.querySelectorAll('button').forEach(b=>b.onclick=()=>{
@@ -4289,10 +4352,11 @@ function askDelete(title,cb,yesLabel,slideSel){
   const softDel=o=>{ o.del=new Date().toISOString(); };   // Delete = মুছে ফেলা নয়, শুধু admin দেখে এমন "deleted" চিহ্ন; deleted-এ আবার Delete = স্থায়ীভাবে মুছে যায়
   const anyLive=l=>(l||[]).some(r=>!r.del||anyLive(r.reps));
   const selLive=l=>(l||[]).some(r=>(cmSel.has(r.id)&&!r.del)||selLive(r.reps));
-  const bulkDel=(l,pick)=>{ for(let i=l.length-1;i>=0;i--){ const r=l[i]; if(!pick(r)){ bulkDel(r.reps,pick); continue; } if(r.del) l.splice(i,1); else{ softDel(r); bulkDel(r.reps,pick); } } };
+  const bulkDel=(l,pick)=>{ for(let i=l.length-1;i>=0;i--){ const r=l[i]; if(!pick(r)){ bulkDel(r.reps,pick); continue; } l.splice(i,1); } };
   const MAXD=2;   // রিপ্লাইয়ের রিপ্লাই সর্বোচ্চ ৩ স্তর (d0, d1, d2); d2-তে রিপ্লাই করলে সেটা একই স্তরে ওই reply-র নিচে বসে
-  const ancDel=(c,rid)=>{ if(!c||rid==null||rid==='') return false; const w=(l,del)=>{ for(const r of (l||[])){ if(String(r.id)===String(rid)) return del; const v=w(r.reps,del||!!r.del); if(v!==null) return v; } return null; }; return w(c.reps,!!c.del)===true; };   // comment / main reply / parent reply deleted -> Edit & Reply disabled on everything under it
-  const findR=(list,id,d)=>{ d=d||0; for(const r of list){ if(r.id===id) return {r,list,d}; const f=findR(r.reps,id,d+1); if(f) return f; } return null; };
+  const hidTxt=t=>t==='reply'?'This reply has been hidden':'This comment has been hidden';
+  const ancDel=(c,rid)=>{ if(!c||rid==null||rid==='') return false; const w=(l,del)=>{ for(const r of (l||[])){ if(String(r.id)===String(rid)) return del; const v=w(r.reps,del||!!r.del||!!r.hid); if(v!==null) return v; } return null; }; return w(c.reps,!!c.del||!!c.hid)===true; };   // comment / main reply / parent reply deleted -> Edit & Reply disabled on everything under it
+  const findR=(list,id,d)=>{ d=d||0; for(const r of (list||[])){ if(String(r.id)===String(id)) return {r,list,d}; const f=findR(r.reps,id,d+1); if(f) return f; } return null; };
   const cmOv=document.createElement('div'); cmOv.className='cmov';
   const cmS=document.createElement('div'); cmS.className='cmsheet';
   cmS.innerHTML='<div class="hd"></div><div class="cmhead"><span class="material-symbols-outlined" id="cmBack" style="display:none;cursor:pointer">arrow_back</span><span class="ttl" id="cmTtl">Comments</span><input class="avinp" id="cmInp" type="text" enterkeyhint="search" placeholder="Search" autocomplete="off" autocapitalize="off" spellcheck="false"><span class="material-symbols-outlined" id="cmClr" style="display:none" aria-label="Clear text">cancel</span><span class="material-symbols-outlined" id="cmMore" style="cursor:pointer">more_horiz</span><span class="material-symbols-outlined" id="cmClose" style="cursor:pointer">close</span><div class="sortmenu cmsort" id="cmMenu"><div data-m="0" class="on">Latest</div><div data-m="4">Oldest</div><div data-m="1">Most replied</div><div data-m="2">Most liked</div><div data-m="3">Most disliked</div></div></div><div class="cmbody" id="cmBody"></div><div class="cmfoot"><div class="cmrt" id="cmRt" style="display:none"><span id="cmRtT"></span><span class="material-symbols-outlined" id="cmRtX" style="cursor:pointer">close</span></div><div class="cmrow" id="cmRow"><div class="cminput" id="cmBox"><textarea id="cmIn" rows="1" placeholder="Comment…" autocomplete="off"></textarea><span class="material-symbols-outlined" id="cmClrT" aria-label="Clear text">close</span><span class="material-symbols-outlined" id="cmSend">send</span></div><span class="material-symbols-outlined" id="cmAdd" title="Add files">attach_file</span></div></div><div class="cmfab" id="cmFab"><span class="material-symbols-outlined">delete</span></div>';
@@ -4374,13 +4438,13 @@ function askDelete(title,cb,yesLabel,slideSel){
     const expd=main?!cmMainMin.has(c.id):cmExp.has(c.id);
     const body=long&&!expd?cmHl(linkEsc(cutT),'text')+'…<span class="rm">Read more</span>':cmHl(linkEsc(c.txt),'text')+(long&&expd&&cmSelMode?' <span class="rm">Read less</span>':'');   // Select মোডে expand করা লেখায় Read less দেখায়
     const pin=!c.del&&t==='comment'&&PINS.has(pinT(),c.id)?'<span class="material-symbols-outlined ppin">push_pin</span>':'';
-    return '<div class="cmi'+(sub?' sub d'+(depth||0):'')+(hasRep?' hasrep':'')+(more?' more':'')+'"'+(t==='reply'?' data-rid="'+c.id+'"':'')+'>'+(tls||'')+'<div class="avatar cav2'+(sub?' sm':'')+'"></div><div class="cmc"><div class="cmh"><span class="cmun">'+cmHl(ME,'user')+'</span> • <span class="ago" data-ts="'+(c.del||c.posted)+'">'+timeAgo(c.del||c.posted)+'</span>'+(c.ed&&!c.del?' <span class="edd">(edited)</span>':'')+pin+'</div>'+(c.del?'<div class="cmt"><span class="cmdel">'+(t==='reply'?'Reply deleted':'Comment deleted')+'</span></div>':'<div class="cmt"'+(long?' data-tg="1"':'')+'>'+(c.to?'<span class="mention">'+esc(c.to)+'</span> ':'')+body+'</div>'+attHTML(c)+actRow(c,t,open?true:(t==='reply'?'reply':false)))+'</div><span class="material-symbols-outlined cmmore" data-t="'+t+'">more_horiz</span></div>';
+    return '<div class="cmi'+(sub?' sub d'+(depth||0):'')+(hasRep?' hasrep':'')+(more?' more':'')+'"'+(t==='reply'?' data-rid="'+c.id+'"':'')+'>'+(tls||'')+'<div class="avatar cav2'+(sub?' sm':'')+'"></div><div class="cmc"><div class="cmh"><span class="cmun">'+cmHl(ME,'user')+'</span> • <span class="ago" data-ts="'+(c.del||(c.hid&&c.hidAt)||c.posted)+'">'+timeAgo(c.del||(c.hid&&c.hidAt)||c.posted)+'</span>'+(c.ed&&!c.del&&!c.hid?' <span class="edd">(edited)</span>':'')+pin+'</div>'+(c.del?'<div class="cmt"><span class="cmdel">'+(t==='reply'?'Reply deleted':'Comment deleted')+'</span></div>':c.hid?'<div class="cmt"><span class="cmhid">'+hidTxt(t)+'</span></div>':'<div class="cmt"'+(long?' data-tg="1"':'')+'>'+(c.to?'<span class="mention">'+esc(c.to)+'</span> ':'')+body+'</div>'+attHTML(c)+actRow(c,t,open?true:(t==='reply'?'reply':false)))+'</div><span class="material-symbols-outlined cmmore" data-t="'+t+'">more_horiz</span></div>';
   }
   // রিপ্লাই ট্রি: রিপ্লাইয়ের রিপ্লাই ওই রিপ্লাইয়ের ঠিক নিচে আলাদা সারিতে, ভেতরে সরিয়ে (indent) বসে
   function repRows(tree){
     // main reply = কমেন্টের সরাসরি রিপ্লাই (d0); তার সব sub reply + reply-to-reply নিজেদের আলাদা সারিতে, ভেতরে সরিয়ে (d1), একই স্তরে
     return tree.map((r,i)=>{
-      const lastTop=i===tree.length-1, ds=[]; (function fl(a){ a.forEach(q=>{ ds.push(q); fl(q.reps); }); })(r.reps);
+      const lastTop=i===tree.length-1, ds=[]; if(!r.hid) (function fl(a){ a.forEach(q=>{ ds.push(q); fl(q.reps); }); })(r.reps);
       const tl=(x,t)=>'<i class="tl" style="left:'+x+'px;top:'+t+'px;bottom:-14px"></i>';
       const col=ds.length>0&&cmColl.has(String(r.id));   // username-এ tap করলে sub reply লুকায়, নিচে "N replies"
       let h=itemHTML(r,'reply',true,false,false,false,false,0,(lastTop?'':tl(35,32))+(ds.length&&!col?tl(79,52):''));
@@ -4413,9 +4477,10 @@ function askDelete(title,cb,yesLabel,slideSel){
       html='<div class="thr" data-cid="'+oc.id+'">'+(m.length?m.map(q=>itemHTML(q,'reply',true,false,false,false,false,0,'')).join(''):'<div class="cmempty"><div>No results</div></div>')+'</div>'; }
     else if(rep) html='<div class="thr" data-cid="'+oc.id+'">'+itemHTML(oc,'comment',false,false,!!oc.reps.length,false,true)+repRows(sortedR(oc.reps))+'</div>';
     else if(!x.cmts.length) html='<div class="cmempty"><div>No comments yet</div><div>Say something to start the conversation</div></div>';
-    else{ x.cmts.forEach(c=>{ if(c.del&&PINS.has(pinT(),c.id)) PINS.toggle(pinT(),c.id); }); let cs=PINS.first(pinT(),sortedC(x)); if(cmQ) cs=cs.filter(c=>hit(c.del?'':c.txt)); html=cs.length?cs.map(c=>'<div class="thr" data-cid="'+c.id+'"'+(PINS.has(pinT(),c.id)?' data-pin="1"':'')+'>'+itemHTML(c,'comment',false,true,!!c.reps.length)+(c.reps.length?'<div class="rpl" data-open="1"><span>'+rTot(c.reps)+(rTot(c.reps)===1?' reply':' replies')+'</span><span class="material-symbols-outlined">chevron_right</span></div>':'')+'</div>').join(''):'<div class="cmempty"><div>No results</div></div>'; }
+    else{ x.cmts.forEach(c=>{ if(c.del&&PINS.has(pinT(),c.id)) PINS.toggle(pinT(),c.id); }); let cs=PINS.first(pinT(),sortedC(x)); if(cmQ) cs=cs.filter(c=>hit(c.del?'':c.txt)); html=cs.length?cs.map(c=>'<div class="thr" data-cid="'+c.id+'"'+(PINS.has(pinT(),c.id)?' data-pin="1"':'')+'>'+itemHTML(c,'comment',false,true,!!c.reps.length)+(c.reps.length&&!c.hid?'<div class="rpl" data-open="1"><span>'+rTot(c.reps)+(rTot(c.reps)===1?' reply':' replies')+'</span><span class="material-symbols-outlined">chevron_right</span></div>':'')+'</div>').join(''):'<div class="cmempty"><div>No results</div></div>'; }
     cmBody.innerHTML=html; cmBody.classList.toggle('flat',flat);
     if(oc) cmBody.querySelectorAll('.cmi[data-rid]').forEach(el=>el.classList.toggle('rdis',ancDel(oc,el.dataset.rid)));
+    cmBody.querySelectorAll('[data-reply]').forEach(el=>el.classList.toggle('cpdis',!!cmBlocked));   // Block from Comments: reply icon disable
     // নতুন comment / reply ডান পাশ থেকে ঢুকবে
     { const ids=[], walk=l=>(l||[]).forEach(r=>{ ids.push(String(r.id)); walk(r.reps); }); walk(x.cmts); const sig=cmPost+'|'+cmMode+'|'+cmOpen;
       if(cmSeen&&cmSeen.sig===sig){ const fresh=ids.filter(i=>!cmSeen.ids.has(i));
@@ -4428,7 +4493,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     paintCmHead();
     if(window.__paintPr) window.__paintPr();
     cmBody.querySelectorAll('.cav2').forEach(e=>{ const a=document.querySelector('.head .avatar'); if(a&&a.style.backgroundImage){ e.style.backgroundImage=a.style.backgroundImage; e.style.backgroundSize='cover'; e.style.backgroundPosition='center'; } });
-    const dlo=rep&&!!(oc&&oc.del), full=rep?repCount(x)>=MAXR:cLive(x)>=MAXC, lockIn=cmEdit?false:(cmBlocked||full||dlo);
+    const dlo=rep&&!!(oc&&(oc.del||oc.hid)), full=rep?repCount(x)>=MAXR:cLive(x)>=MAXC, lockIn=cmBlocked||(cmEdit?false:(full||dlo));
     cmIn.placeholder=cmBlocked?'Blocked from commenting':dlo?'Comment deleted':full?(rep?'Reply limit reached':'Comment limit reached'):(rep?'Reply…':'Comment…');
     { const ad=document.getElementById('cmAdd'); if(ad) ad.classList.toggle('lim',!!lockIn); }   // Comment / Reply limit reached হলে attachment option disable
     cmIn.disabled=lockIn; cmIn.readOnly=false; cmBox.classList.toggle('off',lockIn);   // কমেন্ট ও রিপ্লাই — দুটোর add/edit-ই নিচের একই ইনলাইন বক্সে
@@ -4488,11 +4553,13 @@ function askDelete(title,cb,yesLabel,slideSel){
       }catch(err){ toast('Could not save audio'); }
     }
   });
-  function audPlayOpen(src,ctx){ if(!src) return; ctx=ctx||{}; audCtx={src:src,id:ctx.id||src}; cmAudP.querySelector('#cmAudMore').style.display=ctx.menu?'':'none';
+  function audPlayOpen(src,ctx){ if(!src) return; ctx=ctx||{}; audCtx={src:src,id:ctx.id||src}; cmAudP.querySelector('#cmAudMore').style.display=ctx.menu?'':'none'; audMenu.querySelectorAll('[data-k="copy"],[data-k="share"]').forEach(b=>b.style.display=ctx.xm?'none':'');
     audHost.innerHTML=window.audCtlHtml(src,ctx.dur||0,false); audMenu.classList.remove('show'); cmAudP.classList.add('show');
     const a=audHost.querySelector('audio'); const pr=a.play(); if(pr&&pr.catch) pr.catch(()=>{}); }
   window.audPlayOpen=audPlayOpen;
-  attB.addEventListener('click',e=>{ if(e.target===attB) attClose(); });
+  attB.addEventListener('click',e=>{ if(e.target===attB){ attClose(); return; }
+    if(e.target.closest('button,#cmAudFly,#cmGifFly,#cmPolFly')) return;   // dialog-এর খালি জায়গায় চাপলে GIF / Audio / Poll flyout বন্ধ
+    cmFly.classList.remove('show'); gifFly.classList.remove('show'); const pf=document.getElementById('cmPolFly'); if(pf) pf.classList.remove('show'); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') attClose(); });
   // ---- একটি comment/reply-তে সর্বোচ্চ ১টি attachment (photo / video / GIF / sticker / voice) ----
   var cmAtt=null, cmAttOrig=null, MAXSEC=60, cmChg=false, cmAttRect=null, cmAttTr=null;
@@ -4559,7 +4626,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   stkB.addEventListener('click',e=>{ if(e.target===stkB){ stkB.classList.remove('show'); return; } const sp=e.target.closest('[data-s]'); if(sp){ stkB.classList.remove('show'); setAtt({k:'sticker',src:sp.dataset.s}); } });
   // voice recorder (সর্বোচ্চ ১ মিনিট): Audio player-এর মতো window — [Record start/stop] [Pause/Resume] [slider] [time] [Mute];
   // stop-এর পর ওই window-তেই audio controller (play / seek / mute / speed) আসে, নিচে Reset ও তার ডানে Done
-  { const st=document.createElement('style'); st.textContent='#cmVcBack .dlg{position:relative;max-width:440px;width:100%;padding:10px 0;text-align:left}#cmVcBack .aph{display:flex;align-items:center;padding:16px 22px 12px}#cmVcBack h2{font-size:20px;font-weight:500;margin:0;padding:0}#cmVcHost .cmaud{width:calc(100% - 24px);margin:0 12px 8px}#cmVcBack .vcrc .vb{width:34px;height:34px;border-radius:50%;background:#3a3a3a}#cmVcBack .vcrc .vrec .material-symbols-outlined{color:#ff4d4d}#cmVcBack .vcrc .dis{opacity:.35;pointer-events:none}#cmVcBack .vcrc .aseek{pointer-events:none}#cmVcBack .vcrc .amt{width:30px;height:30px}#cmVcBack .vcnote{color:#aaa;font-size:13px;padding:0 22px 6px}#cmVcBack .row{display:flex;justify-content:flex-end;padding:0 14px}#cmVcBack .row button{background:none;border:0;color:#fff;font-size:16px;padding:10px 14px;cursor:pointer}body:has(#cmVcBack.show) .aspm{z-index:120}body:has(#cmVcBack.show) #delBack.show{z-index:140}'; document.head.appendChild(st); }
+  { const st=document.createElement('style'); st.textContent='#cmVcBack .dlg{position:relative;max-width:440px;width:100%;padding:10px 0;text-align:left}#cmVcBack .aph{display:flex;align-items:center;padding:16px 22px 12px}#cmVcBack h2{font-size:20px;font-weight:500;margin:0;padding:0}#cmVcHost .cmaud{width:calc(100% - 24px);margin:0 12px 8px}#cmVcBack .vcrc .vb{width:34px;height:34px;border-radius:50%;background:#3a3a3a}#cmVcBack .vcrc .vrec .material-symbols-outlined{color:#ff4d4d}#cmVcBack .vcrc .dis{opacity:.35;pointer-events:none}#cmVcBack .vcrc .aseek{pointer-events:none}#cmVcBack .vcrc .amt{width:30px;height:30px}#cmVcBack .vcnote{color:#aaa;font-size:13px;padding:0 22px 6px}#cmVcBack .row{display:flex;justify-content:flex-end;padding:0 14px}#cmVcBack .row button{background:none;border:0;color:#fff;font-size:16px;padding:10px 14px;cursor:pointer}#cmVcBack #cmVcReset{color:#ff4d4d}body:has(#cmVcBack.show) .aspm{z-index:120}body:has(#cmVcBack.show) #delBack.show{z-index:140}'; document.head.appendChild(st); }
   const vcB=document.createElement('div'); vcB.className='dlg-back'; vcB.id='cmVcBack';
   vcB.innerHTML='<div class="dlg"><div class="aph"><h2>Record voice</h2></div><div id="cmVcHost"></div><div class="vcnote" id="cmVcNote">Up to 1 minute</div><div class="row" id="cmVcRow"></div></div>';
   document.body.appendChild(vcB);
@@ -4649,11 +4716,16 @@ function askDelete(title,cb,yesLabel,slideSel){
     else if(k==='audfile') pickAudio();
     else if(k==='audrec') openRec();
   });
-  cmAdd.onclick=()=>{ if(cmAdd.classList.contains('lim')){ if(!cmBlocked) toast(cmMode==='rep'?'Reply limit reached':'Comment limit reached'); return; }
+  let addMic=false, addT=0, addTm=null;   // double tap: attachment আইকন <-> Record voice (mic) আইকন
+  const addGo=()=>{ if(cmAdd.classList.contains('lim')){ if(!cmBlocked) toast(cmMode==='rep'?'Reply limit reached':'Comment limit reached'); return; }
     if(cmBlocked) { toast('Blocked from commenting'); return; }
     if(cmAtt){ toast('Only one attachment can be added'); return; }
     { ['cmPollBtn','cmQuizBtn'].forEach(id=>{ const pb=$(id); if(pb) pb.style.display=cmMode==='rep'?'none':''; }); }   // Poll only in Comments page
+    if(addMic){ openRec(); return; }
     attB.classList.add('show'); };
+  cmAdd.onclick=()=>{ const now=Date.now();
+    if(addTm&&now-addT<320){ clearTimeout(addTm); addTm=null; addMic=!addMic; cmAdd.textContent=addMic?'mic':'attach_file'; cmAdd.title=addMic?'Record voice':'Add files'; return; }
+    addT=now; addTm=setTimeout(()=>{ addTm=null; addGo(); },300); };
   // comment box-এর thumbnail-এ চাপলে একই ধরনের attachment বদলানো যায় (photo / video / GIF / sticker / voice)
   function changeAtt(){
     if(!cmAtt||cmBlocked) return; cmChg=true; const k=cmAtt.k;
@@ -4708,7 +4780,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     setAtt({k:'poll',src:'poll:'+uid(),poll:{q:q,quiz:pollQuiz?1:0,ex:pollQuiz?pEx.value.trim():'',opts:o.map(z=>pollQuiz?{t:z.t,v:0,c:z.c?1:0}:{t:z.t,v:0}),my:-1}}); };
   // ---- Trim Video: video attachment নির্বাচনের পর trim window (সর্বোচ্চ MAXSEC) ----
   const trimSt=document.createElement('style');
-  trimSt.textContent='.trimpg{position:fixed;inset:0;z-index:80;display:none;background:#0f0f0f;color:#fff}.trimpg.show{display:block}.trimb{width:100%;max-width:600px;height:100%;margin:0 auto;display:flex;flex-direction:column;overflow-y:auto;padding:calc(env(safe-area-inset-top,0px)) 0 calc(88px + env(safe-area-inset-bottom,0px))}.trimh{display:flex;align-items:center;gap:8px;padding:10px 8px;flex-shrink:0}.trimh h2{font-size:20px;font-weight:500}.trimh button{background:none;border:0;color:#fff;cursor:pointer;padding:8px;border-radius:50%;display:flex}.trimh .material-symbols-outlined{font-size:26px}.trimpg.show{z-index:130}'
+  trimSt.textContent='#trimTools{display:flex;align-items:center;gap:8px}#trimTools button{width:40px;height:40px;border-radius:50%;border:0;background:rgba(60,60,60,.88);color:#fff;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}#trimTools button:active{background:#555}.trimpg.taud #trimTools{display:none}.trimv video{transform-origin:50% 50%}.trimpg{position:fixed;inset:0;z-index:80;display:none;background:#0f0f0f;color:#fff}.trimpg.show{display:block}.trimb{width:100%;max-width:600px;height:100%;margin:0 auto;display:flex;flex-direction:column;overflow-y:auto;padding:calc(env(safe-area-inset-top,0px)) 0 calc(88px + env(safe-area-inset-bottom,0px))}.trimh{display:flex;align-items:center;gap:8px;padding:10px 8px;flex-shrink:0}.trimh h2{font-size:20px;font-weight:500}.trimh button{background:none;border:0;color:#fff;cursor:pointer;padding:8px;border-radius:50%;display:flex}.trimh .material-symbols-outlined{font-size:26px}.trimpg.show{z-index:130}'
     +'.trimv{min-height:0;position:relative;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center;flex:1 1 0;min-height:200px}.trimv video{max-width:100%;max-height:100%;display:block}'
     +'.trimpl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:none;border:0;color:#fff;cursor:pointer}.trimpl span{font-size:48px;background:rgba(0,0,0,.5);border-radius:50%;padding:8px}.trimpl.hid span{opacity:0}'
     +'.tbar{flex:0 0 56px;position:relative;height:56px;min-height:56px;margin:30px 28px 0;overflow:visible;touch-action:none;user-select:none}.tstrip{position:absolute;inset:0;display:flex;overflow:hidden;border-radius:6px;background:#111}.tdim{position:absolute;top:0;bottom:0;background:rgba(0,0,0,.65);pointer-events:none}.tdim.l{left:0;border-radius:6px 0 0 6px}.tdim.r{right:0;border-radius:0 6px 6px 0}.tstrip canvas{flex:1;min-width:0;height:100%;display:block;object-fit:cover}'
@@ -4721,7 +4793,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   document.head.appendChild(trimSt);
   const tFmt=t=>{ t=Math.max(0,t); const m=Math.floor(t/60), s=t-m*60; return m+':'+(s<10?'0':'')+s.toFixed(1); };
   const trimB=document.createElement('div'); trimB.className='trimpg'; trimB.id='cmTrimBack';
-  trimB.innerHTML='<div class="trimb"><div class="abar" style="background:#000"><span class="material-symbols-outlined" id="trimBack" style="cursor:pointer" role="button" aria-label="Close">close</span><span class="ttl2">Trim Video</span><button class="evsave" id="trimOk" type="button">Done</button></div><div class="trimv"><video playsinline preload="auto"></video><button type="button" class="trimpl" aria-label="Play"><span class="material-symbols-outlined">play_arrow</span></button></div>'
+  trimB.innerHTML='<div class="trimb"><div class="abar" style="background:#000"><span class="material-symbols-outlined" id="trimBack" style="cursor:pointer" role="button" aria-label="Close">close</span><span class="ttl2">Trim Video</span><div id="trimTools"><button type="button" id="trRR" aria-label="Rotate"><span class="material-symbols-outlined">rotate_right</span></button><button type="button" id="trFl" aria-label="Flip"><span class="material-symbols-outlined">flip</span></button></div><button class="evsave" id="trimOk" type="button" style="margin-left:10px">Done</button></div><div class="trimv"><video playsinline preload="auto"></video><button type="button" class="trimpl" aria-label="Play"><span class="material-symbols-outlined">play_arrow</span></button></div>'
     +'<div class="tbar"><div class="tstrip"></div><div class="tsel"><div class="th l"></div><div class="th r"></div></div><div class="tph"></div></div>'
     +'<div class="tinf"><span>Start <b id="tS">0:00.0</b></span><span id="tL">Length 0:00.0</span><span>End <b id="tE">0:00.0</b></span></div>'
     +'<div class="tnote">Video must be 1 minute or shorter.</div><div class="tprog"><div><i></i></div><span>Trimming…</span></div>'
@@ -4731,8 +4803,20 @@ function askDelete(title,cb,yesLabel,slideSel){
         tHl=trimB.querySelector('.th.l'), tHr=trimB.querySelector('.th.r'), tS=trimB.querySelector('#tS'), tE=trimB.querySelector('#tE'), tL=trimB.querySelector('#tL'),
         tOk=trimB.querySelector('#trimOk'), tNo=trimB.querySelector('#trimBack'), tProg=trimB.querySelector('.tprog');
   let tc=null;   // {file,url,dur,s,e,s0,e0,edit,busy,abort,done}
-  const tDirty=()=>{ if(!tc) return false; const tol=Math.max(.049,2*tc.dur/Math.max(1,tBar.clientWidth)); return Math.abs(tc.s-tc.s0)>tol||Math.abs(tc.e-tc.e0)>tol; };   // ২ pixel-এর মধ্যে ফিরলেই আগের অবস্থা ধরা হয়   // handle নড়িয়ে আবার আগের জায়গায় ফিরলে আর edited নয়
+  const tDirty=()=>{ if(!tc) return false; const tol=Math.max(.049,2*tc.dur/Math.max(1,tBar.clientWidth)); return Math.abs(tc.s-tc.s0)>tol||Math.abs(tc.e-tc.e0)>tol||(tc.rot|0)!==(tc.rot0|0)||!!tc.fl!==!!tc.fl0; };   // ২ pixel-এর মধ্যে ফিরলেই আগের অবস্থা ধরা হয়   // handle নড়িয়ে আবার আগের জায়গায় ফিরলে আর edited নয়
   { const st=document.createElement('style'); st.textContent='body:has(#cmTrimBack.show) .dlg-back.show{z-index:140}'; document.head.appendChild(st); }
+  // thumbnail strip-এও rotate/flip দেখায়: প্রতিটি ছোট ফ্রেমের আসল কপি রেখে ঘুরিয়ে আবার আঁকা হয়
+  let tThumbs=[], tCvs=[];
+  const tStripT=(only)=>{ if(!tc||tc.audio) return; const r=tc.rot|0, f=tc.fl?-1:1;
+    tCvs.forEach((c,k)=>{ if(only!=null&&only!==k) return; const o=tThumbs[k]; if(!o) return; const x=c.getContext('2d'); x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,56,56); x.translate(28,28); x.rotate(r*Math.PI/2); x.scale(f,1); x.drawImage(o,-28,-28); }); };
+  // ---- Video rotate (৯০° ডান) ও flip: preview-তে CSS transform, Done/Save-এ canvas দিয়ে ভিডিওতে বসে ----
+  const tFit=()=>{ if(!tc||tc.audio){ tV.style.cssText=''; return; } const vw=tV.videoWidth, vh=tV.videoHeight, r=tc.rot|0, odd=r%2===1;
+    tV.style.transform=(r||tc.fl)?('rotate('+(r*90)+'deg) scaleX('+(tc.fl?-1:1)+')'):'';
+    if(odd&&vw&&vh){ const bx=tV.parentNode, cw=bx.clientWidth, ch=bx.clientHeight, k=Math.min(cw/vh,ch/vw,1); tV.style.maxWidth='none'; tV.style.maxHeight='none'; tV.style.flex='none'; tV.style.width=(vw*k)+'px'; tV.style.height=(vh*k)+'px'; }
+    else{ tV.style.maxWidth=''; tV.style.maxHeight=''; tV.style.flex=''; tV.style.width=''; tV.style.height=''; } tStripT(); };
+  trimB.querySelector('#trRR').onclick=e=>{ e.stopPropagation(); if(!tc||tc.busy||tc.audio) return; tc.rot=((tc.rot|0)+1)%4; tFit(); tPaint(); };
+  trimB.querySelector('#trFl').onclick=e=>{ e.stopPropagation(); if(!tc||tc.busy||tc.audio) return; tc.fl=!tc.fl; tFit(); tPaint(); };
+  tV.addEventListener('loadedmetadata',tFit); addEventListener('resize',tFit);
   const tMin=1;   // সর্বনিম্ন range ১ সেকেন্ড: দুই handle কখনও একে অপরের ভেতরে ঢুকবে না (handle দুটো selection-এর দুই পাশে বাইরে বসে)
   const tDl=document.createElement('div'), tDr=document.createElement('div'); tDl.className='tdim l'; tDr.className='tdim r'; tBar.insertBefore(tDl,tSel); tBar.insertBefore(tDr,tSel);
   const tSlop=document.createElement('div'); tSlop.className='tslop'; tBar.insertBefore(tSlop,tBar.firstChild);   // Hit slop: playhead সরাসরি না ধরেও strip-এর উপর-নিচের এই অদৃশ্য জায়গায় টাচ করে playhead নড়ানো যায়
@@ -4834,11 +4918,11 @@ function askDelete(title,cb,yesLabel,slideSel){
     go(e); const up=()=>{ tBar.removeEventListener('pointermove',go); tBar.removeEventListener('pointerup',up); tBar.removeEventListener('pointercancel',up); };
     tBar.addEventListener('pointermove',go); tBar.addEventListener('pointerup',up); tBar.addEventListener('pointercancel',up); });
   const tStripBuild=(url,dur,tok)=>{ tStrip.innerHTML=''; const N=10, vv=document.createElement('video'); vv.muted=true; vv.preload='auto'; vv.playsInline=true; vv.src=url; let i=0;
-    const cvs=[]; for(let k=0;k<N;k++){ const c=document.createElement('canvas'); c.width=56; c.height=56; tStrip.appendChild(c); cvs.push(c); }
+    const cvs=[]; tThumbs=[]; tCvs=cvs; for(let k=0;k<N;k++){ const c=document.createElement('canvas'); c.width=56; c.height=56; tStrip.appendChild(c); cvs.push(c); }
     const next=()=>{ if(!tc||tc.tok!==tok||i>=N){ vv.removeAttribute('src'); try{ vv.load(); }catch(_){} return; } vv.currentTime=Math.min(dur-.05,(i+.5)*dur/N); };
-    vv.addEventListener('seeked',()=>{ try{ const c=cvs[i], x=c.getContext('2d'), w=vv.videoWidth||56, h=vv.videoHeight||56, sc=Math.max(56/w,56/h); x.drawImage(vv,(56-w*sc)/2,(56-h*sc)/2,w*sc,h*sc); }catch(_){} i++; next(); });
+    vv.addEventListener('seeked',()=>{ try{ const c=cvs[i], x=c.getContext('2d'), w=vv.videoWidth||56, h=vv.videoHeight||56, sc=Math.max(56/w,56/h); x.drawImage(vv,(56-w*sc)/2,(56-h*sc)/2,w*sc,h*sc); const o=document.createElement('canvas'); o.width=o.height=56; o.getContext('2d').drawImage(c,0,0); tThumbs[i]=o; tStripT(i); }catch(_){} i++; next(); });
     vv.addEventListener('loadeddata',next); vv.addEventListener('error',()=>{}); };
-  const trimShut=(keepUrl)=>{ if(!tc) return; const c=tc; tc=null; tV.pause(); tV.removeAttribute('src'); try{ tV.load(); }catch(_){} trimB.classList.remove('show'); tProg.style.display='none'; if(!keepUrl&&!c.edit){ try{ URL.revokeObjectURL(c.url); }catch(_){} } };
+  const trimShut=(keepUrl)=>{ if(!tc) return; const c=tc; tc=null; tV.pause(); tV.removeAttribute('src'); tV.style.cssText=''; try{ tV.load(); }catch(_){} trimB.classList.remove('show'); tProg.style.display='none'; if(!keepUrl&&!c.edit){ try{ URL.revokeObjectURL(c.url); }catch(_){} } };
   // Close: handle নড়ানো থাকলে Discard dialog (নতুন বাছাই = "Discard this selection?", Edit = "Discard this edit?"); আগের অবস্থায় থাকলে dialog ছাড়াই বন্ধ
   const tClose=()=>{ if(!tc) return; if(tc.busy){ tc.abort=true; return; } if(!tDirty()){ trimShut(false); return; } tV.pause(); const c=tc; askDelete(c.edit?'Discard this edit?':(c.audio?'Discard this audio?':'Discard this video?'),()=>{ if(tc===c) trimShut(false); },'Discard'); };
   tNo.onclick=tClose;
@@ -4849,29 +4933,35 @@ function askDelete(title,cb,yesLabel,slideSel){
     if(old&&free(old)){ try{ URL.revokeObjectURL(old); }catch(_){} }
     if(oldTr&&oldTr.out===old&&oldTr.url!==c.url&&oldTr.url!==old&&isB(oldTr.url)&&!own(oldTr.url)&&oldTr.url!==src2){ try{ URL.revokeObjectURL(oldTr.url); }catch(_){} }
     setAtt({k:c.audio?'voice':'video',src:src2,dur:dur2,blob:blob});
-    cmAttTr={file:c.file,url:c.url,dur:c.dur,s:c.s,e:c.e,audio:c.audio,out:src2}; };
+    cmAttTr={file:c.file,url:c.url,dur:c.dur,s:c.s,e:c.e,rot:c.rot|0,fl:!!c.fl,audio:c.audio,out:src2}; };
   // comment box-এর edit icon (video / audio): আসল ফাইল + আগের trim range নিয়ে Edit window খোলে
   function openTrimEdit(){
     if(!cmAtt||cmBlocked||(cmAtt.k!=='video'&&cmAtt.k!=='voice')) return;
     const a=cmAtt, audio=a.k==='voice', tr=(cmAttTr&&cmAttTr.out===a.src)?cmAttTr:null;
-    const go=(file,url,dur,s,e)=>{ if(!isFinite(dur)||dur<=0){ toast('Could not open this file'); return; } openTrim(file,url,dur,audio,{s:s,e:e}); };
-    if(tr){ go(tr.file,tr.url,tr.dur,tr.s,tr.e); return; }
+    const go=(file,url,dur,s,e,rot,fl)=>{ if(!isFinite(dur)||dur<=0){ toast('Could not open this file'); return; } openTrim(file,url,dur,audio,{s:s,e:e,rot:rot|0,fl:!!fl}); };
+    if(tr){ go(tr.file,tr.url,tr.dur,tr.s,tr.e,tr.rot,tr.fl); return; }
     const dur=+a.dur||0, blob=(window.__cmBlobs||{})[a.src];
     if(blob){ go(blob,a.src,dur,0,Math.min(dur,MAXSEC)); return; }
     fetch(a.src).then(r=>r.blob()).then(b=>go(b,a.src,dur,0,Math.min(dur,MAXSEC))).catch(()=>toast('Could not open this file')); }
-  function openTrim(f,url,d,audio,ed){ const s0=ed?ed.s:0, e0=ed?ed.e:Math.min(d,MAXSEC); tc={file:f,url:url,dur:d,s:s0,e:e0,s0:s0,e0:e0,edit:!!ed,busy:false,abort:false,audio:!!audio,tok:Math.random()};
+  function openTrim(f,url,d,audio,ed){ const s0=ed?ed.s:0, e0=ed?ed.e:Math.min(d,MAXSEC); tc={file:f,url:url,dur:d,s:s0,e:e0,s0:s0,e0:e0,rot:ed?(ed.rot|0):0,fl:!!(ed&&ed.fl),rot0:ed?(ed.rot|0):0,fl0:!!(ed&&ed.fl),edit:!!ed,busy:false,abort:false,audio:!!audio,tok:Math.random()};
     trimB.classList.toggle('taud',!!audio); tTtl.textContent=audio?'Trim Audio':'Trim Video'; tNote.textContent=audio?'Audio must be 1 minute or shorter.':'Video must be 1 minute or shorter.';
-    tV.src=url; tV.currentTime=tc.s; tOk.textContent=ed?'Save':'Done'; tSetPlay(false); tMuteIcon(); tProg.style.display='none'; trimB.classList.add('show'); tPaint();
+    tV.src=url; tV.currentTime=tc.s; tOk.textContent=ed?'Save':'Done'; tSetPlay(false); tMuteIcon(); tProg.style.display='none'; trimB.classList.add('show'); tFit(); tPaint();
     if(audio){ tStrip.innerHTML=''; tWaveLoad(f,d,tc.tok); if(!tRaf) tRaf=requestAnimationFrame(tWvLoop); } else tStripBuild(url,d,tc.tok); }
   const trimEncode=(c,onP)=>new Promise((res,rej)=>{
     const v=document.createElement(c.audio?'audio':'video'); v.src=c.url; v.playsInline=true; v.preload='auto'; let rec=null, ac=null, fin=false, timer=0;
-    const clean=()=>{ clearInterval(timer); try{ v.pause(); }catch(_){} try{ if(ac) ac.close(); }catch(_){} v.removeAttribute('src'); };
+    let clean=()=>{ clearInterval(timer); try{ v.pause(); }catch(_){} try{ if(ac) ac.close(); }catch(_){} v.removeAttribute('src'); };
     const fail=m=>{ if(fin) return; fin=true; clean(); rej(new Error(m)); };
     v.addEventListener('error',()=>fail('read'));
     v.addEventListener('loadedmetadata',()=>{ v.currentTime=c.s; },{once:true});
     v.addEventListener('seeked',()=>{ if(rec) return;
       try{ const cap=v.captureStream||v.mozCaptureStream; if(!cap||typeof MediaRecorder==='undefined') return fail('unsupported');
         const st=cap.call(v); let tr=c.audio?[]:st.getVideoTracks();
+        if(!c.audio&&(c.rot||c.fl)){   // rotate/flip: ফ্রেম canvas-এ ঘুরিয়ে এঁকে সেই canvas-এর stream record করা হয়
+          const vw=v.videoWidth||640, vh=v.videoHeight||360, odd=(c.rot|0)%2===1, K=Math.min(1,1280/Math.max(vw,vh)), dw=vw*K, dh=vh*K,
+            W=Math.max(2,Math.round((odd?dh:dw)/2)*2), H=Math.max(2,Math.round((odd?dw:dh)/2)*2), cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+          const g=cv.getContext('2d'), draw=()=>{ g.setTransform(1,0,0,1,0,0); g.fillStyle='#000'; g.fillRect(0,0,W,H); g.translate(W/2,H/2); g.rotate((c.rot|0)*Math.PI/2); g.scale(c.fl?-1:1,1); try{ g.drawImage(v,-dw/2,-dh/2,dw,dh); }catch(_){} };
+          draw(); const dt=setInterval(draw,33); const _cl=clean; clean=()=>{ clearInterval(dt); _cl(); };
+          tr=cv.captureStream(30).getVideoTracks(); }
         try{ ac=new (window.AudioContext||window.webkitAudioContext)(); const src=ac.createMediaElementSource(v), dst=ac.createMediaStreamDestination(); src.connect(dst); tr=tr.concat(dst.stream.getAudioTracks()); }catch(_){ tr=tr.concat(st.getAudioTracks()); }
         const mt=(c.audio?['audio/mp4;codecs=mp4a.40.2','audio/webm;codecs=opus','audio/webm']:['video/mp4;codecs=avc1','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm']).find(t=>{ try{ return MediaRecorder.isTypeSupported(t); }catch(_){ return false; } })||'';
         const ch=[]; rec=new MediaRecorder(new MediaStream(tr),mt?(c.audio?{mimeType:mt,audioBitsPerSecond:128000}:{mimeType:mt,videoBitsPerSecond:2500000}):undefined);
@@ -4884,7 +4974,7 @@ function askDelete(title,cb,yesLabel,slideSel){
       }catch(e){ fail('unsupported'); } });
   });
   tOk.onclick=()=>{ if(!tc||tc.busy) return; if(tc.edit&&!tDirty()) return; const c=tc, len=c.e-c.s; if(len>MAXSEC+.05||len<Math.min(tMin,tc.dur)-.01) return;
-    if(c.s<=.05&&c.e>=c.dur-.05&&c.dur<=MAXSEC+.5){ tApply(c,c.url,c.dur,c.file); return; }   // পুরো ভিডিও (≤1 মিনিট): re-encode ছাড়াই
+    if(!c.rot&&!c.fl&&c.s<=.05&&c.e>=c.dur-.05&&c.dur<=MAXSEC+.5){ tApply(c,c.url,c.dur,c.file); return; }   // পুরো ভিডিও (≤1 মিনিট): re-encode ছাড়াই
     c.busy=true; tV.pause(); tOk.disabled=true; tProg.style.display='block'; const bar=tProg.querySelector('i'), lb=tProg.querySelector('span'); bar.style.width='0'; lb.textContent='Trimming… keep this window open';
     trimEncode(c,p=>{ bar.style.width=Math.round(p*100)+'%'; lb.textContent='Trimming… '+Math.round(p*100)+'%'; }).then(b=>{ const u=URL.createObjectURL(b); c.busy=false; tApply(c,u,len,b); })
       .catch(er=>{ if(!tc||tc!==c) return; c.busy=false; c.abort=false; tProg.style.display='none'; tPaint(); if(er&&er.message!=='abort') toast(er.message==='unsupported'?'Trimming is not supported in this browser':(c.audio?'Could not trim this audio':'Could not trim this video')); });
@@ -4935,7 +5025,7 @@ function askDelete(title,cb,yesLabel,slideSel){
       (im._b?Promise.resolve(im._b):dataBlob(im._orig).then(b=>im._b=b)).then(b=>{
         if(!el._on||!el.isConnected) return; if(im._u) URL.revokeObjectURL(im._u); im._u=URL.createObjectURL(b); im.src=im._u; }).catch(()=>{});   // নতুন URL → GIF শুরু থেকে চলে
     }else{
-      const v=el.querySelector('video'); try{ v.currentTime=0; }catch(e){} const pr=v.play(); if(pr&&pr.catch) pr.catch(()=>{});
+      /* video: scroll করলে autoplay হয় না (প্রথম frame স্থির থাকে); শুধু GIF চলে */
     }
   }
   function cmStop(el){
@@ -5187,11 +5277,11 @@ function askDelete(title,cb,yesLabel,slideSel){
           const x=curX(); if(!x){ return; }
           if(inf.rid){
             const c=x.cmts.find(y=>y.id===inf.cid), f=c&&findR(c.reps,inf.rid);
-            if(f){ if(cmReplyTo&&(cmReplyTo===inf.rid||findR(f.r.reps,cmReplyTo))) resetIn(); if(cmEdit&&(cmEdit.o===f.r||findR(f.r.reps,cmEdit.o.id))) resetIn(); if(f.r.del) f.list.splice(f.list.indexOf(f.r),1); else softDel(f.r); saveC(); }
+            if(f){ if(cmReplyTo&&(cmReplyTo===inf.rid||findR(f.r.reps,cmReplyTo))) resetIn(); if(cmEdit&&(cmEdit.o===f.r||findR(f.r.reps,cmEdit.o.id))) resetIn(); f.list.splice(f.list.indexOf(f.r),1); saveC(); }
             drawCm(); toast('Reply removed');
           } else {
             if(PINS.has(pinT(),inf.cid)) PINS.toggle(pinT(),inf.cid);
-            const sc=x.cmts.find(y=>y.id===inf.cid), wasDel=!sc||!!sc.del; if(sc&&!sc.del) softDel(sc); else x.cmts=x.cmts.filter(y=>y.id!==inf.cid); saveC();
+            const sc=x.cmts.find(y=>y.id===inf.cid), wasDel=true; x.cmts=x.cmts.filter(y=>y.id!==inf.cid); saveC();
             if(cmMode==='rep'&&wasDel) setMode('list'); else drawCm(); drawPosts(); toast('Comment removed');
           }
         },190);
@@ -5235,7 +5325,7 @@ function askDelete(title,cb,yesLabel,slideSel){
 
   // তিন ডট মেনু: Edit / Delete (কমেন্ট ও রিপ্লাই দুটোর জন্য)
   const cp=document.createElement('div'); cp.className='popup';
-  cp.innerHTML='<button data-k="reply"><span class="material-symbols-outlined">reply</span><span class="lbl">Reply</span></button><button data-k="pin"><span class="material-symbols-outlined">push_pin</span><span class="lbl">Pin</span></button><button data-k="edit"><span class="material-symbols-outlined">edit</span>Edit</button><button data-k="hist" style="display:none"><span class="material-symbols-outlined">history</span>Edit history</button><button data-k="copy"><span class="material-symbols-outlined">content_copy</span>Copy</button><button data-k="share"><span class="material-symbols-outlined">share</span>Share</button><button data-k="del"><span class="material-symbols-outlined">delete</span>Delete</button><button data-k="info" style="display:none"><span class="material-symbols-outlined">info</span>Info</button>';
+  cp.innerHTML='<button data-k="reply"><span class="material-symbols-outlined">reply</span><span class="lbl">Reply</span></button><button data-k="pin"><span class="material-symbols-outlined">push_pin</span><span class="lbl">Pin</span></button><button data-k="edit"><span class="material-symbols-outlined">edit</span>Edit</button><button data-k="hist" style="display:none"><span class="material-symbols-outlined">history</span>Edit history</button><button data-k="copy"><span class="material-symbols-outlined">content_copy</span>Copy</button><button data-k="share"><span class="material-symbols-outlined">share</span>Share</button><button data-k="hide"><span class="material-symbols-outlined">visibility_off</span><span class="lbl">Hide</span></button><button data-k="del"><span class="material-symbols-outlined">delete</span>Delete</button><button data-k="info" style="display:none"><span class="material-symbols-outlined">info</span>Info</button>';
   document.body.appendChild(cp);
   let cpO=null;   // {cid, rid}
   const closeCP=()=>cp.classList.remove('show');
@@ -5316,15 +5406,26 @@ function askDelete(title,cb,yesLabel,slideSel){
     { const po=e.target.closest('.cmpoll .plo'); if(po){ const th=po.closest('.thr[data-cid]'), x0=curX(), c0=x0&&th&&x0.cmts.find(y=>String(y.id)===String(th.dataset.cid));
         if(c0&&!c0.del&&c0.att&&c0.att.poll){ const p=c0.att.poll, i=+po.dataset.pi; if(p.my>=0) return; p.my=i; saveC(); po.closest('.cmpoll').innerHTML=pollInner(p); } return; }
       if(e.target.closest('.cmpoll')) return; }
-    const cmMainSeq=k=>{ const x=curX(); if(!x) return false;
-      const cs=PINS.first(pinT(),sortedC(x)).filter(c=>!c.del&&c.att&&c.att.src&&(k==='img'?(c.att.k==='photo'||c.att.k==='gif'):c.att.k==='video'));
-      const at=cs.findIndex(c=>String(c.id)===String(cmOpen)); if(at<0) return false;
-      if(k==='img') window.openPhotoViewer(cs[at].att.src,cs.map(c=>c.att.src),at);
-      else window.openVideoViewer(cs[at].att.src,+cs[at].att.dur||0,cs[at].att.bid||'',undefined,{list:cs.map(c=>({src:c.att.src,dur:+c.att.dur||0,bid:c.att.bid||''})),at:at});
+    const cmAttMeta=n=>{ const rp=n.closest('.cmi[data-rid]'); if(rp){ const rid=rp.dataset.rid, cid=cmOpen; return {lbl:'Show in replies',go:()=>window.__cmShowIn({c:cid,r:true,id:rid})}; }
+      const th=n.closest('.thr[data-cid]'), cid=th?th.dataset.cid:cmOpen; return {lbl:'Show in comments',go:()=>window.__cmShowIn({c:cid,r:false,id:cid})}; };
+    // Replies page: minimize করা (লুকানো) sub reply-র photo / GIF / video-ও swipe তালিকায় থাকে — DOM নয়, data থেকে দেখানোর ক্রমে তালিকা বানানো হয়
+    const repSeq=el=>{ const x=curX(); if(!x||!inRep||cmBody.classList.contains('flat')) return false; const oc=x.cmts.find(y=>y.id===cmOpen); if(!oc) return false;
+      const ci=el.closest('.cmi[data-rid]'); if(!ci) return false; const rid0=String(ci.dataset.rid);
+      const ord=[], topOf=new Map(); sortedR(oc.reps).forEach(r=>{ ord.push(r); topOf.set(r.id,r); (function fl(a){ a.forEach(q=>{ ord.push(q); topOf.set(q.id,r); fl(q.reps); }); })(r.reps); });
+      const hidS=new Set(); const mkH=r=>{ hidS.add(r.id); (r.reps||[]).forEach(mkH); }; ord.forEach(r=>{ if(r.hid) mkH(r); });   // Hide করা reply ও তার নিচের sub reply swipe-এ আসবে না
+      const L=ord.filter(r=>!r.del&&!hidS.has(r.id)&&r.att&&r.att.src&&(r.att.k==='photo'||r.att.k==='gif'||r.att.k==='video'));
+      const at=L.findIndex(r=>String(r.id)===rid0); if(at<0) return false;
+      const cid=oc.id;
+      window.__openMixList(L.map(r=>({k:r.att.k==='video'?'video':'photo',src:r.att.src,dur:+r.att.dur||0,bid:r.att.bid||'',lbl:'Show in replies',go:()=>window.__cmShowIn({c:cid,r:true,id:r.id}),back:()=>{ const q='[data-rid="'+r.id+'"]'; let el=cmBody.querySelector(q); if(!el){ const tp=topOf.get(r.id); if(tp&&cmColl.has(String(tp.id))){ cmColl.delete(String(tp.id)); drawCm(); el=cmBody.querySelector(q); } } if(el){ const rc=el.getBoundingClientRect(); if(rc.top<56||rc.bottom>innerHeight-8) el.scrollIntoView({block:'center'}); } }})),at);
       return true; };
-    { const pvI=e.target.closest('.cmatt img[data-pv]'); if(pvI){ if(inRep&&!isRepAtt(pvI)){ if(!cmMainSeq('img')) window.openPhotoViewer(pvI._orig||pvI.currentSrc||pvI.src); return; } window.__openImgSeq(cmBody,pvI,repFlt); return; } }
-    { const gf=e.target.closest('.cmatt.cmgif'); if(gf){ const im=gf.querySelector('img'); if(im){ if(inRep&&!isRepAtt(im)){ if(!cmMainSeq('img')) window.openPhotoViewer(im._orig||im.src); return; } window.__openImgSeq(cmBody,im,repFlt); } return; } }
-    { const vv=e.target.closest('.cmatt.cmvid'); if(vv){ if(inRep&&!isRepAtt(vv)){ if(!cmMainSeq('vid')){ const v=vv.querySelector('video'); window.openVideoViewer(String((v&&v.getAttribute('src'))||'').split('#')[0],+vv.dataset.dur||0,vv.dataset.bid||''); } return; } window.__openVidSeq(cmBody,vv,repFlt); return; } }
+    const cmMainSeq=k=>{ const x=curX(); if(!x) return false;
+      const cs=PINS.first(pinT(),sortedC(x)).filter(c=>!c.del&&!c.hid&&c.att&&c.att.src&&(c.att.k==='photo'||c.att.k==='gif'||c.att.k==='video'));   // photo + video একসাথে
+      const at=cs.findIndex(c=>String(c.id)===String(cmOpen)); if(at<0) return false;
+      window.__openMixList(cs.map(c=>({k:c.att.k==='video'?'video':'photo',src:c.att.src,dur:+c.att.dur||0,bid:c.att.bid||'',lbl:'Show in comments',go:()=>window.__cmShowIn({c:c.id,r:false,id:c.id})})),at);
+      return true; };
+    { const pvI=e.target.closest('.cmatt img[data-pv]'); if(pvI){ if(inRep&&!isRepAtt(pvI)){ if(!cmMainSeq('img')) window.openPhotoViewer(pvI._orig||pvI.currentSrc||pvI.src); return; } if(repSeq(pvI)) return; window.__openMixSeq(cmBody,pvI,repFlt,cmAttMeta); return; } }
+    { const gf=e.target.closest('.cmatt.cmgif'); if(gf){ const im=gf.querySelector('img'); if(im){ if(inRep&&!isRepAtt(im)){ if(!cmMainSeq('img')) window.openPhotoViewer(im._orig||im.src); return; } if(repSeq(im)) return; window.__openMixSeq(cmBody,im,repFlt,cmAttMeta); } return; } }
+    { const vv=e.target.closest('.cmatt.cmvid'); if(vv){ if(inRep&&!isRepAtt(vv)){ if(!cmMainSeq('vid')){ const v=vv.querySelector('video'); window.openVideoViewer(String((v&&v.getAttribute('src'))||'').split('#')[0],+vv.dataset.dur||0,vv.dataset.bid||''); } return; } if(repSeq(vv)) return; window.__openMixSeq(cmBody,vv,repFlt,cmAttMeta); return; } }
     if(e.target.closest('a.cmlink,.cmatt')) return;   // লিংকে চাপলে শুধু লিংক খুলবে (expand / reply screen নয়)
     if(e.target.closest('.cav2')){ guardReply(()=>openPr()); return; }   // লেখা/edit অসমাপ্ত থাকলে আগে Discard dialog
     { const ex=e.target.closest('.rpl[data-exp]'); if(ex&&cmMode==='rep'&&!cmSelMode){ cmColl.delete(String(ex.dataset.exp)); drawCm(); return; }   // "N replies" চাপলে আবার সব sub reply দেখায়
@@ -5349,7 +5450,10 @@ function askDelete(title,cb,yesLabel,slideSel){
     { const oo2=rid?(findR(c.reps,rid)||{}).r:c, hasT=!!(oo2&&String(oo2.txt||'').trim()); ['copy','share'].forEach(k=>{ const b=cp.querySelector('[data-k="'+k+'"]'); if(b) b.style.display=hasT?'':'none'; }); }   // Edit history শুধু edited হলে
       { const oo3=rid?(findR(c.reps,rid)||{}).r:c, dl=!!(oo3&&oo3.del), q=k=>cp.querySelector('[data-k="'+k+'"]');   // deleted কমেন্ট/রিপ্লাই (শুধু admin দেখে): মেনুতে শুধু Edit history, Delete, Info
         ['reply','pin','copy','share'].forEach(k=>{ if(dl) q(k).style.display='none'; }); q('edit').style.display=dl?'none':''; if(dl) q('hist').style.display=''; q('info').style.display='';
-        { const ad=!dl&&!!rid&&ancDel(c,rid); ['reply','edit'].forEach(k=>{ const b=q(k); b.disabled=ad; b.classList.toggle('cpdis',ad); }); } }
+        { const ad=!dl&&!!rid&&ancDel(c,rid); ['reply','edit'].forEach(k=>{ const b=q(k); b.disabled=ad; b.classList.toggle('cpdis',ad); }); }
+        if(cmBlocked&&!dl){ ['reply','edit'].forEach(k=>{ const b=q(k); b.disabled=true; b.classList.add('cpdis'); }); }
+        { const hb=q('hide'), hd=!!(oo3&&oo3.hid); hb.style.display=dl?'none':''; hb.querySelector('.lbl').textContent=hd?'Unhide':'Hide'; hb.querySelector('.material-symbols-outlined').textContent=hd?'visibility':'visibility_off';
+          if(hd&&!dl){ ['reply','edit'].forEach(k=>{ const b=q(k); b.disabled=true; b.classList.add('cpdis'); }); ['copy','share','hist'].forEach(k=>{ q(k).style.display='none'; }); } } }   // Block from Comments: Reply / Edit disable
       const r=mb.getBoundingClientRect(), w=cp.offsetWidth, h=cp.offsetHeight;
       let left=Math.max(8,Math.min(r.right+8,innerWidth-8)-w), top=r.bottom+4;
       if(top+h>innerHeight-16) top=Math.max(8,r.top-h-4);
@@ -5375,6 +5479,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   // Edit comment / Edit reply: Add reply-র মতোই নিচের ইনলাইন বক্সে (লেখা আগে থেকে ভরা থাকে)
   function startEdit(o,isReply){
     const x=curX(); if(!x) return;
+    if(cmBlocked){ toast('Blocked from commenting'); return; }
     if(isReply){ const oc0=x.cmts.find(y=>y.id===cmOpen); if(oc0&&ancDel(oc0,o.id)) return; }
     const go=()=>{
       cmReplyTo=null; cmEdit={o,isReply}; drawCm(); cmAtt=o.att?{k:o.att.k,src:o.att.src,dur:o.att.dur,bid:o.att.bid,name:o.att.name,icon:o.att.icon,logo:o.att.logo,giphy:o.att.giphy,poll:o.att.poll}:null; cmAttOrig=null; drawPrev();
@@ -5414,27 +5519,28 @@ function askDelete(title,cb,yesLabel,slideSel){
     const a=[]; if(o.del) a.push({del:true,delTxt:isReply?'Reply deleted':'Comment deleted',at:o.del,cur:true});
     a.push({txt:o.txt,att:o.att,at:o.posted,cur:!o.del});
     (o.hist||[]).slice().reverse().forEach(z=>a.push({txt:z.txt,att:z.att,at:z.at}));
-    ehOpen(a);
+    ehOpen(a,{c:isReply?cmOpen:o.id,r:!!isReply,id:o.id});
   }
   // Info (শুধু deleted কমেন্ট/রিপ্লাইয়ে): Sended / Edited (edit হলে) / Deleted
   function cmInfo(o,isReply,main){
     $('infoT').textContent=isReply?'Reply info':'Comment info';
-    const nR=rTot(o.reps||[]), nA=(function w(l){ return (l||[]).reduce((n,r)=>n+(r.del?0:((r.att&&r.att.src)?1:0))+w(r.reps),0); })(o.reps), nL=likeN(o), nD=disN(o); $('infoB').innerHTML=(main?nR+(nR<=1?' reply':' replies')+'<br>'+nA+(nA<=1?' attachment':' attachments')+'<br>':'')+nL+(nL<=1?' like':' likes')+'<br>'+nD+(nD<=1?' dislike':' dislikes')+'<br>Sent: '+esc(fmtFull(o.t0||o.posted))+(o.ed?'<br>Edited: '+esc(fmtFull(o.posted)):'')+(o.del?'<br>Deleted: '+esc(fmtFull(o.del)):'');
+    const nR=rTot(o.reps||[]), nA=(function w(l){ return (l||[]).reduce((n,r)=>n+(r.del?0:((r.att&&r.att.src)?1:0))+w(r.reps),0); })(o.reps), nL=likeN(o), nD=disN(o); $('infoB').innerHTML=(main?nR+(nR<=1?' reply':' replies')+'<br>'+nA+(nA<=1?' attachment':' attachments')+'<br>':'')+nL+(nL<=1?' like':' likes')+'<br>'+nD+(nD<=1?' dislike':' dislikes')+'<br>Sent: '+esc(fmtFull(o.t0||o.posted))+(o.ed?'<br>Edited: '+esc(fmtFull(o.posted)):'')+(o.del?'<br>Deleted: '+esc(fmtFull(o.del)):(o.hid&&o.hidAt?'<br>Hid: '+esc(fmtFull(o.hidAt)):''));
     $('infoBack').classList.add('show');
   }
   cp.querySelectorAll('button').forEach(b=>b.onclick=()=>{
     const x=curX(), pr=cpO; closeCP(); if(!x||!pr) return;
     const c=x.cmts.find(y=>y.id===pr.cid), o=c&&(pr.rid?(findR(c.reps,pr.rid)||{}).r:c); if(!o) return;
-    if((b.dataset.k==='reply'||b.dataset.k==='edit')&&pr.rid&&ancDel(c,pr.rid)) return;
+    if((b.dataset.k==='reply'||b.dataset.k==='edit')&&((pr.rid&&ancDel(c,pr.rid))||o.hid)) return;
+    if(b.dataset.k==='hide'){ const isR=!!pr.rid, go=()=>{ if(o.hid){ delete o.hid; delete o.hidAt; } else{ o.hid=true; o.hidAt=new Date().toISOString(); if(cmReplyTo&&isR&&(cmReplyTo===o.id||findR(o.reps||[],cmReplyTo))) resetIn(); if(cmEdit&&(cmEdit.o===o||(o.reps&&findR(o.reps,cmEdit.o.id)))) resetIn(); if(!isR&&PINS.has(pinT(),pr.cid)) PINS.toggle(pinT(),pr.cid); if(!isR&&cmMode==='rep'&&cmOpen===o.id) setMode('list'); } saveC(); drawCm(); if(!isR) drawPosts(); }; if(o.hid) go(); else askDelete(isR?'Hide this reply?':'Hide this comment?',go,'Hide'); return; }
     if(b.dataset.k==='reply'){ focusReply(pr.rid); return; }
     if(b.dataset.k==='pin'){ PINS.toggle(pinT(),pr.cid,pinOk(x)); drawCm(); return; }
     if(b.dataset.k==='copy'){ cmCopy(o.txt,'Copied'); return; }
     if(b.dataset.k==='share'){ if(navigator.share){ navigator.share({text:o.txt}).catch(()=>{}); } else cmCopy(o.txt,'Share panel খোলা যায়নি, কপি হয়েছে'); return; }
     if(b.dataset.k==='hist'){ cmHistOpen(o,!!pr.rid); return; }
     if(b.dataset.k==='info'){ cmInfo(o,!!pr.rid,!pr.rid||c.reps.indexOf(o)>=0); return; }
-    if(b.dataset.k==='edit') startEdit(o,!!pr.rid);
-    else if(pr.rid) askDelete(o.del?'Delete this reply permanently?':'Delete this reply?',()=>{ const f=findR(c.reps,pr.rid); if(f){ if(cmReplyTo&&(cmReplyTo===pr.rid||findR(f.r.reps,cmReplyTo))) resetIn(); if(cmEdit&&(cmEdit.o===f.r||findR(f.r.reps,cmEdit.o.id))) resetIn(); if(f.r.del) f.list.splice(f.list.indexOf(f.r),1); else softDel(f.r); } saveC(); drawCm(); },undefined,o.del?'#cmBody [data-rid="'+pr.rid+'"]':undefined);
-    else askDelete(c.del?'Delete this comment permanently?':'Delete this comment?',()=>{ if(PINS.has(pinT(),pr.cid)) PINS.toggle(pinT(),pr.cid); const wasDel=!!c.del; if(wasDel) x.cmts=x.cmts.filter(y=>y.id!==pr.cid); else softDel(c); saveC(); if(cmMode==='rep'&&wasDel) setMode('list'); else drawCm(); drawPosts(); },undefined,c.del?'#cmBody .thr[data-cid="'+pr.cid+'"]':undefined);
+    if(b.dataset.k==='edit'){ if(cmBlocked){ toast('Blocked from commenting'); return; } startEdit(o,!!pr.rid); }
+    else if(pr.rid) askDelete('Delete this reply?',()=>{ const f=findR(c.reps,pr.rid); if(f){ if(cmReplyTo&&(cmReplyTo===pr.rid||findR(f.r.reps,cmReplyTo))) resetIn(); if(cmEdit&&(cmEdit.o===f.r||findR(f.r.reps,cmEdit.o.id))) resetIn(); f.list.splice(f.list.indexOf(f.r),1); } saveC(); drawCm(); },undefined,o.del?'#cmBody [data-rid="'+pr.rid+'"]':undefined);
+    else askDelete('Delete this comment?',()=>{ if(PINS.has(pinT(),pr.cid)) PINS.toggle(pinT(),pr.cid); const wasDel=true; x.cmts=x.cmts.filter(y=>y.id!==pr.cid); saveC(); if(cmMode==='rep'&&wasDel) setMode('list'); else drawCm(); drawPosts(); },undefined,c.del?'#cmBody .thr[data-cid="'+pr.cid+'"]':undefined);
   });
 
   // ---------- Commenter profile window ----------
@@ -5476,8 +5582,8 @@ function askDelete(title,cb,yesLabel,slideSel){
       $('prPost').innerHTML='<span class="prcm" data-w="po">'+pn+(pn<=1?' comment':' comments')+'</span>';
       const ec=+$('subCount').textContent.replace(/,/g,'')||0, tc=videos.length+shorts.length+posts.length;   // Home ট্যাবের মতো subscriber ও contents
       $('prStat').innerHTML='<span class="subtap">'+ec.toLocaleString('en-US')+(ec<=1?' subscriber':' subscribers')+'</span> • '+tc.toLocaleString('en-US')+(tc<=1?' content':' contents'); }
-    $('prBlockT').textContent=cmBlocked?'Unblock from Comments':'Block from Comments';
-    $('prBlockLT').textContent=BLK.lk?'Unblock from likes':'Block from likes'; $('prBlockDT').textContent=BLK.dl?'Unblock from dislikes':'Block from dislikes';
+    $('prBlockT').textContent=cmBlocked?'Unblock from comment':'Block from comment';
+    $('prBlockLT').textContent=BLK.lk?'Unblock from like':'Block from like'; $('prBlockDT').textContent=BLK.dl?'Unblock from dislike':'Block from dislike';
     $('prBlock').style.display=rxm?'none':''; $('prBlockL').style.display=$('prBlockD').style.display=prMode==='rx'?'':'none'; $('prBlockS').style.display=prMode==='sh'?'':'none'; $('prBlockST').textContent=BLK.sh?'Unblock from shares':'Block from shares';
     const a=document.querySelector('.head .avatar'), av=$('prAv');
     if(a&&a.style.backgroundImage){ av.style.backgroundImage=a.style.backgroundImage; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; } else { av.style.backgroundImage=''; }
@@ -5508,7 +5614,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   document.addEventListener('click',e=>{ if(!prPop.contains(e.target)&&e.target.id!=='prMore') prPop.classList.remove('show'); });
   const prToggleBlk=k=>{
     prPop.classList.remove('show');
-    BLK[k]=!BLK[k]; saveBLK(); const w=k==='lk'?'likes':k==='dl'?'dislikes':'shares';
+    BLK[k]=!BLK[k]; saveBLK(); const w=k==='lk'?'like':k==='dl'?'dislike':'shares';
     toast(BLK[k]?'Blocked from '+w:'Unblocked from '+w);
     paintPr(); drawPosts(); if(window.__rxRedraw) window.__rxRedraw();
   };
@@ -5518,7 +5624,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   window.__selDiscard=()=>{ if(cmSelMode&&cmSel.size) cmExitSel(); else if(window.__rxDiscard) window.__rxDiscard(); };
   $('prBlock').onclick=()=>{
     prPop.classList.remove('show');
-    cmBlocked=!cmBlocked; saveBlk(); toast(cmBlocked?'Blocked from comments':'Unblocked from comments');
+    cmBlocked=!cmBlocked; saveBlk(); toast(cmBlocked?'Blocked from comment':'Unblocked from comment');
     paintPr(); if(cmS.classList.contains('show')) drawCm();
   };
   // নিচে সোয়াইপ করে বন্ধ
@@ -5573,7 +5679,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   let rxSeen=null, rxPost=null, rxTab='like', rxSort=0, rxQ='', rxSearch=false, rxMode='name', rxSelMode=false; const rxSel=new Set();
   let rxCm=null; const rxX=()=>rxCm?rxCm.o:posts.find(y=>y.id===rxPost);
   const rxSave=()=>{ if(rxCm){ if(rxCm.cb) rxCm.cb(); } else { savePosts(); drawPosts(); } };
-  const rxLk=x=>rxCm?false:lkOffOf(x), rxDl=x=>rxCm?false:dlOffOf(x);
+  const rxLk=x=>rxCm?false:!!x.lkOff, rxDl=x=>rxCm?false:!!x.dlOff;   // Block from likes / dislikes (BLK) এখানে ধরা হয় না — শুধু post-এর নিজের Likes/Dislikes Off window বন্ধ করে
   const rxCnt=(x,k)=>k==='share'?shc(x):k==='like'?x.l+(x.my==='like'?1:0):x.dl+(x.my==='dislike'?1:0);
   // কে আগে react করেছে সেই ক্রমে (সবচেয়ে আগে যে, সে ১ নম্বরে)
   const rxMatch=e=>String(rxMode==='user'?ME:NAME).toLowerCase().includes(rxQ.toLowerCase());
@@ -5975,30 +6081,34 @@ function askDelete(title,cb,yesLabel,slideSel){
 
   // ---- See attachments: Comments / Replies page-এর সব attachment আলাদা window-এ (Photos | Videos | GIF | Audios) ----
   const atCss=document.createElement('style');
-  atCss.textContent='#atPage{z-index:30}#atPage .wltabs{display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:56px;z-index:2;background:var(--bg);border-bottom:1px solid var(--line)}#atPage .wltabs button{flex:1 0 auto;padding:14px 10px;white-space:nowrap;background:none;border:0;border-bottom:3px solid transparent;color:var(--sub);font-size:15px;font-weight:500;cursor:pointer}#atPage .wltabs button.on{color:#fff;border-bottom-color:#fff}#atPage .wltabs .wlc{color:#777;font-size:12px}#atPage .atg{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:2px}#atPage .atl{position:relative;overflow:hidden;background:#272727;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none}#atPage .atg .atl{aspect-ratio:1/1}#atPage .atl img,#atPage .atl video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}#atPage .atl.au{display:flex;align-items:center;justify-content:center}#atPage .atl.au .material-symbols-outlined{font-size:40px;color:#fff}#atPage .atb{position:absolute;right:4px;bottom:4px;font-style:normal;font-size:11px;font-weight:600;color:#fff;background:rgba(0,0,0,.72);padding:1px 5px;border-radius:4px;pointer-events:none}#atPage .atv{display:flex;gap:2px;padding:2px;align-items:flex-start}#atPage .atv>div{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}#atPage .atl.atlr{display:flex;align-items:center;gap:14px;padding:12px 16px;background:none;border-bottom:1px solid var(--line);overflow:hidden}#atPage .atlr .atli{flex-shrink:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center}#atPage .atlr .atli svg{width:32px;height:32px}#atPage .atlr .atlt{min-width:0;display:flex;flex-direction:column;gap:2px}#atPage .atlr b{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#atPage .atlr i{font-style:normal;font-size:13px;color:#3ea6ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#atPage .atem{padding:60px 16px;text-align:center;color:var(--sub);font-size:15px}';
+  atCss.textContent='#atPage{z-index:30}#atPage .wltabs{display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:56px;z-index:2;background:var(--bg);border-bottom:1px solid var(--line)}#atPage .wltabs button{flex:1 0 auto;padding:14px 10px;white-space:nowrap;background:none;border:0;border-bottom:3px solid transparent;color:var(--sub);font-size:15px;font-weight:500;cursor:pointer}#atPage .wltabs button.on{color:#fff;border-bottom-color:#fff}#atPage .wltabs .wlc{color:#777;font-size:12px}#atPage .atg{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:2px}#atPage .atl{position:relative;overflow:hidden;background:#272727;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none}#atPage .atg .atl{aspect-ratio:1/1}#atPage .atl img,#atPage .atl video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;-webkit-user-drag:none;-webkit-touch-callout:none}#atPage .atl.au{display:flex;align-items:center;justify-content:center}#atPage .atl.au .material-symbols-outlined{font-size:40px;color:#fff}#atPage .atb{position:absolute;right:4px;bottom:4px;font-style:normal;font-size:11px;font-weight:600;color:#fff;background:rgba(0,0,0,.72);padding:1px 5px;border-radius:4px;pointer-events:none}#atPage .atv{display:flex;gap:2px;padding:2px;align-items:flex-start}#atPage .atv>div{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}#atPage .atl.atlr{display:flex;align-items:center;gap:14px;padding:12px 16px;background:none;border-bottom:1px solid var(--line);overflow:hidden}#atPage .atlr .atli{flex-shrink:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center}#atPage .atlr .atli svg{width:32px;height:32px}#atPage .atlr .atlt{min-width:0;display:flex;flex-direction:column;gap:2px}#atPage .atlr b{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#atPage .atlr i{font-style:normal;font-size:13px;color:#3ea6ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#atPage .atem{padding:60px 16px;text-align:center;color:var(--sub);font-size:15px}';
   document.head.appendChild(atCss);
+  // Hide করা comment / reply-এর attachment: ধূসর background-এর মাঝখানে Hide icon (hold, tap, viewer swipe বন্ধ)
+  { const hs=document.createElement('style'); hs.textContent='#atPage .atl.hid{background:#3a3a3a;display:flex;align-items:center;justify-content:center;cursor:default;pointer-events:auto}#atPage .atl.hid .material-symbols-outlined{font-size:36px;color:#9a9a9a}#atPage .atl.atlr.hid{padding:0;height:64px;border-bottom:1px solid var(--line)}'; document.head.appendChild(hs); }
+  let atNoHide=false; const atH=i=>!!(i&&i.h&&!atNoHide);   // Profile > My attachments-এ Hide করা attachment-ও সাধারণভাবে দেখায়
+  const atHidI='<span class="material-symbols-outlined">visibility_off</span>';
   const atPg=document.createElement('div'); atPg.className='about'; atPg.id='atPage';
   atPg.innerHTML='<div class="abar"><span class="material-symbols-outlined" id="atBack" style="cursor:pointer">arrow_back</span><span class="ttl2" id="atTtl">Attachments</span><span class="material-symbols-outlined ico-r" id="atMore" style="cursor:pointer">more_vert</span></div><div class="athd"><div class="wltabs" id="atT"><button class="on" data-t="p" type="button">Photos <span class="wlc"></span></button><button data-t="v" type="button">Videos <span class="wlc"></span></button><button data-t="g" type="button">GIF <span class="wlc"></span></button><button data-t="a" type="button">Audios <span class="wlc"></span></button><button data-t="l" type="button">Links <span class="wlc"></span></button></div><div class="stabs" id="atTT"><button class="active" data-t="all" type="button">All</button><button data-t="c" type="button">Comments</button><button data-t="r" type="button">Replies</button></div></div><div id="atBody"></div>';
   document.body.appendChild(atPg);
-  let atItems=[], atTab='p', atShown=[], atMine=false, atTT='all', atSort=0, atVCols=3, atScope=null;
+  let atItems=[], atTab='p', atShown=[], atMine=false, atTT='all', atSort=0, atVC={p:3,v:3,g:3}, atScope=null;   // grid (2 / 3 column) প্রতিটা ট্যাবের আলাদা
   const atKey={photo:'p',video:'v',gif:'g',voice:'a',link:'l'}, atEmpty={p:'No photos',v:'No videos',g:'No GIFs',a:'No audios',l:'No links'};
   const atT=t=>{ t=Math.max(0,Math.round(t||0)); return Math.floor(t/60)+':'+String(t%60).padStart(2,'0'); };
   const atShut=()=>atPg.classList.remove('show');
   // My attachments: সব post-এর সব comment / reply-এর attachment (My comments-এর মতো), নতুন আগে
   function atCollectMine(sc){
     const out=[];
-    const add=(p,r,c,isR)=>{ if(r.del||!r.att||!r.att.src||!atKey[r.att.k]) return; out.push({a:r.att,c:c,id:r.id,r:isR,at:r.posted,p:p,o:r}); };
-    posts.filter(x=>sc==null||x.id===sc).forEach(x=>(x.cmts||[]).forEach(c=>{ add(x.id,c,c.id,0); const w=l=>(l||[]).forEach(r=>{ add(x.id,r,c.id,1); w(r.reps); }); w(c.reps); }));
+    const add=(p,r,c,isR,hh)=>{ if(r.del||!r.att||!r.att.src||!atKey[r.att.k]) return; out.push({a:r.att,c:c,id:r.id,r:isR,at:r.posted,p:p,o:r,h:!!(r.hid||hh),ah:!!hh}); };
+    posts.filter(x=>sc==null||x.id===sc).forEach(x=>(x.cmts||[]).forEach(c=>{ add(x.id,c,c.id,0,false); const w=(l,hh)=>(l||[]).forEach(r=>{ add(x.id,r,c.id,1,hh); w(r.reps,hh||!!r.hid); }); w(c.reps,!!c.hid); }));
     return out.sort((p,q)=>new Date(q.at)-new Date(p.at));
   }
-  window.__maCount=()=>atCollectMine(null).length;
+  window.__maCount=()=>atCollectMine(null).length; window.__maCollect=()=>atCollectMine(null);
   function atCollect(){
     if(atMine) return atCollectMine(atScope);
     const x=curX(), out=[]; if(!x) return out; const rep=cmMode==='rep';
-    const add=(r,c,isR)=>{ if(r.del||!r.att||!r.att.src||!atKey[r.att.k]) return; out.push({a:r.att,c:c,id:r.id,r:isR,at:r.posted,o:r}); };
-    const walk=(l,c)=>(l||[]).forEach(r=>{ add(r,c,1); walk(r.reps,c); });
-    if(rep){ const oc=x.cmts.find(y=>y.id===cmOpen); if(oc) walk(oc.reps,oc.id); }   // Replies page: শুধু ওই main comment-এর ভেতরের reply
-    else x.cmts.forEach(c=>{ add(c,c.id,0); walk(c.reps,c.id); });   // Comments page: কমেন্টবক্সের সব
+    const add=(r,c,isR,hh)=>{ if(r.del||!r.att||!r.att.src||!atKey[r.att.k]) return; out.push({a:r.att,c:c,id:r.id,r:isR,at:r.posted,o:r,h:!!(r.hid||hh),ah:!!hh}); };
+    const walk=(l,c,hh)=>(l||[]).forEach(r=>{ add(r,c,1,hh); walk(r.reps,c,hh||!!r.hid); });
+    if(rep){ const oc=x.cmts.find(y=>y.id===cmOpen); if(oc) walk(oc.reps,oc.id,!!oc.hid); }   // Replies page: শুধু ওই main comment-এর ভেতরের reply
+    else x.cmts.forEach(c=>{ add(c,c.id,0,false); walk(c.reps,c.id,!!c.hid); });   // Comments page: কমেন্টবক্সের সব
     return out.sort((p,q)=>new Date(q.at)-new Date(p.at));
   }
   function atDraw(){
@@ -6011,16 +6121,17 @@ function askDelete(title,cb,yesLabel,slideSel){
     if(!atShown.length){ body.innerHTML='<div class="atem">'+atEmpty[atTab]+'</div>'; return; }
     if(atTab==='l'){
       const lst=document.createElement('div'); lst.className='atlk';
-      lst.innerHTML=atShown.map((it,i)=>'<div class="atl atlr" data-i="'+i+'"><span class="atli">'+linkIcon({icon:it.a.icon,logo:it.a.logo})+'</span><span class="atlt"><b>'+esc(it.a.name||linkText(it.a.src))+'</b><i>'+esc(linkText(it.a.src))+'</i></span></div>').join('');
+      lst.innerHTML=atShown.map((it,i)=>atH(it)?'<div class="atl atlr hid" data-i="'+i+'">'+atHidI+'</div>':'<div class="atl atlr" data-i="'+i+'"><span class="atli">'+linkIcon({icon:it.a.icon,logo:it.a.logo})+'</span><span class="atlt"><b>'+esc(it.a.name||linkText(it.a.src))+'</b><i>'+esc(linkText(it.a.src))+'</i></span></div>').join('');
       body.appendChild(lst); return;
     }
-    if((atTab==='v'||atTab==='p'||atTab==='g')&&atVCols===2){   // Asymmetrical Grid (pinch out)
+    if((atTab==='v'||atTab==='p'||atTab==='g')&&atVC[atTab]===2){   // Asymmetrical Grid (pinch out)
       const wrap=document.createElement('div'); wrap.className='atv'; wrap.style.visibility='hidden'; const cols=[document.createElement('div'),document.createElement('div')]; cols.forEach(c=>wrap.appendChild(c)); body.appendChild(wrap);
       let pend=atShown.length, shown=false, q=0, tiles=[];
       const place=()=>{ const h=[0,0]; tiles.forEach(d=>{ const k=h[0]<=h[1]?0:1; if(d.parentNode!==cols[k]||d.nextSibling) cols[k].appendChild(d); h[k]+=1/d._r; }); };
       const lay=()=>{ if(q) return; q=requestAnimationFrame(()=>{ q=0; if(wrap.isConnected) place(); }); };
       const reveal=()=>{ if(shown||!wrap.isConnected) return; shown=true; place(); wrap.style.visibility=''; };   // সব ভিডিওর মাপ জানার পরে একবারেই 2 column-এ দেখায়
       tiles=atShown.map((it,i)=>{ const d=document.createElement('div'); d.className='atl'; d.dataset.i=i; d.style.aspectRatio='16/9'; d._r=16/9;
+        if(atH(it)){ d.className='atl hid'; d.innerHTML=atHidI; pend--; return d; }   // Hide করা: ধূসর tile + Hide icon
         let done=false; const fin=()=>{ if(done) return; done=true; if(--pend<=0) reveal(); };
         const setR=(w,h)=>{ if(w&&h){ const r=Math.max(.5,Math.min(1.8,w/h)); if(Math.abs(r-d._r)>=.001){ d._r=r; d.style.aspectRatio=String(r); if(shown) lay(); } } fin(); };
         if(atTab==='v'){
@@ -6028,22 +6139,23 @@ function askDelete(title,cb,yesLabel,slideSel){
           const vd=d.querySelector('video'); vd.addEventListener('loadedmetadata',e=>setR(e.target.videoWidth,e.target.videoHeight)); vd.addEventListener('error',fin);
         }else{
           d.innerHTML='<img src="'+esc(it.a.src)+'" alt="" draggable="false">'+(atTab==='g'?'<i class="atb">'+(it.a.giphy?'GIPHY':'GIF')+'</i>':'');
-          const im=d.querySelector('img'), prep=()=>{ im.onload=null; setR(im.naturalWidth,im.naturalHeight); if(atTab==='g'){ im._orig=im.src; const f=gifFrame(im); if(f) im.src=f; } };
+          const im=d.querySelector('img'), prep=()=>{ im.onload=null; setR(im.naturalWidth,im.naturalHeight); if(atTab==='g'){ im._orig=im.src; } };
           if(im.complete&&im.naturalWidth) prep(); else{ im.onload=prep; im.onerror=fin; }
         }
         return d; });
       tiles.forEach(d=>cols[0].appendChild(d)); place();
+      if(pend<=0) reveal();
       setTimeout(reveal,900);
       return;
     }
     const g=document.createElement('div'); g.className='atg';
-    g.innerHTML=atShown.map((it,i)=>{ const u=esc(it.a.src);
+    g.innerHTML=atShown.map((it,i)=>{ if(atH(it)) return '<div class="atl hid" data-i="'+i+'">'+atHidI+'</div>'; const u=esc(it.a.src);
       if(atTab==='v') return '<div class="atl" data-i="'+i+'"><video src="'+u+'#t=0.1" muted playsinline preload="metadata"></video><i class="atb">'+atT(it.a.dur)+'</i></div>';   // 3 column grid (default)
       if(atTab==='a') return '<div class="atl au" data-i="'+i+'"><span class="material-symbols-outlined">headphones</span><i class="atb">'+atT(it.a.dur)+'</i></div>';
       if(atTab==='g') return '<div class="atl" data-i="'+i+'"><img src="'+u+'" alt="" draggable="false"><i class="atb">'+(it.a.giphy?'GIPHY':'GIF')+'</i></div>';
       return '<div class="atl" data-i="'+i+'"><img src="'+u+'" alt="" draggable="false"></div>'; }).join('');
     body.appendChild(g);
-    if(atTab==='g') g.querySelectorAll('img').forEach(im=>{ im._orig=im.src; const prep=()=>{ im.onload=null; const f=gifFrame(im); if(f) im.src=f; }; if(im.complete&&im.naturalWidth) prep(); else im.onload=prep; });   // autoplay বন্ধ: প্রথম frame স্থির
+    if(atTab==='g') g.querySelectorAll('img').forEach(im=>{ im._orig=im.src; });   // GIF autoplay চালু
   }
   // ---- All / Comments / Replies ট্যাব (My comments-এর মতো), 3 dot → Sort by (Comments-এর sort by-এর মতো), Videos-এ pinch out = 3 column grid / pinch in = 2 column ----
   { const st=document.createElement('style'); st.textContent='#atPage{touch-action:pan-y}#atPage .athd{position:sticky;top:56px;z-index:2;background:var(--bg)}#atPage .athd .wltabs{position:static}#atPage .stabs{position:static;padding-top:12px}'; document.head.appendChild(st); }
@@ -6079,23 +6191,23 @@ function askDelete(title,cb,yesLabel,slideSel){
   const atGT=()=>atTab==='v'||atTab==='p'||atTab==='g';   // Photos / Videos / GIF: default 3 column grid, pinch in = 3 column, pinch out = Asymmetrical Grid
   { let d0=0, last=1, on=false;
     const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
-    const apply=r=>{ if(!atGT()) return; if(r<0.83&&atVCols!==3) atVCols=3; else if(r>1.2&&atVCols!==2) atVCols=2; else return; atLP=Date.now(); const y=atPg.scrollTop; atDraw(); atPg.scrollTop=y; };
+    const apply=r=>{ if(!atGT()) return; if(r<0.83&&atVC[atTab]!==3) atVC[atTab]=3; else if(r>1.2&&atVC[atTab]!==2) atVC[atTab]=2; else return; atLP=Date.now(); const y=atPg.scrollTop; atDraw(); atPg.scrollTop=y; };
     atPg.addEventListener('touchstart',e=>{ if(atGT()&&e.touches.length===2){ d0=dist(e.touches)||1; last=1; on=true; atMnShut(); } },{passive:true});
     atPg.addEventListener('touchmove',e=>{ if(!on||e.touches.length!==2) return; if(e.cancelable) e.preventDefault(); last=dist(e.touches)/d0; },{passive:false});
     atPg.addEventListener('touchend',e=>{ if(!on||e.touches.length>=2) return; on=false; atLP=Date.now(); apply(last); },{passive:true});
     atPg.addEventListener('touchcancel',()=>{ on=false; },{passive:true});
     atPg.addEventListener('wheel',e=>{ if(!e.ctrlKey||!atGT()) return; e.preventDefault(); apply(e.deltaY<0?1.3:.7); },{passive:false});   // trackpad pinch / Ctrl + scroll
   }
-  function atOpen0(){ atMine=false; atScope=null; atMn.style.zIndex=''; atPg.style.zIndex=''; $('atTtl').textContent='Attachments'; atTT='all'; atSort=0; atVCols=3; atPShut(); atItems=atCollect(); atTab='p'; atDraw(); atPg.classList.add('show'); }
+  function atOpen0(){ atNoHide=false; atMine=false; atScope=null; atMn.style.zIndex=''; atPg.style.zIndex=''; $('atTtl').textContent='Attachments'; atTT='all'; atSort=0; atVC={p:3,v:3,g:3}; atPShut(); atItems=atCollect(); atTab='p'; atDraw(); atPg.classList.add('show'); }
   // Profile > My attachments: একই window ও mechanism (Photos / Videos / GIF / Audios / Links, tap = viewer, double tap = ওই comment, hold = menu)
-  window.__maOpen=()=>{ atMine=true; atScope=null; atMn.style.zIndex=''; atPg.style.zIndex='20'; $('atTtl').textContent='My attachments'; atTT='all'; atSort=0; atVCols=3; atPShut(); atItems=atCollect(); atTab='p'; atDraw(); atPg.classList.add('show'); atPg.scrollTop=0; };
+  window.__maOpen=()=>{ atNoHide=true; atMine=true; atScope=null; atMn.style.zIndex=''; atPg.style.zIndex='20'; $('atTtl').textContent='My attachments'; atTT='all'; atSort=0; atVC={p:3,v:3,g:3}; atPShut(); atItems=atCollect(); atTab='p'; atDraw(); atPg.classList.add('show'); atPg.scrollTop=0; };
   // Comments in this channel / this post window-এর 3 dot → See attachments: ওই window-এর comment / reply-এর attachments
-  window.__maOpenScoped=pid=>{ atMine=true; atScope=(pid==null?null:pid); atMn.style.zIndex='95'; atPg.style.zIndex='85'; $('atTtl').textContent='Attachments'; atTT='all'; atSort=0; atVCols=3; atPShut(); atItems=atCollect(); atTab='p'; atDraw(); atPg.classList.add('show'); atPg.scrollTop=0; };
+  window.__maOpenScoped=pid=>{ atNoHide=false; atMine=true; atScope=(pid==null?null:pid); atMn.style.zIndex='95'; atPg.style.zIndex='85'; $('atTtl').textContent='Attachments'; atTT='all'; atSort=0; atVC={p:3,v:3,g:3}; atPShut(); atItems=atCollect(); atTab='p'; atDraw(); atPg.classList.add('show'); atPg.scrollTop=0; };
   document.addEventListener('click',e=>{ if(e.target.closest('#acMA')) window.__maOpen(); });
   function atView(it){
     const a=it.a;
-    if(a.k==='photo'||a.k==='gif'){ if(window.openPhotoViewer){ const L=atShown.filter(z=>z.a.k==='photo'||z.a.k==='gif'), at=Math.max(0,L.indexOf(it)); window.openPhotoViewer(a.src,L.map(z=>z.a.src),at); } }   // See attachments: ওই ট্যাবের ক্রমে swipe
-    else if(a.k==='video'){ if(window.openVideoViewer){ const L=atShown.filter(z=>z.a.k==='video'), at=Math.max(0,L.indexOf(it)); window.openVideoViewer(a.src,+a.dur||0,a.bid||'',undefined,{list:L.map(z=>({src:z.a.src,dur:+z.a.dur||0,bid:z.a.bid||''})),at:at}); } }
+    if(a.k==='photo'||a.k==='gif'){ if(window.openPhotoViewer){ const L=atShown.filter(z=>(z.a.k==='photo'||z.a.k==='gif')&&!atH(z)), at=Math.max(0,L.indexOf(it)); window.openPhotoViewer(a.src,L.map(z=>z.a.src),at,L.map(z=>({lbl:z.r?'Show in replies':'Show in comments',go:()=>atGo(z),back:()=>window.__scrollBack(atPg.querySelector('#atBody .atl[data-i="'+atShown.indexOf(z)+'"]'))}))); } }   // See attachments: ওই ট্যাবের ক্রমে swipe
+    else if(a.k==='video'){ if(window.openVideoViewer){ const L=atShown.filter(z=>z.a.k==='video'&&!atH(z)), at=Math.max(0,L.indexOf(it)); window.openVideoViewer(a.src,+a.dur||0,a.bid||'',undefined,{list:L.map(z=>({src:z.a.src,dur:+z.a.dur||0,bid:z.a.bid||'',lbl:z.r?'Show in replies':'Show in comments',go:()=>atGo(z),back:()=>window.__scrollBack(atPg.querySelector('#atBody .atl[data-i="'+atShown.indexOf(z)+'"]'))})),at:at}); } }
     else if(a.k==='voice'){ if(window.audPlayOpen) window.audPlayOpen(a.src,{id:a.bid||a.src,dur:+a.dur||0,menu:true}); }
     else if(a.k==='link'){ try{ window.open(linkNorm(a.src),'_blank','noopener,noreferrer'); }catch(e){} }
   }
@@ -6106,7 +6218,7 @@ function askDelete(title,cb,yesLabel,slideSel){
       atShut();
       if(it.r){
         if(cmMode!=='rep'||cmOpen!==c.id){ cmOpen=c.id; cmMainMin.delete(c.id); setMode('rep'); }
-        const has=(l,t)=>l.some(q=>q===t||has(q.reps,t)), f=findR(c.reps,it.id);
+        const has=(l,t)=>(l||[]).some(q=>q===t||has(q.reps,t)), f=findR(c.reps,it.id);
         if(f){ const top=c.reps.find(m=>m===f.r||has(m.reps,f.r)); if(top){ cmColl.delete(String(top.id)); drawCm(); } }
       }else{ if(cmSelMode) cmExitSel(); if(cmSearch) cmSetSearch(false); }
       setTimeout(()=>{ const el=it.r?cmBody.querySelector('[data-rid="'+it.id+'"]'):cmBody.querySelector('.thr[data-cid="'+it.id+'"] .cmi'); if(!el) return; el.scrollIntoView({block:'center'}); el.classList.add('cmflash'); setTimeout(()=>el.classList.remove('cmflash'),1700); },60);
@@ -6152,7 +6264,8 @@ function askDelete(title,cb,yesLabel,slideSel){
     ];
   }
   function atMenuOpen(tile,it,x,y){
-    const items=[{i:it.r?'forum':'comment',t:it.r?'Show in replies':'Show in comments',f:()=>atGo(it)},{div:1}].concat(atMenuItems(it)); atMn.innerHTML='<div class="atmb"></div>';
+    const goOk=it.r?!it.ah:!it.h;   // reply: parent reply / main comment hidden না হলে Show in replies; main comment: hidden না হলে Show in comments
+    const items=(goOk?[{i:it.r?'forum':'comment',t:it.r?'Show in replies':'Show in comments',f:()=>atGo(it)},{div:1}]:[]).concat(atMenuItems(it)); atMn.innerHTML='<div class="atmb"></div>';
     items.forEach(o=>{ if(o.div){ const d=document.createElement('div'); d.className='atdv'; atMn.appendChild(d); return; } const b=document.createElement('button'); b.type='button'; b.innerHTML='<span class="material-symbols-outlined">'+o.i+'</span><span class="lbl">'+o.t+'</span>';
       if(o.wl&&window.WL){ try{ window.WL.paint(b,'cv',o.wl); }catch(e){} }
       b.onclick=ev=>{ ev.stopPropagation(); atMnShut(); o.f(); }; atMn.appendChild(b); });
@@ -6164,38 +6277,58 @@ function askDelete(title,cb,yesLabel,slideSel){
   { let lt=null, sx=0, sy=0;
     const stop=()=>{ clearTimeout(lt); lt=null; };
     const body=$('atBody');
-    body.addEventListener('pointerdown',e=>{ const t=e.target.closest('.atl'); if(!t||(e.pointerType==='mouse'&&e.button!==0)) return; const it=atShown[+t.dataset.i]; if(!it) return; sx=e.clientX; sy=e.clientY; stop();
+    body.addEventListener('pointerdown',e=>{ const t=e.target.closest('.atl'); if(!t||(e.pointerType==='mouse'&&e.button!==0)) return; const it=atShown[+t.dataset.i]; if(!it||atH(it)||(it.r&&it.ah)) return; sx=e.clientX; sy=e.clientY; stop();
       lt=setTimeout(()=>{ lt=null; atLP=Date.now(); if(navigator.vibrate){ try{ navigator.vibrate(15); }catch(_){} } atMenuOpen(t,it,sx,sy); },450); });
     body.addEventListener('pointermove',e=>{ if(lt&&(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10)) stop(); });
     ['pointerup','pointercancel','pointerleave'].forEach(n=>body.addEventListener(n,stop));
     body.addEventListener('scroll',stop,{passive:true});
-    body.addEventListener('contextmenu',e=>{ if(e.target.closest('.atl')) e.preventDefault(); });
+    body.addEventListener('contextmenu',e=>{ const t=e.target.closest('.atl'); if(!t) return; e.preventDefault(); stop();   // photo-তে browser-এর নিজের long-press (pointercancel) timer থামিয়ে দিলেও contextmenu থেকে menu খোলে
+      if(Date.now()-atLP<1000) return; const it=atShown[+t.dataset.i]; if(!it||atH(it)||(it.r&&it.ah)) return; atLP=Date.now(); if(navigator.vibrate){ try{ navigator.vibrate(15); }catch(_){} } atMenuOpen(t,it,e.clientX||sx,e.clientY||sy); });
   }
   atPg.querySelector('#atT').addEventListener('click',atMnShut); $('atBack').addEventListener('click',atMnShut);
   { let tm=null, ti=-1;
-    $('atBody').addEventListener('click',e=>{ if(Date.now()-atLP<700) return; const t=e.target.closest('.atl'); if(!t) return; const i=+t.dataset.i, it=atShown[i]; if(!it) return;
+    $('atBody').addEventListener('click',e=>{ if(Date.now()-atLP<700) return; const t=e.target.closest('.atl'); if(!t) return; const i=+t.dataset.i, it=atShown[i]; if(!it||atH(it)) return;
       if(tm&&ti===i){ clearTimeout(tm); tm=null; atGo(it); return; }   // double tap → ওই comment / reply-তে
       clearTimeout(tm); ti=i; tm=setTimeout(()=>{ tm=null; atView(it); },260); });   // single tap → viewer / player
   }
+  // Photo / Video / GIF viewer-এর ৩ ডট → Show in comments / replies: viewer বন্ধ করে ওই comment / reply-তে গিয়ে highlight করে
+  window.__cmShowIn=o=>{
+    if(!cmS.classList.contains('show')){ if(cmPost!=null) openCmAt(cmPost,o.c,o.r?o.id:''); return; }
+    const x=curX(); if(!x) return; const c=x.cmts.find(y=>String(y.id)===String(o.c)); if(!c) return;
+    const fr=(l,id)=>{ for(const r of (l||[])){ if(String(r.id)===String(id)) return r; const f=fr(r.reps,id); if(f) return f; } return null; };
+    const go=()=>{
+      if(cmEdit){ /* edit চলছে: আগের অবস্থায় থাকে */ }
+      if(o.r){
+        if(cmMode!=='rep'||cmOpen!==c.id){ cmOpen=c.id; cmMainMin.delete(c.id); setMode('rep'); }
+        const has=(l,t)=>(l||[]).some(q=>q===t||has(q.reps,t)), f=fr(c.reps,o.id);
+        if(f){ const top=c.reps.find(m=>m===f||has(m.reps,f)); if(top){ cmColl.delete(String(top.id)); drawCm(); } }
+      }else{ if(cmMode==='rep') setMode('list'); if(cmSelMode) cmExitSel(); if(cmSearch) cmSetSearch(false); }
+      setTimeout(()=>{ const el=o.r?cmBody.querySelector('[data-rid="'+o.id+'"]'):cmBody.querySelector('.thr[data-cid="'+c.id+'"] .cmi'); if(!el) return; el.scrollIntoView({block:'center'}); el.classList.add('cmflash'); setTimeout(()=>el.classList.remove('cmflash'),1700); },60);
+    };
+    if((o.r&&cmMode!=='rep')||(!o.r&&cmMode==='rep')) guardReply(go); else go();
+  };
   function openCmAt(pid,cid,rid){
     const x=posts.find(y=>y.id===pid); if(!x) return;
     openCm(pid);
     const c=x.cmts.find(y=>String(y.id)===String(cid)); if(!c) return;
     if(rid){ cmOpen=c.id; cmMainMin.delete(c.id); setMode('rep');
-      const has=(l,t)=>l.some(q=>q===t||has(q.reps,t)), f=findR(c.reps,rid);
+      const has=(l,t)=>(l||[]).some(q=>q===t||has(q.reps,t)), f=findR(c.reps,rid);
       if(f){ const top=c.reps.find(m=>m===f.r||has(m.reps,f.r)); if(top){ cmColl.delete(String(top.id)); drawCm(); } } }
     setTimeout(()=>{ const el=rid?cmBody.querySelector('[data-rid="'+rid+'"]'):cmBody.querySelector('.thr[data-cid="'+c.id+'"] .cmi'); if(!el) return; el.scrollIntoView({block:'center'}); el.classList.add('cmflash'); setTimeout(()=>el.classList.remove('cmflash'),1700); },60);
   }
+  window.__openCmAt=openCmAt;
   const mcCss=document.createElement('style');
-  mcCss.textContent='.mcnm{color:#3ea6ff;cursor:pointer}@keyframes cmFl{0%,60%{background:rgba(62,166,255,.25)}100%{background:transparent}}.cmflash{animation:cmFl 1.6s ease-out}#mcList .mci{padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer}#mcList .mci small{display:block;color:var(--sub);font-size:13px;margin-bottom:4px}#mcList .mci .mct{white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.4}#mcList .mci .mcatt{margin-top:2px}#mcList .mci .mcatt .cmatt{margin-top:8px}#mcList .mci .mcatt .cmaud{margin-top:8px}#mcList .mci{touch-action:pan-y}#mcList .mci.on{background:rgba(62,166,255,.2)}#mcList mark{background:#ffd54f;color:#000;border-radius:3px;padding:0 1px}#mcPage{overflow-x:hidden}.cmi.rdis [data-reply]{opacity:.35;cursor:not-allowed}.cpdis{opacity:.4!important;cursor:not-allowed}#mcPage .mchd{position:sticky;top:56px;z-index:2;background:var(--bg)}#mcPage .wltabs{display:flex;border-bottom:1px solid var(--line)}#mcPage .wltabs button{flex:1;padding:14px 0;background:none;border:0;border-bottom:3px solid transparent;color:var(--sub);font-size:15px;font-weight:500;cursor:pointer}#mcPage .wltabs button.on{color:#fff;border-bottom-color:#fff}#mcPage .wlc{color:#888;font-weight:400}#mcPage .stabs{padding-top:12px}#mcPage .abar #mcInp{margin-left:26px}body:has(#mcPage.show[data-hi="1"]) .dlg-back{z-index:95}.mcpop{z-index:95!important}';
+  mcCss.textContent='.mcnm{color:#3ea6ff;cursor:pointer}@keyframes cmFl{0%,60%{background:rgba(62,166,255,.25)}100%{background:transparent}}.cmflash{animation:cmFl 1.6s ease-out}#mcList .mci{padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer}#mcList .mci small{display:block;color:var(--sub);font-size:13px;margin-bottom:4px}#mcList .mci .mct{white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.4}#mcList .mci .mcatt{margin-top:2px}#mcList .mci .mcatt .cmatt{margin-top:8px}#mcList .mci .mcatt .cmaud{margin-top:8px}#mcList .mci{touch-action:pan-y}#mcList .mci.on{background:rgba(62,166,255,.2)}#mcList mark{background:#ffd54f;color:#000;border-radius:3px;padding:0 1px}#mcPage{overflow-x:hidden}.cmi.rdis [data-reply]{opacity:.35;cursor:not-allowed}.cpdis{opacity:.4!important;cursor:not-allowed}#mcPage .mchd{position:sticky;top:56px;z-index:2;background:var(--bg)}#mcPage .wltabs{display:flex;border-bottom:1px solid var(--line)}#mcPage .wltabs button{flex:1;padding:14px 0;background:none;border:0;border-bottom:3px solid transparent;color:var(--sub);font-size:15px;font-weight:500;cursor:pointer}#mcPage .wltabs button.on{color:#fff;border-bottom-color:#fff}#mcPage .wlc{color:#888;font-weight:400}#mcPage .stabs{padding-top:12px}#mcPage .abar #mcInp{margin-left:26px}#mcList .mci.mchid{cursor:default;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}#mcList .mct .cmhid{color:#aaa;font-style:italic}body:has(#mcPage.show[data-hi="1"]) .dlg-back{z-index:95}.mcpop{z-index:95!important}';
   document.head.appendChild(mcCss);
   const mcPg=document.createElement('div'); mcPg.className='about'; mcPg.id='mcPage'; mcPg.style.zIndex=19;
   mcPg.innerHTML='<div class="abar"><span class="material-symbols-outlined" id="mcBack" style="cursor:pointer">arrow_back</span><span class="ttl2" id="mcTitle">My comments</span><input class="avinp" id="mcInp" type="text" enterkeyhint="search" placeholder="Search by comment" autocomplete="off" autocapitalize="off" spellcheck="false"><span class="material-symbols-outlined" id="mcClr" style="display:none;cursor:pointer;color:#aaa" aria-label="Clear text">cancel</span><span class="material-symbols-outlined ico-r" id="mcSrch" style="cursor:pointer">search</span><span class="material-symbols-outlined ico-r" id="mcMore" style="cursor:pointer">more_vert</span></div><div class="mchd"><div class="wltabs" id="mcCT"><button class="on" data-t="v" type="button">Videos <span class="wlc">(0)</span></button><button data-t="s" type="button">Shorts <span class="wlc">(0)</span></button><button data-t="q" type="button">Posts <span class="wlc">(0)</span></button></div><div class="stabs" id="mcTT"><button class="active" data-t="all" type="button">All</button><button data-t="c" type="button">Comments</button><button data-t="r" type="button">Replies</button></div></div><div id="mcList"></div>';
   document.body.appendChild(mcPg);
   let mcPid=null, mcTab='v', mcTT='all', mcSort=0, mcSearch=false, mcQ='', mcSMode='text', mcSelMode=false; const mcSel=new Set();
-  const mcAll0=()=>{ const a=[]; posts.filter(y=>mcPid==null||y.id===mcPid).forEach(x=>(x.cmts||[]).forEach(c=>{ if(!c.del) a.push({x,o:c,c:c.id,r:0}); const w=l=>(l||[]).forEach(r=>{ if(!r.del) a.push({x,o:r,c:c.id,r:1}); w(r.reps); }); w(c.reps); })); const lat=(p,q)=>new Date(q.o.posted)-new Date(p.o.posted);
+  const mcAll0=()=>{ const a=[]; const hi=mcPg.dataset.hi==='1'; posts.filter(y=>mcPid==null||y.id===mcPid).forEach(x=>(x.cmts||[]).forEach(c=>{ const ch=hi&&!!c.hid, cat=ch?c.hidAt:null; if(!c.del) a.push({x,o:c,c:c.id,r:0,ih:ch,hat:cat}); const w=(l,ih,iat)=>(l||[]).forEach(r=>{ const eh=hi&&(ih||!!r.hid), at=(hi&&r.hid)?r.hidAt:iat; if(!r.del) a.push({x,o:r,c:c.id,r:1,ih:eh,hat:at}); w(r.reps,eh,at); }); w(c.reps,ch,cat); })); const lat=(p,q)=>new Date(q.o.posted)-new Date(p.o.posted);
     return a.sort((p,q)=>{ if(mcSort===4) return (new Date(p.o.t0||p.o.posted)-new Date(q.o.t0||q.o.posted)); if(mcSort===1) return (rTot(q.o.reps||[])-rTot(p.o.reps||[]))||lat(p,q); if(mcSort===2) return (likeN(q.o)-likeN(p.o))||lat(p,q); if(mcSort===3) return (disN(q.o)-disN(p.o))||lat(p,q); return lat(p,q); }); };
   const mcKey=i=>i.x.id+':'+i.o.id;
+  const mcHid=i=>mcPg.dataset.hi==='1'&&(!!i.o.hid||!!i.ih);   // শুধু channel/post window-এ Hide করা item; My comments-এ কাজ করে না
+  const mcSelOk=i=>true;   // hidden item-ও select / select all-এ ধরা হয়
   // comments exist only on posts for now ('q'); Videos / Shorts tabs stay empty until those have comments
   const mcKind=i=>'q';
   const mcFlat=()=>mcAll0().filter(i=>(mcPid!=null||mcKind(i)===mcTab)&&(mcTT==='all'||(mcTT==='c'?!i.r:!!i.r)));
@@ -6203,7 +6336,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     const ct=$('mcCT'); ct.style.display=mcPid==null?'':'none';
     ct.querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.t===mcTab); b.querySelector('.wlc').textContent='('+n[b.dataset.t]+')'; });
     $('mcTT').querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.t===mcTT)); };
-  const mcVis=()=>{ let a=mcFlat(); if(mcSearch&&mcQ){ a=a.filter(i=>mcSMode==='content'?String(i.x.txt||'').toLowerCase().includes(mcQ):String(i.o.txt||'').toLowerCase().includes(mcQ)); } return a; };
+  const mcVis=()=>{ let a=mcFlat(); if(mcSearch&&mcQ){ a=a.filter(i=>mcSMode==='content'?String(i.x.txt||'').toLowerCase().includes(mcQ):String(mcHid(i)?'':(i.o.txt||'')).toLowerCase().includes(mcQ)); } return a; };
   const mcHl=(t,on)=>{ const str=String(t); if(!on||!mcSearch||!mcQ) return esc(str); const low=str.toLowerCase(); let out='',i=0,k; while((k=low.indexOf(mcQ,i))>=0){ out+=esc(str.slice(i,k))+'<mark>'+esc(str.slice(k,k+mcQ.length))+'</mark>'; i=k+mcQ.length; } return out+esc(str.slice(i)); };
   // GIF / video: স্ক্রিনে এলে auto play, সরে গেলে বন্ধ (Comments window-র মতোই)
   const mcIO=('IntersectionObserver' in window)?new IntersectionObserver(es=>es.forEach(en=>{
@@ -6215,16 +6348,20 @@ function askDelete(title,cb,yesLabel,slideSel){
     $('mcList').querySelectorAll('.cmatt.cmvid,.cmatt.cmgif').forEach(cmStop);
     $('mcList').querySelectorAll('audio').forEach(a=>{ try{ a.pause(); }catch(_){} }); }).observe(mcPg,{attributes:true,attributeFilter:['class']});
   function mcDraw(){ const a=mcVis(), box=$('mcList'); { const allK=new Set(mcAll0().map(mcKey)); [...mcSel].forEach(k=>{ if(!allK.has(k)) mcSel.delete(k); }); } box.innerHTML=a.length?'':'<p class="empty">'+((mcSearch&&mcQ)?'No results':(mcTT==='r'?'No replies yet':'No comments yet'))+'</p>';
-    a.forEach(i=>{ const d=document.createElement('div'); d.className='mci'+(mcSelMode&&mcSel.has(mcKey(i))?' on':''); d.dataset.pid=i.x.id; d.dataset.cid=i.c; d.dataset.rid=i.r?i.o.id:''; d.dataset.key=mcKey(i); const s=document.createElement('small'); s.textContent=(i.r?'Reply':'Comment')+' \u2022 '+timeAgo(i.o.posted)+(i.o.ed?' (edited)':'')+' \u2022 '; const cl=document.createElement('span'); cl.className='mcnm'; cl.innerHTML=mcHl(String(i.x.txt||'').slice(0,40)||'Post',mcSMode==='content'); s.appendChild(cl); d.appendChild(s);
+    a.forEach(i=>{ const d=document.createElement('div'); d.className='mci'+(mcSelMode&&mcSel.has(mcKey(i))?' on':''); d.dataset.pid=i.x.id; d.dataset.cid=i.c; d.dataset.rid=i.r?i.o.id:''; d.dataset.key=mcKey(i); const s=document.createElement('small'); const hh=mcHid(i); s.textContent=(i.r?'Reply':'Comment')+' \u2022 '+timeAgo((hh&&(i.hat||i.o.hidAt))||i.o.posted)+(i.o.ed&&!hh?' (edited)':'')+(mcPid==null?' \u2022 ':''); const cl=document.createElement('span'); cl.className='mcnm'; cl.innerHTML=mcHl(String(i.x.txt||'').slice(0,40)||'Post',mcSMode==='content'); if(mcPid==null) s.appendChild(cl); d.appendChild(s);   // Comments in this post-এ post-এর নাম থাকে না
+      if(hh){ d.classList.add('mchid'); d.dataset.hid='1'; const t=document.createElement('div'); t.className='mct'; const hs=document.createElement('span'); hs.className='cmhid'; hs.textContent=i.r?'This reply has been hidden':'This comment has been hidden'; t.appendChild(hs); d.appendChild(t); box.appendChild(d); return; }   // channel/post window: Hide করা item শুধু এই লেখা দেখায়, কোনো attachment নয়, tap/hold/swipe কিছুই হয় না
       if(String(i.o.txt||'').trim()){ const t=document.createElement('div'); t.className='mct'; t.innerHTML=mcHl(i.o.txt,mcSMode==='text'); d.appendChild(t); }
       const ah=attHTML(i.o); if(ah){ const w=document.createElement('div'); w.className='mcatt'; w.innerHTML=ah; d.appendChild(w); }
       box.appendChild(d); });
     mcTabsUI(); mcScan(); mcPaint(); }
+  const mcMeta=n=>{ const d=n.closest('.mci'); if(!d) return null; const rid=d.dataset.rid; return {lbl:rid?'Show in replies':'Show in comments',go:()=>{ if(mcPg.style.zIndex==80){ mcPg.classList.remove('show'); if(window.__closePr) window.__closePr(); } openCmAt(+d.dataset.pid,d.dataset.cid,d.dataset.rid); }}; };
+  $('mcList').addEventListener('contextmenu',e=>{ if(!e.target.closest('.mci')) e.preventDefault(); });
   $('mcList').onclick=e=>{
     if(mcSelMode&&!e.target.closest('.cmatt')){ const r0=e.target.closest('.mci'); if(r0) mcToggle(r0); return; }
-    { const pvI=e.target.closest('.cmatt img[data-pv]'); if(pvI&&!pvI.closest('.cmgif')){ window.__openImgSeq($('mcList'),pvI); return; } }
-    { const gf=e.target.closest('.cmatt.cmgif'); if(gf){ const im=gf.querySelector('img'); if(im) window.__openImgSeq($('mcList'),im); return; } }
-    { const vv=e.target.closest('.cmatt.cmvid'); if(vv){ window.__openVidSeq($('mcList'),vv); return; } }
+    if(e.target.closest('.mci.mchid')&&!e.target.closest('.mcnm')) return;   // Hide করা item-এ tap করলে কিছু হয় না (শুধু নীল post নাম চাপলে post খোলে)
+    { const pvI=e.target.closest('.cmatt img[data-pv]'); if(pvI&&!pvI.closest('.cmgif')){ window.__openMixSeq($('mcList'),pvI,null,mcMeta); return; } }
+    { const gf=e.target.closest('.cmatt.cmgif'); if(gf){ const im=gf.querySelector('img'); if(im) window.__openMixSeq($('mcList'),im,null,mcMeta); return; } }
+    { const vv=e.target.closest('.cmatt.cmvid'); if(vv){ window.__openMixSeq($('mcList'),vv,null,mcMeta); return; } }
     if(e.target.closest('.cmatt')) return;   // audio controller / sticker-এ চাপলে comment খুলবে না
     { const nm=e.target.closest('.mcnm'); if(nm){ const d0=nm.closest('.mci'); if(d0&&mcPg.style.zIndex==80){ mcPg.classList.remove('show'); if(window.__closePr) window.__closePr(); } if(d0) openPost(+d0.dataset.pid); return; } }   // নীল content নাম চাপলে ওই content (post) খোলে
     if(e.target.closest('.mci')&&mcPg.style.zIndex==80){ mcPg.classList.remove('show'); if(window.__closePr) window.__closePr(); }
@@ -6263,21 +6400,35 @@ function askDelete(title,cb,yesLabel,slideSel){
   function mcClose(){ mcReset(); mcPg.classList.remove('show'); mcPaint(); }
   const mcExitSel=()=>{ mcSelMode=false; mcSel.clear(); mcDraw(); };
   const mcLeaveSel=()=>{ if(!mcSel.size){ mcExitSel(); return; } askDelete('Discard this selection?',mcExitSel,'Discard'); };
-  function mcToggle(r){ const k=r.dataset.key; if(mcSel.has(k)) mcSel.delete(k); else mcSel.add(k); r.classList.toggle('on',mcSel.has(k)); mcPaint(); }
+  // এই window-এ থাকা কোনো comment / reply-র অন্তর্ভুক্ত সব reply ও sub reply-র সারি
+  // ডাটা থেকে: ওই comment / reply-র অন্তর্ভুক্ত সব reply ও sub reply (কোন ট্যাব খোলা আছে তাতে কিছু আসে যায় না)
+  function mcDescObjs(d){ const x=posts.find(y=>String(y.id)===String(d.dataset.pid)); if(!x) return []; const c=(x.cmts||[]).find(y=>String(y.id)===String(d.dataset.cid)); if(!c) return []; const rid=d.dataset.rid; let base=c.reps;
+    if(rid){ const fnd=l=>{ for(const r of (l||[])){ if(String(r.id)===String(rid)) return r; const f=fnd(r.reps); if(f) return f; } return null; }; const me=fnd(c.reps); if(!me) return []; base=me.reps; }
+    const out=[], w=l=>(l||[]).forEach(r=>{ if(!r.del) out.push(r); w(r.reps); }); w(base); return out; }
+  // এই window-এ এখন দেখা যাচ্ছে এমন সারি (animation-এর জন্য)
+  function mcDescRows(d){ const ids=new Set(mcDescObjs(d).map(r=>String(r.id)));
+    return [...$('mcList').querySelectorAll('.mci')].filter(e=>e!==d&&e.dataset.pid===String(d.dataset.pid)&&e.dataset.cid===String(d.dataset.cid)&&e.dataset.rid&&ids.has(e.dataset.rid)); }
+  // কোনো reply / sub reply-এর উপরের সব parent (main comment + মাঝের reply) — descendant আলাদা করে deselect করলে এরা-ও deselect হবে
+  function mcAnc(d){ const x=posts.find(y=>String(y.id)===String(d.dataset.pid)); if(!x) return []; const c=(x.cmts||[]).find(y=>String(y.id)===String(d.dataset.cid)); if(!c) return []; const rid=d.dataset.rid; if(!rid) return [];
+    const fnd=(l,p)=>{ for(const r of (l||[])){ if(String(r.id)===String(rid)) return p; const f=fnd(r.reps,p.concat(r)); if(f) return f; } return null; }; return fnd(c.reps,[c])||[]; }
+  function mcAncRows(d,anc){ const ids=new Set(anc.map(o=>String(o.id))); return [...$('mcList').querySelectorAll('.mci')].filter(e=>e!==d&&e.dataset.pid===String(d.dataset.pid)&&e.dataset.cid===String(d.dataset.cid)&&ids.has(e.dataset.rid||e.dataset.cid)); }
+  function mcToggle(r){ const on=!mcSel.has(r.dataset.key); if(on) mcSel.add(r.dataset.key); else mcSel.delete(r.dataset.key); r.classList.toggle('on',on); mcDescObjs(r).forEach(o=>{ const k=r.dataset.pid+':'+o.id; if(on) mcSel.add(k); else mcSel.delete(k); }); mcDescRows(r).forEach(e=>e.classList.toggle('on',on));
+    if(!on){ const anc=mcAnc(r); anc.forEach(o=>mcSel.delete(r.dataset.pid+':'+o.id)); mcAncRows(r,anc).forEach(e=>e.classList.remove('on')); }   // sub reply / reply আলাদা করে deselect করলে তার parent reply ও main comment-ও deselect হয় (All / Comments / Replies তিন ট্যাবেই)
+    mcPaint(); }   // main comment / reply select করলে তার সব reply ও sub reply-ও select / unselect
   function mcAfter(){ saveC(); mcDraw(); try{ drawPosts(); }catch(_){} try{ if(cmS.classList.contains('show')) drawCm(); }catch(_){} if(window.__paintPr) window.__paintPr(); if(window.__acCounts) window.__acCounts(); }
   function mcDelOne(pid,cid,rid){
     const x=posts.find(y=>y.id===pid); if(!x) return false; const c=(x.cmts||[]).find(y=>String(y.id)===String(cid)); if(!c) return false;
-    if(rid){ const f=findR(c.reps,rid); if(!f) return false; if(f.r.del) f.list.splice(f.list.indexOf(f.r),1); else softDel(f.r); }
-    else{ if(PINS.has('c'+x.id,c.id)) PINS.toggle('c'+x.id,c.id); if(c.del) x.cmts=x.cmts.filter(y=>y!==c); else softDel(c); }
+    if(rid){ const f=findR(c.reps,rid); if(!f) return false; f.list.splice(f.list.indexOf(f.r),1); }
+    else{ if(PINS.has('c'+x.id,c.id)) PINS.toggle('c'+x.id,c.id); x.cmts=x.cmts.filter(y=>y!==c); }
     mcAfter(); return true; }
   const mcPinned=(pid,cid)=>{ const x=posts.find(y=>String(y.id)===String(pid)); const c=x&&(x.cmts||[]).find(y=>String(y.id)===String(cid)); return !!c&&PINS.has('c'+x.id,c.id); };
   const mcScope=()=>posts.filter(y=>mcPid==null||y.id===mcPid);
   mcSub.querySelectorAll('button').forEach(d=>d.onclick=e=>{ e.stopPropagation(); if(d.classList.contains('dis')) return; mcSort=+d.dataset.m; mcP.classList.remove('show','subshow'); mcDraw(); mcPg.scrollTop=0; });
   $('mcMore').onclick=e=>{
     e.stopPropagation(); if(mcP.classList.contains('show')){ mcP.classList.remove('show','subshow'); return; }
-    const all=mcFlat(), vis=mcVis(), idle=!mcSearch&&!mcSelMode, n=all.length;
+    const all=mcFlat(), vis=mcVis().filter(mcSelOk), idle=!mcSearch&&!mcSelMode, n=all.length;
     const set=(k,show,dis)=>{ const b=mcP.querySelector('[data-k="'+k+'"]'); b.style.display=show?'':'none'; b.disabled=!!dis; };
-    set('sort',idle,n===0); set('select',idle,n===0); set('att',idle&&mcPg.dataset.hi==='1',n===0); set('bytext',mcSearch); set('bycont',mcSearch);
+    set('sort',idle,n===0); set('select',idle,n===0); set('att',idle&&mcPg.dataset.hi==='1',n===0); set('bytext',mcSearch); set('bycont',mcSearch&&mcPid==null);
     { const nSel=vis.filter(i=>mcSel.has(mcKey(i))).length; set('all',mcSelMode,!vis.length||nSel===vis.length); set('none',mcSelMode,nSel===0); }
     { const lv=mcAll0(); set('del',idle,!lv.some(i=>!i.r)); set('delr',idle,!lv.some(i=>i.r)); }
     [['bytext','text'],['bycont','content']].forEach(z=>{ const b=mcP.querySelector('[data-k="'+z[0]+'"]'), on=mcSMode===z[1]; b.querySelector('.cmtk').style.visibility=on?'visible':'hidden'; b.style.fontWeight=on?'700':''; });
@@ -6294,17 +6445,20 @@ function askDelete(title,cb,yesLabel,slideSel){
     mcP.classList.remove('show','subshow');
     if(k==='select'){ mcSelMode=true; mcSel.clear(); mcDraw(); return; }
     if(k==='att'){ window.__maOpenScoped(mcPid); return; }   // Comments in this channel / post: এই window-এর comment-এর attachments
-    if(k==='all'||k==='none'){ mcVis().forEach(i=>{ if(k==='all') mcSel.add(mcKey(i)); else mcSel.delete(mcKey(i)); }); mcDraw(); return; }
+    if(k==='all'||k==='none'){ mcVis().forEach(i=>{ if(!mcSelOk(i)) return; const ks=[mcKey(i)].concat(mcDescObjs({dataset:{pid:String(i.x.id),cid:String(i.c),rid:i.r?String(i.o.id):''}}).map(o=>i.x.id+':'+o.id)); ks.forEach(kk=>{ if(k==='all') mcSel.add(kk); else mcSel.delete(kk); }); }); mcDraw(); return; }
     if(k==='bytext'||k==='bycont'){ mcSMode=k==='bycont'?'content':'text'; mcInp.placeholder=mcPh(); mcDraw(); return; }
-    if(k==='del'){ askDelete('Delete all comments?',()=>{ mcScope().forEach(x=>{ (x.cmts||[]).forEach(c=>{ if(c.del) return; if(PINS.has('c'+x.id,c.id)) PINS.toggle('c'+x.id,c.id); softDel(c); }); }); mcAfter(); },'Delete','#mcList .mci[data-rid=""]'); }   // comments only; replies stay
-    if(k==='delr'){ askDelete('Delete all replies?',()=>{ const w=l=>(l||[]).forEach(r=>{ if(!r.del) softDel(r); w(r.reps); }); mcScope().forEach(x=>(x.cmts||[]).forEach(c=>w(c.reps))); mcAfter(); },'Delete','#mcList .mci:not([data-rid=""])'); }   // replies only; comments stay
+    if(k==='del'){ askDelete('Delete all comments?',()=>{ mcScope().forEach(x=>{ (x.cmts||[]).forEach(c=>{ if(PINS.has('c'+x.id,c.id)) PINS.toggle('c'+x.id,c.id); }); x.cmts=(x.cmts||[]).filter(c=>false); }); mcAfter(); },'Delete','#mcList .mci[data-rid=""]'); }   // comments only; replies stay
+    if(k==='delr'){ askDelete('Delete all replies?',()=>{ mcScope().forEach(x=>(x.cmts||[]).forEach(c=>{ c.reps=[]; })); mcAfter(); },'Delete','#mcList .mci:not([data-rid=""])'); }   // replies only; comments stay
   });
   mcFab.onclick=()=>{ if(!mcSel.size) return;
     askDelete('Delete selected comments?',()=>{ mcScope().forEach(x=>{ (x.cmts||[]).forEach(c=>{ if(mcSel.has(x.id+':'+c.id)&&PINS.has('c'+x.id,c.id)) PINS.toggle('c'+x.id,c.id); }); bulkDel(x.cmts||[],r=>mcSel.has(x.id+':'+r.id)); });
       mcSelMode=false; mcSel.clear(); mcAfter(); },'Delete','#mcList .mci.on'); };
   // hold / right-click -> Delete this comment? ; swipe left -> delete
   const mcAsk=rr=>{ if(!rr) return false; const pid=+rr.dataset.pid, cid=rr.dataset.cid, rid=rr.dataset.rid||null;
-    askDelete(rid?'Delete this reply?':'Delete this comment?',()=>{ mcDelOne(pid,cid,rid); },'Delete',[rr]); return true; };
+    const dob=mcDescObjs(rr), ds=mcDescRows(rr); let ttl=rid?'Delete this reply?':'Delete this comment?', yes='Delete';
+    if(dob.length){ const nc=(rid?0:1), nr=(rid?1:0)+dob.length, pc=nc+(nc===1?' comment':' comments'), pr=nr+(nr===1?' reply':' replies');
+      ttl='Delete '+[nc?pc:'',nr?pr:''].filter(Boolean).join(' and ')+'?'; }   // ভেতরে reply / sub reply থাকলে: Delete 2 replies? / Delete 1 comment and 2 replies?
+    askDelete(ttl,()=>{ mcDelOne(pid,cid,rid); },yes,[rr].concat(ds)); return true; };
   (function(){
     const L=$('mcList'); let hold=false, sup=0, tm=null, sx=0, sy=0, last=0, typ='mouse';
     const rel=()=>{ clearTimeout(tm); tm=null; if(hold){ hold=false; sup=Date.now()+600; } };
@@ -6329,7 +6483,7 @@ function askDelete(title,cb,yesLabel,slideSel){
       if(!row||e.pointerId!==pid) return; const r=row; row=null; if(!drag) return; drag=false; supUntil=Date.now()+500;
       const w=r.offsetWidth; r.style.transition='transform .2s ease,opacity .2s ease';
       if(dx<-Math.min(140,w*.35)&&e.type!=='pointercancel'){
-        r.style.transform='translateX(-'+w+'px)'; r.style.opacity='0'; const a=+r.dataset.pid, b=r.dataset.cid, c=r.dataset.rid||null;
+        r.style.transform='translateX(-'+w+'px)'; r.style.opacity='0'; mcDescRows(r).forEach(q=>{ q.style.transition='transform .2s ease,opacity .2s ease'; q.style.transform='translateX(-'+w+'px)'; q.style.opacity='0'; }); const a=+r.dataset.pid, b=r.dataset.cid, c=r.dataset.rid||null;
         setTimeout(()=>{ if(mcDelOne(a,b,c)) toast(c?'Reply removed':'Comment removed'); else mcDraw(); },190);
       } else { r.style.transform=''; r.style.opacity=''; } };
     ['pointerup','pointercancel'].forEach(t=>L.addEventListener(t,end));
@@ -6746,7 +6900,8 @@ body.member :is(.video,.hcard,.rres,.avrow,.post,.pl):has(.priv),body.member :is
     const allS=window.searchSources?window.searchSources().shorts:[];
     const ss=window.WL?window.WL.ids('s').filter(id=>allS.some(x=>x.id===id)).length:0;
     const rx=m=>videos.filter(x=>x.my===m).length+(window.LK?window.LK.shorts(m).length+window.LK.posts(m).length:0);
-    const n={wl:vs+ss,lk:rx('like'),dk:rx('dislike'),dl:(window.DLS?window.DLS.ids('v').filter(id=>videos.some(x=>x.id===id)).length+window.DLS.ids('s').filter(id=>allS.some(x=>x.id===id)).length+window.DLS.ids('p').filter(id=>window.plById&&window.plById(id)).length:0),sp:(window.SPL?window.SPL.ids().filter(id=>window.plById&&window.plById(id)).length:0),hs:(window.histItems?window.histItems().length:0),mc:(window.__extraStats?window.__extraStats().c:0),ma:(window.__maCount?window.__maCount():0),sc:(typeof subscribed!=='undefined'&&subscribed)?1:0};
+    const wc=(window.WL&&window.__maCollect)?(function(){ const all=window.__maCollect(); return window.WL.ids('cv').filter(id=>all.some(i=>i.a.k==='video'&&String(i.a.bid||i.a.src)===String(id))).length; })():0;
+    const n={wl:vs+ss+wc,lk:rx('like'),dk:rx('dislike'),dl:(window.DLS?window.DLS.ids('v').filter(id=>videos.some(x=>x.id===id)).length+window.DLS.ids('s').filter(id=>allS.some(x=>x.id===id)).length+window.DLS.ids('p').filter(id=>window.plById&&window.plById(id)).length:0),sp:(window.SPL?window.SPL.ids().filter(id=>window.plById&&window.plById(id)).length:0),hs:(window.histItems?window.histItems().length:0),mc:(window.__extraStats?window.__extraStats().c:0),ma:(window.__maCount?window.__maCount():0),sc:(typeof subscribed!=='undefined'&&subscribed)?1:0};
     acct.querySelectorAll('.acn').forEach(e=>{ const v=n[e.dataset.c]||0; e.textContent=v; e.classList.toggle('z',v===0); });
   }
   new MutationObserver(()=>{ if(acct.classList.contains('show')) paintCounts(); }).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});
@@ -6911,7 +7066,7 @@ body.member :is(.video,.hcard,.rres,.avrow,.post,.pl):has(.priv),body.member :is
 </style>
 <div class="about" id="wlPage">
   <div class="abar"><span class="material-symbols-outlined" id="wlBack" style="cursor:pointer">arrow_back</span><span class="ttl2">Watch later</span><span class="material-symbols-outlined ico-r" id="wlMore" style="cursor:pointer">more_vert</span></div>
-  <div class="wltabs"><button class="on" data-t="v" type="button">Videos <span class="wlc">(0)</span></button><button data-t="s" type="button">Shorts <span class="wlc">(0)</span></button></div>
+  <div class="wltabs"><button class="on" data-t="v" type="button">Videos <span class="wlc">(0)</span></button><button data-t="s" type="button">Shorts <span class="wlc">(0)</span></button><button data-t="c" type="button">Attachments <span class="wlc">(0)</span></button></div>
   <div id="wlBody" style="padding-bottom:30px"></div>
 </div>
 <script>
@@ -6923,9 +7078,18 @@ body.member :is(.video,.hcard,.rres,.avrow,.post,.pl):has(.priv),body.member :is
   const rxS=m=>m?'<span class="material-symbols-outlined shrx">'+(m==='like'?'thumb_up':'thumb_down')+'</span>':'';
   const cv=()=>window.WL.ids('v').filter(id=>videos.some(x=>x.id===id)).length;
   const cs=()=>{ const all=window.searchSources?window.searchSources().shorts:[]; return window.WL.ids('s').filter(id=>all.some(x=>x.id===id)).length; };
+  // Comments ট্যাব: comment / reply-র video যেগুলো Watch later-এ সেভ করা (সবার শেষের ট্যাব)
+  const cmItems=()=>{ const all=window.__maCollect?window.__maCollect():[]; return window.WL.ids('cv').map(id=>all.find(i=>i.a.k==='video'&&String(i.a.bid||i.a.src)===String(id))).filter(Boolean); };
+  const cc=()=>cmItems().length;
+  const curUN=()=>{ try{ return (window.__curUser&&window.__curUser())||'@GopalBharMax-m2s'; }catch(e){ return '@GopalBharMax-m2s'; } };
+  const dFmt=t=>{ t=Math.max(0,Math.round(t||0)); return Math.floor(t/60)+':'+String(t%60).padStart(2,'0'); };
+  { const st=document.createElement('style'); st.textContent='#wlBody .wlcv{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}#wlBody .wlcv.hold{background:rgba(62,166,255,.15)}#wlBody .wlcv{display:flex;gap:12px;padding:8px 16px 14px;position:relative;align-items:flex-start;cursor:pointer}#wlBody .wlcv .cth{position:relative;flex:0 0 168px;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#272727}#wlBody .wlcv .cth video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}#wlBody .wlcv .cth i{position:absolute;right:4px;bottom:4px;font-style:normal;font-size:11px;font-weight:600;color:#fff;background:rgba(0,0,0,.72);padding:1px 5px;border-radius:4px}#wlBody .wlcv .info{flex:1;min-width:0}#wlBody .wlcv .cth.hid{display:flex;align-items:center;justify-content:center;background:#3a3a3a}#wlBody .wlcv .cth.hid .material-symbols-outlined{font-size:36px;color:#9a9a9a}#wlBody .wlcv.wlh{cursor:default}#wlBody .wlcv h3.wlun{cursor:pointer;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#wlBody .wlcv h3{font-size:14px;font-weight:500;margin:0 0 4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}#wlBody .wlcv p{margin:0;font-size:12px;color:var(--sub)}'; document.head.appendChild(st); }
   function draw(){
-    pg.querySelectorAll('.wltabs button').forEach(b=>{ b.classList.toggle('on',b.dataset.t===tab); b.querySelector('.wlc').textContent='('+(b.dataset.t==='v'?cv():cs())+')'; });
-    if(tab==='v'){
+    pg.querySelectorAll('.wltabs button').forEach(b=>{ b.classList.toggle('on',b.dataset.t===tab); b.querySelector('.wlc').textContent='('+(b.dataset.t==='v'?cv():b.dataset.t==='s'?cs():cc())+')'; });
+    if(tab==='c'){
+      const a=cmItems();
+      body.innerHTML=a.length?a.map(i=>'<div class="wlcv'+(i.h?' wlh':'')+'" data-id="'+E(i.a.bid||i.a.src)+'"><div class="cth'+(i.h?' hid':'')+'">'+(i.h?'<span class="material-symbols-outlined">visibility_off</span>':'<video src="'+E(i.a.src)+'#t=0.1" muted playsinline preload="metadata"></video><i>'+dFmt(i.a.dur)+'</i>')+'</div><div class="info"><h3 class="wlun">'+E(curUN())+'</h3><p>Attachment</p></div><span class="material-symbols-outlined wlx" title="Remove from Watch later">close</span></div>').join(''):'<p class="empty">No attachments in Watch later</p>';
+    }else if(tab==='v'){
       const a=window.WL.ids('v').map(id=>videos.find(x=>x.id===id)).filter(Boolean).filter(visOk);
       body.innerHTML=a.length?a.map(v=>'<div class="video" data-id="'+v.id+'"><div class="thumb'+(v.priv?' priv':'')+'" style="'+(v.img?"background:url('"+v.img+"') center/cover":'')+'">'+window.durI(v,E)+''+window.pbarHtml('v',v.id)+'</div><div class="info"><h3>'+E(v.t)+'</h3><p>'+fmt(v.n)+(v.n<=1?' view':' views')+' · '+timeAgo(v.posted)+'</p>'+rxIcon(v)+'</div><span class="material-symbols-outlined wlx" title="Remove from Watch later">close</span></div>').join(''):'<p class="empty">No videos in Watch later</p>';
     }else{
@@ -6936,26 +7100,60 @@ body.member :is(.video,.hcard,.rres,.avrow,.post,.pl):has(.priv),body.member :is
   }
   pg.querySelector('.wltabs').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; tab=b.dataset.t; draw(); pg.scrollTop=0; });
   body.addEventListener('click',e=>{
+    const cv0=e.target.closest('.wlcv');
+    if(cv0){ const key=cv0.dataset.id;
+      if(e.target.closest('.wlun')){ pg.classList.remove('show'); menu.classList.remove('show'); if(window.__acGoHome) window.__acGoHome(); return; }   // username চাপলে account-এর Home tab
+      if(cv0.classList.contains('wlh')&&!e.target.closest('.wlx')) return;   // Hide করা: video চাপলে কিছু খুলবে না
+      if(e.target.closest('.wlx')){ window.WL.toggle('cv',key); draw(); toast('Removed from Watch later'); return; }
+      const L=cmItems(), at=Math.max(0,L.findIndex(i=>String(i.a.bid||i.a.src)===String(key))), it=L[at]; if(!it||!window.openVideoViewer) return;
+      window.openVideoViewer(it.a.src,+it.a.dur||0,it.a.bid||'',undefined,{list:L.map(z=>({src:z.a.src,dur:+z.a.dur||0,bid:z.a.bid||'',lbl:z.r?'Show in replies':'Show in comments',go:()=>{ if(window.__openCmAt) window.__openCmAt(z.p,z.c,z.r?z.id:''); }})),at:at});
+      return; }
     const c=e.target.closest('.video,.sh'); if(!c) return; const id=+c.dataset.id, k=c.classList.contains('sh')?'s':'v';
     if(e.target.closest('.wlx')){ window.WL.toggle(k,id); draw(); toast('Removed from Watch later'); return; }
     if(k==='v'&&window.__openV) window.__openV(id); else if(k==='s'&&window.__openS) window.__openS(id);
   });
+
+  // Attachments ট্যাব: hold / right click করলে video viewer-এর অপশনগুলো (Quality ও Playback speed বাদে)
+  { const mn=document.createElement('div'); mn.className='popup'; mn.id='wlcvMenu'; document.body.appendChild(mn);
+    let ht=null, hx=0, hy=0, hItem=null, hSup=0;
+    const shut=()=>{ mn.classList.remove('show'); mn.innerHTML=''; body.querySelectorAll('.wlcv.hold').forEach(z=>z.classList.remove('hold')); };
+    const lnk=async(share,id)=>{ try{ const url=typeof window.contentLink==='function'?await window.contentLink({kind:'comment-video',id:id}):null; if(!url){ toast('Link will be available once the server is connected'); return; } if(!share||!navigator.share) await copyLink(url); else await navigator.share({url:url}); }catch(err){ if(err&&err.name==='AbortError') return; toast(share?'Could not share':'Could not copy link'); } };
+    const itOf=row=>{ const key=row.dataset.id; return cmItems().find(i=>String(i.a.bid||i.a.src)===String(key)); };
+    const blk=row=>{ const it=itOf(row); return !it||(it.r&&it.ah); };   // reply / sub reply-এর main comment বা main reply hidden হলে hold-এ কিছুই হবে না
+    const open=(row,x,y)=>{ const it=itOf(row); if(!it||(it.r&&it.ah)) return; hItem=it; hSup=Date.now()+700; row.classList.add('hold');
+      const goL=it.r?'Show in replies':'Show in comments', goOk=it.r?!it.ah:!it.h;   // reply / sub reply: parent hidden না হলে Show in replies; main comment: hidden না হলে Show in comments
+      const DV='<div style="height:1px;background:var(--line,#3a3a3a);margin:6px 0"></div>', WB='<button type="button" data-k="wl"><span class="material-symbols-outlined">check_circle</span>Remove from Watch later</button>';
+      const GB=goOk?'<button type="button" data-k="go"><span class="material-symbols-outlined">'+(it.r?'forum':'comment')+'</span>'+goL+'</button>'+DV:'';   // Remove from Watch later-এর উপরে, divider দিয়ে আলাদা
+      mn.innerHTML=GB+(it.h?WB:'<button type="button" data-k="copy"><span class="material-symbols-outlined">link</span>Copy link</button><button type="button" data-k="share"><span class="material-symbols-outlined">share</span>Share link</button><button type="button" data-k="save"><span class="material-symbols-outlined">download</span>Save to Device</button>'+WB);
+      mn.classList.add('show'); const w=mn.offsetWidth, h=mn.offsetHeight; mn.style.left=Math.max(8,Math.min(x,innerWidth-w-8))+'px'; mn.style.top=Math.max(8,Math.min(y,innerHeight-h-8))+'px'; };
+    body.addEventListener('pointerdown',e=>{ const row=e.target.closest('.wlcv'); if(!row||e.target.closest('.wlx')||(e.pointerType==='mouse'&&e.button!==0)||blk(row)) return; hx=e.clientX; hy=e.clientY; clearTimeout(ht); ht=setTimeout(()=>{ ht=null; if(navigator.vibrate){ try{ navigator.vibrate(15); }catch(_){} } open(row,hx,hy); },450); });
+    body.addEventListener('pointermove',e=>{ if(ht&&(Math.abs(e.clientX-hx)>10||Math.abs(e.clientY-hy)>10)){ clearTimeout(ht); ht=null; } });
+    ['pointerup','pointercancel'].forEach(n=>body.addEventListener(n,()=>{ clearTimeout(ht); ht=null; }));
+    body.addEventListener('contextmenu',e=>{ const row=e.target.closest('.wlcv'); if(!row) return; e.preventDefault(); clearTimeout(ht); ht=null; open(row,e.clientX,e.clientY); });
+    body.addEventListener('click',e=>{ if(Date.now()<hSup){ e.stopImmediatePropagation(); e.preventDefault(); } },true);
+    document.addEventListener('click',e=>{ if(mn.classList.contains('show')&&!mn.contains(e.target)) shut(); },true);
+    pg.addEventListener('scroll',shut,{passive:true});
+    mn.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||!hItem) return; const it=hItem, id=String(it.a.bid||it.a.src), k=b.dataset.k; shut();
+      if(k==='go'){ if(window.__openCmAt) window.__openCmAt(it.p,it.c,it.r?it.id:''); }
+      else if(k==='copy') lnk(false,id); else if(k==='share') lnk(true,id);
+      else if(k==='save'){ if(window.__vSaveQuality) window.__vSaveQuality({src:it.a.src,dur:+it.a.dur||0,bid:it.a.bid||''}); }
+      else if(k==='wl'){ window.WL.toggle('cv',id); draw(); toast('Removed from Watch later'); } }); }
   (window.__pgDraw=window.__pgDraw||{}).wl=draw;
   $('acWL').addEventListener('click',()=>{ tab='v'; draw(); pg.classList.add('show'); pg.scrollTop=0; });
   $('wlBack').onclick=()=>{ pg.classList.remove('show'); menu.classList.remove('show'); };
   const menu=document.createElement('div'); menu.className='popup'; menu.id='wlMenu';
-  menu.innerHTML='<button data-k="v"><span class="material-symbols-outlined">delete</span>Remove all videos</button><button data-k="s"><span class="material-symbols-outlined">delete</span>Remove all shorts</button>';
+  menu.innerHTML='<button data-k="v"><span class="material-symbols-outlined">delete</span>Remove all videos</button><button data-k="s"><span class="material-symbols-outlined">delete</span>Remove all shorts</button><button data-k="c"><span class="material-symbols-outlined">delete</span>Remove all attachments</button>';
   document.body.appendChild(menu);
   $('wlMore').addEventListener('click',e=>{
     e.stopPropagation();
     if(menu.classList.contains('show')){ menu.classList.remove('show'); return; }
-    menu.querySelector('[data-k="v"]').disabled=!cv(); menu.querySelector('[data-k="s"]').disabled=!cs();
+    menu.querySelector('[data-k="v"]').disabled=!cv(); menu.querySelector('[data-k="s"]').disabled=!cs(); menu.querySelector('[data-k="c"]').disabled=!cc();
     const r=$('wlMore').getBoundingClientRect(), w=menu.offsetWidth;
     menu.style.left=Math.max(8,Math.min(r.right,innerWidth-8)-w)+'px'; menu.style.top=(r.bottom+4)+'px'; menu.classList.add('show');
   });
   menu.addEventListener('click',e=>{
     const b=e.target.closest('button'); if(!b||b.disabled) return; const k=b.dataset.k; menu.classList.remove('show');
-    askDelete(k==='v'?'Remove all videos from Watch later?':'Remove all shorts from Watch later?',()=>{ window.WL.clear(k); draw(); toast(k==='v'?'All videos removed':'All shorts removed'); },'Remove',k===tab?'#wlBody .video,#wlBody .sh':[]);
+    askDelete(k==='v'?'Remove all videos from Watch later?':k==='s'?'Remove all shorts from Watch later?':'Remove all attachments from Watch later?',()=>{ window.WL.clear(k==='c'?'cv':k); draw(); toast(k==='v'?'All videos removed':k==='s'?'All shorts removed':'All attachments removed'); },'Remove',k===tab?'#wlBody .video,#wlBody .sh,#wlBody .wlcv':[]);
   });
   document.addEventListener('click',e=>{ if(!menu.contains(e.target)) menu.classList.remove('show'); });
   pg.addEventListener('scroll',()=>menu.classList.remove('show'),{passive:true});
@@ -7356,7 +7554,7 @@ window.addEventListener('contextmenu',e=>{ const t=e.target; if(t&&t.closest&&t.
   window.__initSwipeDel=function(id){
     const box=document.getElementById(id); if(!box) return;
     let st=null;
-    const pick=e=>{ const c=e.target.closest&&e.target.closest('.video,.sh,.pl,.nt,.pcell'); return (c&&box.contains(c)&&!e.target.closest('.wlx,.dlm,.more'))?c:null; };
+    const pick=e=>{ const c=e.target.closest&&e.target.closest('.video,.sh,.pl,.nt,.pcell,.wlcv'); return (c&&box.contains(c)&&!e.target.closest('.wlx,.dlm,.more'))?c:null; };
     function down(c,x,y){ st={c,x,y,drag:false,dec:false,dx:0}; }
     function move(x,y){
       if(!st) return false;
@@ -7760,7 +7958,7 @@ window.addEventListener('contextmenu',e=>{ const t=e.target; if(t&&t.closest&&t.
 .xslot.srch .xs-s{transform:translateY(-130%);opacity:0;pointer-events:none}
 .xslot.srch .xs-c{transform:translateY(0);opacity:1;pointer-events:auto}
 .xsel .wlx,.xsel .dlm,.xsel .more{visibility:hidden}
-#wlPage .video.on,#hsPage .video.on,#lcPage .video.on,#dcPage .video.on,#dlPage .video.on,#wlPage .pl.on,#dlPage .pl.on,#spPage .pl.on{background:rgba(62,166,255,.2)}
+#wlPage .wlcv.on,#wlPage .video.on,#hsPage .video.on,#lcPage .video.on,#dcPage .video.on,#dlPage .video.on,#wlPage .pl.on,#dlPage .pl.on,#spPage .pl.on{background:rgba(62,166,255,.2)}
 .sgrid.xrows{display:block}.sgrid.xrows .sh.rres{aspect-ratio:auto;overflow:visible;background:none!important}.sgrid.xrows .xth{cursor:pointer}.sgrid.xrows .xth .shrx{display:none}.sgrid.xrows .ri .shrx{position:static!important;display:block;font-size:16px!important;margin-top:4px;color:var(--sub);text-shadow:none}.xsel .sgrid.xrows .sh.on{background:rgba(62,166,255,.2)!important}.xsel .sgrid.xrows .sh.on::before,.xsel .sgrid.xrows .sh.on::after{display:none}
 .xsel .sh.on::after{content:'';position:absolute;inset:0;background:rgba(62,166,255,.3);box-shadow:inset 0 0 0 3px #3ea6ff;pointer-events:none;z-index:2}
 .xsel .sh.on::before{content:'\2713';position:absolute;left:6px;top:6px;width:22px;height:22px;border-radius:50%;background:#3ea6ff;color:#fff;font-size:14px;line-height:22px;text-align:center;z-index:3}
@@ -7774,8 +7972,8 @@ window.addEventListener('contextmenu',e=>{ const t=e.target; if(t&&t.closest&&t.
 (function(){
   const $=id=>document.getElementById(id);
   const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const NM={v:'videos',s:'shorts',q:'posts',p:'playlists',n:'notifications'}, CARD='.video,.sh,.pl,.nt';
-  const kindOf=c=>c.classList.contains('nt')?'n':c.classList.contains('sh')?'s':c.classList.contains('pl')?'p':c.dataset.q?'q':c.dataset.pl?'p':'v';
+  const NM={v:'videos',s:'shorts',q:'posts',p:'playlists',n:'notifications',c:'attachments'}, CARD='.video,.sh,.pl,.nt,.wlcv';
+  const kindOf=c=>c.classList.contains('wlcv')?'c':c.classList.contains('nt')?'n':c.classList.contains('sh')?'s':c.classList.contains('pl')?'p':c.dataset.q?'q':c.dataset.pl?'p':'v';
   const keyOf=c=>kindOf(c)+':'+c.dataset.id;
   const hl=(t,ql)=>{ const s=String(t), low=s.toLowerCase(); let out='', i=0, k; while((k=low.indexOf(ql,i))>=0){ out+=esc(s.slice(i,k))+'<mark>'+esc(s.slice(k,k+ql.length))+'</mark>'; i=k+ql.length; } return out+esc(s.slice(i)); };
   const histRm=items=>{ try{ const a=(JSON.parse(localStorage.getItem('watchHistory')||'[]')||[]).filter(x=>!items.some(i=>i.k===x.k&&i.id===x.id)); localStorage.setItem('watchHistory',JSON.stringify(a)); }catch(e){} };
@@ -7784,7 +7982,7 @@ window.addEventListener('contextmenu',e=>{ const t=e.target; if(t&&t.closest&&t.
     if(vid){ saveReacts(); refresh(); if(window.paintInfo) window.paintInfo(); }
     if(window.redrawHome) window.redrawHome(); };
   const CFG=[
-    {p:'wlPage',b:'wlBody',more:'wlMore',back:'wlBack',menu:'wlMenu',name:'Watch later',draw:'wl',rm:items=>items.forEach(({k,id})=>{ if(window.WL.has(k,id)) window.WL.toggle(k,id); })},
+    {p:'wlPage',b:'wlBody',more:'wlMore',back:'wlBack',menu:'wlMenu',name:'Watch later',draw:'wl',rm:items=>items.forEach(({k,id})=>{ if(k==='c'){ const real=window.WL.ids('cv').find(z=>String(z)===String(id)); if(real!==undefined) window.WL.toggle('cv',real); return; } if(window.WL.has(k,id)) window.WL.toggle(k,id); })},
     {p:'hsPage',b:'hsBody',more:'hsMore',back:'hsBack',menu:'hsMenu',name:'History',draw:'hs',rm:histRm,after:()=>{ if(window.__acDraw) window.__acDraw(); }},
     {p:'lcPage',b:'lcBody',more:'lcMore',back:'lcBack',menu:'lcMenu',name:'Liked contents',draw:'lk',rm:likeRm('like')},
     {p:'dcPage',b:'dcBody',more:'dcMore',back:'dcBack',menu:'dcMenu',name:'Disliked contents',draw:'dk',rm:likeRm('dislike')},
@@ -7838,7 +8036,7 @@ window.addEventListener('contextmenu',e=>{ const t=e.target; if(t&&t.closest&&t.
     // Latest = নতুন → পুরনো, Oldest = উল্টো. কার্ডের আসল (draw-এর) ক্রম data-o-তে মনে রাখা হয়
     function reorder(){
       let i=0; body.querySelectorAll(':scope>*, .sgrid>.sh').forEach(n=>{ if(n.classList.contains('xno')) return; if(n.dataset.o===undefined) n.dataset.o=i; i++; });
-      const rev=c.natOld?order==='latest':order==='oldest', cmp=(a,b)=>rev?b.dataset.o-a.dataset.o:a.dataset.o-b.dataset.o;
+      const rev=c.natOld?order==='latest':order==='oldest', cmp=(a,b)=>{ if(a.dataset.ts!==undefined&&b.dataset.ts!==undefined){ const d=b.dataset.ts-a.dataset.ts; if(d) return order==='latest'?d:-d; }   /* Attachments: comment / reply-এর সময় অনুযায়ী Latest / Oldest */ return rev?b.dataset.o-a.dataset.o:a.dataset.o-b.dataset.o; };
       const place=(par,list)=>{ const pins=list.filter(n=>n.hasAttribute('data-pin')).sort((a,b)=>a.dataset.o-b.dataset.o), rest=list.filter(n=>!n.hasAttribute('data-pin')).sort(cmp); [...pins,...rest].forEach(n=>par.appendChild(n)); };
       if(body.querySelector('.hsday')){
         const kids=[...body.children].filter(n=>!n.classList.contains('xno')), groups=[];
@@ -7872,7 +8070,7 @@ window.addEventListener('contextmenu',e=>{ const t=e.target; if(t&&t.closest&&t.
       if(rowsOn) toRows(sm);
       const ql=q.toLowerCase(), cards=[...body.querySelectorAll(CARD)]; let vis=0;
       cards.forEach(el=>{
-        const k=kindOf(el), id=+el.dataset.id, h=el.querySelector('h3');
+        const k=kindOf(el), id=k==='c'?el.dataset.id:+el.dataset.id, h=el.querySelector('h3');
         if(h&&h.dataset.t===undefined) h.dataset.t=h.textContent;
         const txt=k==='s'?(sm.get(id)||''):(h?h.dataset.t:'');
         const ok=!ql||String(txt).toLowerCase().includes(ql);
@@ -7943,7 +8141,7 @@ window.addEventListener('contextmenu',e=>{ const t=e.target; if(t&&t.closest&&t.
 
     fab.onclick=()=>{
       if(!S.size) return;
-      const items=[...S].map(z=>{ const i=z.indexOf(':'); return {k:z.slice(0,i),id:+z.slice(i+1)}; });
+      const items=[...S].map(z=>{ const i=z.indexOf(':'); const kk=z.slice(0,i), rest=z.slice(i+1); return {k:kk,id:kk==='c'?rest:+rest}; });
       const kinds=[...new Set(items.map(i=>i.k))], what=kinds.length===1?NM[kinds[0]]:'items', verb=c.verb||'Remove';
       askDelete(verb+' selected '+what+' from '+c.name+'?',()=>{
         c.rm(items); sel=false; S.clear();
@@ -9102,6 +9300,7 @@ window.onMediaAction=function({mode,kind,id,title,quality,src,pickAndSave}){
   v.appendChild(box); document.body.appendChild(v);
 })();
 </script>
+
 
 
 </body></html>
