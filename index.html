@@ -3872,7 +3872,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     {id:1,posted:'2026-11-08T14:00:00+06:00',txt:'গোপাল দাদার নতুন এপিসোড এখন আপলোড হয়েছে! রাজসভায় মন্ত্রীর নতুন চাল আর গোপালের বুদ্ধির মজার লড়াই দেখতে চ্যানেলে চোখ রাখুন। কেমন লাগল জানাতে ভুলবেন না!',img:'নতুন এপিসোড\nএখন চ্যানেলে',h:25,l:0,dl:0,cmt:null},
     {id:2,posted:'2026-11-06T20:00:00+06:00',txt:'আপনার প্রিয় গোপাল ভাঁড়ের কোন গল্পটা সবচেয়ে বেশি ভালো লাগে? কমেন্টে জানান।',img:'আপনার\nপ্রিয় গল্প কোনটা?',h:210,l:0,dl:0,cmt:null}
   ];
-  let pst=ld(KP,{}), pdel=ld(KPD,[]), cmts=ld('postComments',{});
+  let pst=ld(KP,{}), pdel=ld(KPD,[]), cmts=ld('postComments',{}), pnd=ld('postPending',{});
   const pViews=ld('postViews',{}), pViewed=new Set(ld('postViewed',[]));
   const savePV=()=>{ try{ const o={}; posts.forEach(x=>o[x.id]=x.n||0); localStorage.setItem('postViews',JSON.stringify(o)); localStorage.setItem('postViewed',JSON.stringify([...pViewed])); }catch(e){} };
   // একজন ব্যবহারকারীর জন্য প্রতি post-এ একবার view গোনা হয়
@@ -3894,7 +3894,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   const normR=(r,k)=>Object.assign({},r,{id:r.id||('r'+k),to:r.to||'',txt:r.txt,posted:r.posted,my:r.my||null,l:r.l||0,dl:r.dl||0,ed:!!r.ed,t0:r.t0||null,reps:(Array.isArray(r.reps)?r.reps:[]).filter(q=>q&&q.txt!=null).map((q,j)=>normR(q,k+'_'+j))});
   const normCm=v=>{ if(!v) return []; return (Array.isArray(v)?v:[v]).filter(c=>c&&c.txt!=null).map((c,i)=>{ const rs=Array.isArray(c.reps)?c.reps:(c.rep?[c.rep]:[]); return Object.assign({},c,{id:c.id||('m'+i),txt:c.txt,posted:c.posted,my:c.my||null,l:c.l||0,dl:c.dl||0,ed:!!c.ed,t0:c.t0||null,reps:rs.filter(r=>r&&r.txt!=null).map((r,j)=>normR(r,i+'_'+j)),rep:undefined}); }); };   // পুরনো (১ কমেন্ট + ১ রিপ্লাই) ডাটা নতুন তালিকায়
   ld('upPosts',[]).forEach(x=>posts.unshift(x));
-  for(let i=posts.length-1;i>=0;i--){ const x=posts[i]; if(pdel.includes(x.id)){ posts.splice(i,1); continue; } const r=pst[x.id]; x.my=r&&r.my||null; x.myAt=r&&r.at||null; x.open=false; x.shl=(r&&r.shl)||(r&&r.sh?Array.from({length:r.sh},(_,i)=>new Date(Date.now()-i*1000).toISOString()):[]); x.cmts=normCm(cmts[x.id]); if(r&&r.txt!=null) x.txt=r.txt; }
+  for(let i=posts.length-1;i>=0;i--){ const x=posts[i]; if(pdel.includes(x.id)){ posts.splice(i,1); continue; } const r=pst[x.id]; x.my=r&&r.my||null; x.myAt=r&&r.at||null; x.open=false; x.shl=(r&&r.shl)||(r&&r.sh?Array.from({length:r.sh},(_,i)=>new Date(Date.now()-i*1000).toISOString()):[]); x.cmts=normCm(cmts[x.id]); x.pend=(Array.isArray(pnd[x.id])?pnd[x.id]:[]).filter(q=>q&&q.o&&q.at&&(q.mode==='c'||q.mode==='r')).map(q=>Object.assign({},q,{o:normCm([q.o])[0]||q.o})); if(r&&r.txt!=null) x.txt=r.txt; }
   posts.forEach(x=>{ x.n=pViews[x.id]||0; });
   let pEd=ld('postEdits',{});
   let pHist=ld('postHist',{});
@@ -4482,7 +4482,8 @@ function askDelete(title,cb,yesLabel,slideSel){
     try{ drawCm(); }catch(e){} const ph=document.getElementById('prHandle'); if(ph) ph.textContent=u; };
   const MAXC=10, MAXR=10;   // এক পোস্টে সর্বোচ্চ ১০ কমেন্ট; সব কমেন্ট মিলিয়ে সর্বোচ্চ ১০ রিপ্লাই (অক্ষরের কোনো সীমা নেই)
   let cmBlocked=false; try{ cmBlocked=!!JSON.parse(localStorage.getItem('cmBlocked')||'false'); }catch(e){}
-  const saveC=()=>{ try{ const o={}; posts.forEach(x=>{ if(x.cmts&&x.cmts.length) o[x.id]=x.cmts; }); localStorage.setItem('postComments',JSON.stringify(o,(k,v)=>(k==='att'&&v&&typeof v.src==='string'&&(v.src.indexOf('blob:')===0||v.src.length>600000))?(v.bid?{k:v.k,dur:v.dur,bid:v.bid,pages:v.pages,name:v.name}:undefined):v)); }catch(e){} };
+  const cmRepl=(k,v)=>(k==='att'&&v&&typeof v.src==='string'&&(v.src.indexOf('blob:')===0||v.src.length>600000))?(v.bid?{k:v.k,dur:v.dur,bid:v.bid,pages:v.pages,name:v.name}:undefined):v;
+  const saveC=()=>{ try{ const pp={}; posts.forEach(x=>{ if(x.pend&&x.pend.length) pp[x.id]=x.pend; }); localStorage.setItem('postPending',JSON.stringify(pp,cmRepl)); }catch(e){} try{ const o={}; posts.forEach(x=>{ if(x.cmts&&x.cmts.length) o[x.id]=x.cmts; }); localStorage.setItem('postComments',JSON.stringify(o,(k,v)=>(k==='att'&&v&&typeof v.src==='string'&&(v.src.indexOf('blob:')===0||v.src.length>600000))?(v.bid?{k:v.k,dur:v.dur,bid:v.bid,pages:v.pages,name:v.name}:undefined):v)); }catch(e){} };
   const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
   // Auto delete চালু থাকা comment / reply-র 3 dot-এর বাম পাশে Delete icon + ঘুরতে থাকা (কমতে থাকা) circular progress; ১ মিনিটের ভেতরে লাল, নইলে নীল
   const AD_C=2*Math.PI*11;
@@ -5153,13 +5154,13 @@ function askDelete(title,cb,yesLabel,slideSel){
     else if(k==='audrec') openRec();
   });
   let addSet=false, addT=0, addTm=null, addHold=null, addHoldAt=0, addSx=0, addSy=0;   // attachment আইকন double tap: attachment <-> Settings আইকন
-  const SETKEY='cmSettings'; let cmSet={lk:true,dl:true,rp:true,ty:false,hd:false,ad:0,adc:{h:0,m:0,s:0},adv:'none'}; try{ localStorage.removeItem(SETKEY); }catch(e){}   // default: Like / Dislike / Reply সব On
-  new MutationObserver(()=>{ if(!cmS.classList.contains('show')){ cmSet.lk=cmSet.dl=cmSet.rp=true; cmSet.ty=false; cmSet.hd=false; cmSet.ad=0; cmSet.adv='none'; cmSet.adc={h:0,m:0,s:0}; addSet=false; soPrev=false; addSetSave=false; cmAdd.textContent='attach_file'; cmAdd.title='Add files'; } }).observe(cmS,{attributes:true,attributeFilter:['class']});   // comment window বন্ধ হলে Settings আবার default (সব On)
+  const SETKEY='cmSettings'; let cmSet={lk:true,dl:true,rp:true,ty:false,hd:false,ad:0,adc:{h:0,m:0,s:0},adv:'none',as:0,asc:{h:0,m:0,s:0},asv:'none'}; try{ localStorage.removeItem(SETKEY); }catch(e){}   // default: Like / Dislike / Reply সব On
+  new MutationObserver(()=>{ if(!cmS.classList.contains('show')){ cmSet.lk=cmSet.dl=cmSet.rp=true; cmSet.ty=false; cmSet.hd=false; cmSet.ad=0; cmSet.adv='none'; cmSet.adc={h:0,m:0,s:0}; cmSet.as=0; cmSet.asv='none'; cmSet.asc={h:0,m:0,s:0}; addSet=false; soPrev=false; addSetSave=false; cmAdd.textContent='attach_file'; cmAdd.title='Add files'; } }).observe(cmS,{attributes:true,attributeFilter:['class']});   // comment window বন্ধ হলে Settings আবার default (সব On)
   let soPrev=false, addSetSave=false;   // settings-only edit: attachment বোতামের জায়গায় Settings আইকন (বের হলে আগের অবস্থা ফেরত)
   window.__cmSoPaint=so=>{ if(so&&!soPrev){ soPrev=true; addSetSave=addSet; addSet=true; } else if(!so&&soPrev){ soPrev=false; addSet=addSetSave; } cmAdd.textContent=addSet?'settings':'attach_file'; cmAdd.title=addSet?'Settings':'Add files'; };
   const addFlip=()=>{ addSet=!addSet; cmAdd.textContent=addSet?'settings':'attach_file'; cmAdd.title=addSet?'Settings':'Add files'; };
   const setB=document.createElement('div'); setB.className='dlg-back'; setB.id='cmSetBack';
-  setB.innerHTML='<div class="dlg"><h2>Settings</h2>'+[['lk','thumb_up','Like'],['dl','thumb_down','Dislike'],['rp','chat','Reply'],['ty','keyboard','Typing indicator'],['hd','visibility_off','Hide']].map(r=>'<div class="cmsrow" data-k="'+r[0]+'"><span class="material-symbols-outlined">'+r[1]+'</span><span class="cmsn">'+r[2]+'</span><span class="cmsw" role="switch" aria-checked="true"><i></i></span></div>').join('')+'<div class="cmsrow cmsad" data-k="ad"><span class="material-symbols-outlined">auto_delete</span><span class="cmsn">Auto delete</span><span class="cmssel" id="cmAdBox"><span class="cmsv">None</span><span class="material-symbols-outlined">arrow_drop_down</span></span></div></div>';
+  setB.innerHTML='<div class="dlg"><h2>Settings</h2>'+[['lk','thumb_up','Like'],['dl','thumb_down','Dislike'],['rp','chat','Reply'],['ty','keyboard','Typing indicator'],['hd','visibility_off','Hide']].map(r=>'<div class="cmsrow" data-k="'+r[0]+'"><span class="material-symbols-outlined">'+r[1]+'</span><span class="cmsn">'+r[2]+'</span><span class="cmsw" role="switch" aria-checked="true"><i></i></span></div>').join('')+'<div class="cmsrow cmsad" data-k="as"><span class="material-symbols-outlined">schedule_send</span><span class="cmsn">Auto send</span><span class="cmssel" id="cmAsBox"><span class="cmsv">None</span><span class="material-symbols-outlined">arrow_drop_down</span></span></div>'+'<div class="cmsrow cmsad" data-k="ad"><span class="material-symbols-outlined">auto_delete</span><span class="cmsn">Auto delete</span><span class="cmssel" id="cmAdBox"><span class="cmsv">None</span><span class="material-symbols-outlined">arrow_drop_down</span></span></div></div>';
   document.body.appendChild(setB);
   { const st=document.createElement('style'); st.textContent='#cmSetBack .dlg{max-width:340px;padding:10px 0}#cmSetBack .dlg h2{font-size:20px;font-weight:500;padding:16px 22px 8px}#cmSetBack .cmsrow{display:flex;align-items:center;gap:22px;padding:16px 22px;font-size:17px;cursor:pointer;user-select:none;-webkit-user-select:none}#cmSetBack .cmsrow:active{background:#333}#cmSetBack .cmsrow.cmsdis{opacity:.4;cursor:not-allowed}#cmSetBack .cmsrow.cmsdis:active{background:none}#cmSetBack .cmsn{flex:1;min-width:0}#cmAdd{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}'
     +'#cmSetBack .cmsad{gap:14px}#cmSetBack .cmsad .cmsn{flex:0 0 auto;white-space:nowrap}#cmSetBack .cmssel{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:2px;margin-left:auto;border:1px solid #4a4a4a;border-radius:8px;padding:7px 4px 7px 10px;font-size:14px;background:#181818;cursor:pointer}#cmSetBack .cmssel.open{border-color:#3ea6ff}#cmSetBack .cmssel .cmsv{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}#cmSetBack .cmssel .material-symbols-outlined{font-size:22px;color:#aaa}'
@@ -5175,7 +5176,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   window.__cmEditSetChg=o=>{ if(!cmEdit||editFor!==cmEdit||!editSet) return false; return editSet.lk!==!o.lkOff||editSet.dl!==!o.dlOff||editSet.rp!==!o.rpOff||(editSet.ad||0)!==(o.ad||0); };
   window.__cmEditSetApply=o=>{ if(!cmEdit||editFor!==cmEdit||!editSet) return; ['lk','dl','rp'].forEach(k=>{ const f=k+'Off'; if(editSet[k]) delete o[f]; else o[f]=true; });
     if((editSet.ad||0)!==(o.ad||0)){ if(editSet.ad>0){ o.ad=editSet.ad; o.adv=editSet.adv; o.adc=editSet.adc; o.adAt=Date.now()+editSet.ad*1000; } else{ delete o.ad; delete o.adv; delete o.adc; delete o.adAt; } } };   // Auto delete বদলালে সময় নতুন করে শুরু; না বদলালে আগের সময়ই চলতে থাকে
-  const setPaint=()=>setB.querySelectorAll('.cmsrow').forEach(r=>{ if(r.dataset.k==='ad'){ r.style.display=''; adPaint(); return; } if(r.dataset.k==='ty'||r.dataset.k==='hd') r.style.display=cmEdit?'none':'';   /* Edit comment / Edit reply-তে Typing option দেখাবে না */ const lk=r.dataset.k==='rp'&&cmSetOnly(); r.classList.toggle('cmsdis',lk); const on=!lk&&!!((r.dataset.k==='ty'||r.dataset.k==='hd')?cmSet:curSet())[r.dataset.k], sw=r.querySelector('.cmsw'); sw.classList.toggle('on',on); sw.setAttribute('aria-checked',on?'true':'false'); });
+  const setPaint=()=>setB.querySelectorAll('.cmsrow').forEach(r=>{ if(r.dataset.k==='as'){ r.style.display=cmEdit?'none':''; asPaint(); return; } if(r.dataset.k==='ad'){ r.style.display=''; adPaint(); return; } if(r.dataset.k==='ty'||r.dataset.k==='hd') r.style.display=cmEdit?'none':'';   /* Edit comment / Edit reply-তে Typing option দেখাবে না */ const lk=r.dataset.k==='rp'&&cmSetOnly(); r.classList.toggle('cmsdis',lk); const on=!lk&&!!((r.dataset.k==='ty'||r.dataset.k==='hd')?cmSet:curSet())[r.dataset.k], sw=r.querySelector('.cmsw'); sw.classList.toggle('on',on); sw.setAttribute('aria-checked',on?'true':'false'); });
   // ---- Auto delete: Settings-এর শেষ option। এক ক্লিকে select box, Custom-এ ঘণ্টা / মিনিট / সেকেন্ডের scroll picker ----
   const AD_OPTS=[['none','None',0],['60','After 1 minute',60],['300','After 5 minutes',300],['600','After 10 minutes',600],['900','After 15 minutes',900],['1200','After 20 minutes',1200],['1500','After 25 minutes',1500],['1800','After 30 minutes',1800],['custom','Custom',-1]];
   const adS=()=>cmEdit?curSet():cmSet;
@@ -5204,13 +5205,33 @@ function askDelete(title,cb,yesLabel,slideSel){
   const adCustOpen=()=>{ adB.classList.add('show'); const c=adS().adc||{h:0,m:0,s:0}; adPs.forEach(p=>{ p.style.scrollBehavior='auto'; p.scrollTop=(c[p.dataset.u]||0)*ADH; }); adMark(); };
   adB.addEventListener('click',e=>{ if(e.target===adB) adB.classList.remove('show'); });
   adB.querySelector('#cmAdNo').onclick=()=>adB.classList.remove('show');
-  adOk.onclick=()=>{ const v={}; adPs.forEach(p=>{ v[p.dataset.u]=adIdx(p); }); const t=v.h*3600+v.m*60+v.s; if(t<=0) return; const S=adS(); S.adc=v; S.adv='custom'; S.ad=t; adB.classList.remove('show'); adPaint(); if(cmEdit) cmInput(); };
+  adOk.onclick=()=>{ const v={}; adPs.forEach(p=>{ v[p.dataset.u]=adIdx(p); }); const t=v.h*3600+v.m*60+v.s; if(t<=0) return; if(asCust){ cmSet.asc=v; cmSet.asv='custom'; cmSet.as=t; adB.classList.remove('show'); asPaint(); return; } const S=adS(); S.adc=v; S.adv='custom'; S.ad=t; adB.classList.remove('show'); adPaint(); if(cmEdit) cmInput(); };
   adList.addEventListener('click',e=>{ const d=e.target.closest('div[data-v]'); if(!d) return; const v=d.dataset.v; adListClose();
     if(v==='custom'){ adCustOpen(); return; }
     const o=AD_OPTS.find(q=>q[0]===v), S=adS(); S.adv=v; S.ad=o?o[2]:0; adPaint(); if(cmEdit) cmInput(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&adB.classList.contains('show')){ adB.classList.remove('show'); e.stopPropagation(); } },true);
+  // ---- Auto send: Auto delete-এর মতোই options; Send করলে comment / reply এখনই দেখায় না, নির্দিষ্ট সময় পর যোগ হয় ----
+  const asLabel=()=>{ if(cmSet.asv==='custom'){ const c=cmSet.asc, a=[]; if(c.h) a.push(c.h+'h'); if(c.m) a.push(c.m+'m'); if(c.s) a.push(c.s+'s'); return 'After '+(a.join(' ')||'0s'); } const o=AD_OPTS.find(q=>q[0]===cmSet.asv); return o?o[1]:'None'; };
+  const asPaint=()=>{ const v=setB.querySelector('#cmAsBox .cmsv'); if(v) v.textContent=asLabel(); };
+  const asList=document.createElement('div'); asList.id='cmAsList'; document.body.appendChild(asList);
+  { const st=document.createElement('style'); st.textContent='#cmAsList{position:fixed;z-index:300;display:none;background:#383838;border-radius:10px;padding:6px 0;box-shadow:0 6px 24px rgba(0,0,0,.55);overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}#cmAsList.show{display:block}#cmAsList div{padding:12px 16px;font-size:15px;cursor:pointer;white-space:nowrap}#cmAsList div:active{background:#4a4a4a}#cmAsList div.on{color:#3ea6ff}'; document.head.appendChild(st); }
+  const asListClose=()=>{ asList.classList.remove('show'); const b=setB.querySelector('#cmAsBox'); if(b) b.classList.remove('open'); };
+  const asListToggle=()=>{ if(asList.classList.contains('show')){ asListClose(); return; } const box=setB.querySelector('#cmAsBox'); if(!box) return; adListClose();
+    asList.innerHTML=AD_OPTS.map(o=>'<div data-v="'+o[0]+'"'+(o[0]===cmSet.asv?' class="on"':'')+'>'+o[1]+'</div>').join('');
+    const r=box.getBoundingClientRect(); asList.style.visibility='hidden'; asList.classList.add('show'); box.classList.add('open');
+    const h=Math.min(asList.scrollHeight,window.innerHeight-24), below=window.innerHeight-r.bottom-12;
+    asList.style.maxHeight=h+'px'; asList.style.minWidth=Math.max(r.width,170)+'px'; asList.style.right=Math.max(8,window.innerWidth-r.right)+'px'; asList.style.left='auto';
+    asList.style.top=(below>=h?r.bottom+4:Math.max(8,r.top-h-4))+'px'; asList.style.visibility=''; };
+  document.addEventListener('click',e=>{ if(!asList.classList.contains('show')) return; if(e.target.closest('#cmAsList')) return; e.stopPropagation(); e.preventDefault(); asListClose(); },true);
+  new MutationObserver(()=>{ if(!setB.classList.contains('show')) asListClose(); }).observe(setB,{attributes:true,attributeFilter:['class']});
+  let asCust=false;   // Custom picker: Auto delete-এর window-ই Auto send-এর জন্য ব্যবহার হয়
+  const asCustOpen=()=>{ asCust=true; adB.querySelector('h2').textContent='Auto send'; adB.classList.add('show'); const c=cmSet.asc||{h:0,m:0,s:0}; adPs.forEach(p=>{ p.style.scrollBehavior='auto'; p.scrollTop=(c[p.dataset.u]||0)*ADH; }); adMark(); };
+  new MutationObserver(()=>{ if(!adB.classList.contains('show')){ asCust=false; adB.querySelector('h2').textContent='Auto delete'; } }).observe(adB,{attributes:true,attributeFilter:['class']});
+  asList.addEventListener('click',e=>{ const d=e.target.closest('div[data-v]'); if(!d) return; const v=d.dataset.v; asListClose();
+    if(v==='custom'){ asCustOpen(); return; }
+    const o=AD_OPTS.find(q=>q[0]===v); cmSet.asv=v; cmSet.as=o?o[2]:0; asPaint(); });
   const openSet=()=>{ setPaint(); setB.classList.add('show'); };
-  setB.addEventListener('click',e=>{ const r=e.target.closest('.cmsrow'); if(r){ if(r.dataset.k==='ad'){ adListToggle(); return; } if(r.dataset.k==='rp'&&cmSetOnly()) return;   // parent-এর Reply off থাকলে এখানে Reply toggle বদলানো যায় না (নিজের আগের অবস্থা অক্ষত থাকে)
+  setB.addEventListener('click',e=>{ const r=e.target.closest('.cmsrow'); if(r){ if(r.dataset.k==='as'){ asListToggle(); return; } if(r.dataset.k==='ad'){ asListClose(); adListToggle(); return; } if(r.dataset.k==='rp'&&cmSetOnly()) return;   // parent-এর Reply off থাকলে এখানে Reply toggle বদলানো যায় না (নিজের আগের অবস্থা অক্ষত থাকে)
     if(r.dataset.k==='ty'){ cmSet.ty=!cmSet.ty; setPaint(); if(!cmSet.ty&&window.__cmTypStop) window.__cmTypStop(); return; }
     if(r.dataset.k==='hd'){ if(cmEdit) return; cmSet.hd=!cmSet.hd; setPaint(); return; }   // Hide: Add comment / Add reply / Reply to reply Send করলে box hide; Edit-এ নেই; window বন্ধ হলে Off   // Typing: item-এর নয়, পুরো window-এর সেটিং (default Off)
     { const S=curSet(); S[r.dataset.k]=!S[r.dataset.k]; } setPaint(); if(cmEdit) cmInput(); return; } if(e.target===setB) setB.classList.remove('show'); });
@@ -5670,8 +5691,9 @@ function askDelete(title,cb,yesLabel,slideSel){
   const tbBlank=()=>Array.from({length:TB_R},()=>Array(TB_C).fill(''));
   const tbRead=()=>[].slice.call(tbT.rows).map(tr=>[].slice.call(tr.cells).map(td=>td.firstChild.value));
   const tbReadC=()=>[].slice.call(tbT.rows).map(tr=>[].slice.call(tr.cells).map(td=>td.dataset.bg||''));
-  const tbPaint=()=>{ const r=tbRead(); let dis=!r.some(x=>x.some(v=>v.trim())); if(!dis&&tbEdit){ const c=tbReadC(); dis=JSON.stringify(tbEdit.table.rows)===JSON.stringify(r)&&JSON.stringify(tbEdit.table.colors||r.map(x=>x.map(()=>'')))===JSON.stringify(c); } tbOk.disabled=dis; };
-  function openTable(item){ tbEdit=(item&&item.table&&item.table.rows)?item:null; tbBuild(tbEdit?tbEdit.table.rows:tbBlank(),tbEdit&&tbEdit.table.colors); tbCmHide(); tbDM.classList.remove('show'); tbOk.textContent=tbEdit?'Save':'Add'; tbMenu.classList.remove('show'); tbS.scrollTop=0; tbS.scrollLeft=0; tbPaint(); tbB.classList.add('show'); }
+  let tbSig='', tbRsSig=null; const tbSigNow=()=>JSON.stringify([tbRead(),tbReadC()]); const tbRsPaint=()=>{ const rs=document.getElementById('cmTbReset'); if(rs) rs.disabled=tbEdit?(tbRsSig!==null&&tbSigNow()===tbRsSig):(tbSigNow()===tbSig||tbSigNow()===JSON.stringify([tbBlank(),tbBlank().map(x=>x.map(()=>''))])); };
+  const tbPaint=()=>{ tbRsPaint(); const r=tbRead(); let dis=!r.some(x=>x.some(v=>v.trim())); if(!dis&&tbEdit){ const c=tbReadC(); dis=JSON.stringify(tbEdit.table.rows)===JSON.stringify(r)&&JSON.stringify(tbEdit.table.colors||r.map(x=>x.map(()=>'')))===JSON.stringify(c); } tbOk.disabled=dis; };
+  function openTable(item){ tbEdit=(item&&item.table&&item.table.rows)?item:null; tbBuild(tbEdit?tbEdit.table.rows:tbBlank(),tbEdit&&tbEdit.table.colors); tbCmHide(); tbDM.classList.remove('show'); tbOk.textContent=tbEdit?'Save':'Add'; tbMenu.classList.remove('show'); tbS.scrollTop=0; tbS.scrollLeft=0; tbSig=tbSigNow(); tbRsSig=null; tbPaint(); tbB.classList.add('show'); }
   const tbShut=()=>{ tbCmHide(); tbDM.classList.remove('show'); tbB.classList.remove('show'); tbMenu.classList.remove('show'); cmChg=false; tbEdit=null; };
   tbB.addEventListener('input',tbPaint);
   tbB.addEventListener('click',e=>{ if(e.target===tbB){ tbShut(); return; } if(e.target.closest('#cmTbPlus')){ tbDM.classList.remove('show'); tbMenu.classList.toggle('show'); return; } const mb=e.target.closest('#cmTbMenu button'); if(mb){ tbMenu.classList.remove('show');
@@ -5679,7 +5701,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     else{ if(!tbT.rows.length) tbBuild([['']]); else [].slice.call(tbT.rows).forEach(tr=>tbCell(tr,'')); tbS.scrollLeft=tbS.scrollWidth; }
     tbPaint(); return; }
     if(!e.target.closest('#cmTbMenu')) tbMenu.classList.remove('show'); });
-  tbB.querySelector('#cmTbReset').onclick=()=>{ tbCmHide(); tbDM.classList.remove('show'); tbBuild(tbBlank()); tbS.scrollTop=0; tbS.scrollLeft=0; tbMenu.classList.remove('show'); tbPaint(); };
+  tbB.querySelector('#cmTbReset').onclick=()=>{ tbCmHide(); tbDM.classList.remove('show'); tbBuild(tbBlank()); tbS.scrollTop=0; tbS.scrollLeft=0; tbMenu.classList.remove('show'); tbRsSig=tbSigNow(); tbPaint(); };
   tbB.querySelector('#cmTbNo').onclick=tbShut;
   tbOk.onclick=()=>{ const rows=tbRead(), cols=tbReadC(); if(!rows.some(r=>r.some(v=>v.trim()))) return; const same=!!tbEdit&&JSON.stringify(tbEdit.table.rows)===JSON.stringify(rows)&&JSON.stringify(tbEdit.table.colors||rows.map(r=>r.map(()=>'')))===JSON.stringify(cols); tbCmHide(); tbB.classList.remove('show'); tbMenu.classList.remove('show'); tbEdit=null;
     if(same){ cmChg=false; return; }
@@ -6078,6 +6100,59 @@ function askDelete(title,cb,yesLabel,slideSel){
   window.__pdfView=pdfViewOpen;
   document.addEventListener('click',e=>{ const el=e.target.closest&&e.target.closest('.cmatt.cmpdf'); if(!el||pdW.classList.contains('show')) return; if(window.__attHeldNow&&window.__attHeldNow()) return;
     e.stopPropagation(); e.preventDefault(); pdfViewOpen({k:'pdf',src:el.dataset.psrc,bid:el.dataset.bid||'',pages:+el.dataset.pages||1,name:el.dataset.pname||'',xm:!!el.closest('#ehList')},()=>{ if(window.__scrollBack) window.__scrollBack(el); }); },true);
+  // ---- Table viewer: Comments / Replies / My comments / Hidden / this channel / this post / Edit history-তে table-এ চাপলে আলাদা window (সাদা পেইজে table, চার দিকে scroll); Title menu-তে Back (প্রথমে) ও horizontal 3 dot (শেষে) → Export to PDF; Edit history-তে 3 dot নেই ----
+  { const st=document.createElement('style'); st.textContent='#cmTbView{position:fixed;inset:0;z-index:140;display:none;flex-direction:column;background:var(--bg,#0f0f0f);color:#fff;padding-top:env(safe-area-inset-top,0px)}#cmTbView.show{display:flex}'
+    +'#cmTbView .tvh{display:flex;align-items:center;gap:16px;height:56px;padding:0 16px;flex:none;border-bottom:1px solid var(--line,#3f3f3f)}#cmTbView .tvh>.material-symbols-outlined{cursor:pointer;padding:6px;border-radius:50%;-webkit-user-select:none;user-select:none}#cmTbView .tvh>.material-symbols-outlined:active{background:#333}#cmTbView .tvsp{flex:1}#cmTbView.xm #cmTvMore{display:none}'
+    +'#cmTbView .tvsc{flex:1;min-height:0;overflow:auto;background:#fff;touch-action:pan-x pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,0px)}#cmTbView .tvpg{display:inline-block;box-sizing:border-box;min-width:100%;min-height:100%;padding:20px;background:#fff}'
+    +'#cmTvT{border-collapse:collapse}#cmTvT td{border:1px solid #9a9a9a;padding:8px 12px;min-width:90px;height:36px;font-size:14px;line-height:20px;white-space:pre;vertical-align:top;color:#000;background:#fff}'
+    +'#cmTvMn{position:absolute;top:calc(env(safe-area-inset-top,0px) + 60px);right:12px;min-width:210px;background:#212121;border-radius:14px;padding:6px 0;box-shadow:0 4px 24px rgba(0,0,0,.5);display:none;z-index:5}#cmTvMn.show{display:block}#cmTvMn button{display:flex;align-items:center;gap:18px;width:100%;padding:14px 18px;background:none;border:0;color:#fff;font-size:16px;text-align:left;cursor:pointer}#cmTvMn button:active{background:#333}';
+    document.head.appendChild(st); }
+  const tvW=document.createElement('div'); tvW.id='cmTbView';
+  tvW.innerHTML='<div class="tvh"><span class="material-symbols-outlined" id="cmTvBack" role="button" aria-label="Back">arrow_back</span><span class="tvsp"></span><span class="material-symbols-outlined" id="cmTvMore" role="button" aria-label="More">more_horiz</span></div><div class="tvsc"><div class="tvpg"><table id="cmTvT"></table></div></div><div id="cmTvMn"><button type="button"><span class="material-symbols-outlined">picture_as_pdf</span>Export to PDF</button></div>';
+  document.body.appendChild(tvW);
+  const tvT=tvW.querySelector('#cmTvT'), tvSc=tvW.querySelector('.tvsc'), tvMn=tvW.querySelector('#cmTvMn'); let tvR=null, tvBack=null;
+  const tvFromData=t=>{ const rows=(t&&t.rows)||[], cols=(t&&t.colors)||[]; return rows.map((r,ri)=>r.map((v,ci)=>{ const c=cols[ri]&&cols[ri][ci], ok=/^#[0-9a-f]{6}$/i.test(c||''), lum=ok?(0.299*parseInt(c.slice(1,3),16)+0.587*parseInt(c.slice(3,5),16)+0.114*parseInt(c.slice(5,7),16)):0; return {t:String(v==null?'':v),bg:ok?c:'',fg:ok?(lum>150?'#000':'#fff'):''}; })); };
+  const tvRead=el=>{ const tb=el.querySelector('table'); if(!tb) return null; return [].slice.call(tb.rows).map(tr=>[].slice.call(tr.cells).map(td=>({t:td.textContent,bg:td.style.backgroundColor||'',fg:td.style.color||''}))); };
+  const tvDraw=rows=>{ tvT.innerHTML=''; rows.forEach(r=>{ const tr=tvT.insertRow(); r.forEach(c=>{ const td=tr.insertCell(); td.textContent=c.t; if(c.bg){ td.style.background=c.bg; td.style.color=c.fg||'#000'; } }); }); };
+  // একটি পেজের PDF (JPEG ছবি সহ) — কোনো library লাগে না
+  const tvPdfParts=(jpg,iw,ih,pw,ph)=>{ const enc=new TextEncoder(), parts=[], offs=[]; let len=0;
+    const put=d=>{ const u=typeof d==='string'?enc.encode(d):d; parts.push(u); len+=u.length; };
+    const obj=(n,b)=>{ offs[n]=len; put(n+' 0 obj\n'+b+'\nendobj\n'); };
+    put('%PDF-1.4\n');
+    obj(1,'<< /Type /Catalog /Pages 2 0 R >>'); obj(2,'<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+    obj(3,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+pw+' '+ph+'] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>');
+    offs[4]=len; put('4 0 obj\n<< /Type /XObject /Subtype /Image /Width '+iw+' /Height '+ih+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+jpg.length+' >>\nstream\n'); put(jpg); put('\nendstream\nendobj\n');
+    const cs='q '+pw+' 0 0 '+ph+' 0 0 cm /Im0 Do Q'; obj(5,'<< /Length '+cs.length+' >>\nstream\n'+cs+'\nendstream');
+    const xr=len; let xt='xref\n0 6\n0000000000 65535 f \n'; for(let i=1;i<=5;i++) xt+=String(offs[i]).padStart(10,'0')+' 00000 n \n';
+    put(xt+'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+xr+'\n%%EOF'); return parts; };
+  async function tvExport(rows){ try{
+      if(!rows||!rows.length){ toast('Could not export PDF'); return; }
+      const F='14px system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Bengali",sans-serif', PX=12, PY=8, LH=20, MINW=90, MINH=36, PAD=20;
+      const mc=document.createElement('canvas').getContext('2d'); mc.font=F;
+      const nc=Math.max(1,...rows.map(r=>r.length));
+      const cw=Array.from({length:nc},(_,ci)=>Math.max(MINW,Math.ceil(Math.max(0,...rows.map(r=>r[ci]?mc.measureText(r[ci].t).width:0)))+PX*2));
+      const tw=cw.reduce((a,b)=>a+b,0), th=rows.length*MINH, W=tw+PAD*2, H=th+PAD*2;
+      let sc=2; while((W*sc>16000||H*sc>16000||W*sc*H*sc>16e6)&&sc>.25) sc-=.25;
+      const cv=document.createElement('canvas'); cv.width=Math.max(1,Math.round(W*sc)); cv.height=Math.max(1,Math.round(H*sc));
+      const g=cv.getContext('2d'); g.scale(sc,sc); g.fillStyle='#fff'; g.fillRect(0,0,W,H); g.font=F; g.textBaseline='middle';
+      rows.forEach((r,ri)=>{ let x=PAD; const y=PAD+ri*MINH; for(let ci=0;ci<nc;ci++){ const c=r[ci]||{t:'',bg:'',fg:''}; if(c.bg){ g.fillStyle=c.bg; g.fillRect(x,y,cw[ci],MINH); } g.fillStyle=c.bg?(c.fg||'#000'):'#000'; if(c.t) g.fillText(c.t,x+PX,y+PY+LH/2); x+=cw[ci]; } });
+      g.strokeStyle='#9a9a9a'; g.lineWidth=1; g.beginPath();
+      { let x=PAD; for(let i=0;i<=nc;i++){ g.moveTo(x+.5,PAD); g.lineTo(x+.5,PAD+th); x+=cw[i]||0; } }
+      for(let i=0;i<=rows.length;i++){ g.moveTo(PAD,PAD+i*MINH+.5); g.lineTo(PAD+tw,PAD+i*MINH+.5); }
+      g.stroke();
+      const jb=await new Promise((ok,no)=>cv.toBlob(b=>b?ok(b):no(new Error('jpeg')),'image/jpeg',.92)), jpg=new Uint8Array(await jb.arrayBuffer());
+      const blob=new Blob(tvPdfParts(jpg,cv.width,cv.height,+(W*.75).toFixed(2),+(H*.75).toFixed(2)),{type:'application/pdf'});
+      if(await window.__saveBlob(blob,'table-'+Date.now()+'.pdf')) toast('Table exported to PDF');
+    }catch(err){ toast('Could not export PDF'); } }
+  window.__tbExportPdf=t=>tvExport(tvFromData(t));
+  const tvMnHide=()=>tvMn.classList.remove('show');
+  const tvClose=()=>{ tvMnHide(); tvW.classList.remove('show'); tvW.classList.remove('xm'); const b=tvBack; tvBack=null; tvR=null; if(b) setTimeout(b,0); };
+  tvW.querySelector('#cmTvBack').onclick=tvClose;
+  tvW.querySelector('#cmTvMore').onclick=e=>{ e.stopPropagation(); tvMn.classList.toggle('show'); };
+  tvMn.querySelector('button').onclick=e=>{ e.stopPropagation(); tvMnHide(); if(tvR) tvExport(tvR); };
+  tvW.addEventListener('click',e=>{ if(!e.target.closest('#cmTvMn,#cmTvMore')) tvMnHide(); });
+  document.addEventListener('click',e=>{ const el=e.target.closest&&e.target.closest('.cmatt.cmtable'); if(!el||tvW.classList.contains('show')) return; if(window.__attHeldNow&&window.__attHeldNow()) return; const rows=tvRead(el); if(!rows) return;
+    e.stopPropagation(); e.preventDefault(); tvR=rows; tvDraw(rows); tvW.classList.toggle('xm',!!el.closest('#ehList')); tvSc.scrollTop=0; tvSc.scrollLeft=0; tvMnHide(); tvW.classList.add('show'); tvBack=()=>{ if(window.__scrollBack) window.__scrollBack(el); }; },true);
   // comment box-এর PDF thumbnail-এর edit icon: বর্তমান PDF একই window-তে খোলে (Done-এর জায়গায় Save)
   async function pdfEditAtt(){ const a=cmAtt; if(!a||a.k!=='pdf') return; let b=a.blob||(window.__cmBlobs&&window.__cmBlobs[a.src]);
     if(!b){ try{ b=await (await fetch(a.src)).blob(); }catch(e){ toast('Could not open this PDF'); return; } }
@@ -6860,6 +6935,8 @@ function askDelete(title,cb,yesLabel,slideSel){
     cmReplyTo=null; updRt(); };
   cmIn.addEventListener('input',cmInput);
   const mk=v=>Object.assign({id:uid(),txt:v,posted:new Date().toISOString(),my:null,l:0,dl:0,reps:[]},cmSet.lk?null:{lkOff:true},cmSet.dl?null:{dlOff:true},cmSet.rp?null:{rpOff:true},cmSet.ad>0?{adAt:Date.now()+cmSet.ad*1000,ad:cmSet.ad,adv:cmSet.adv,adc:cmSet.adc}:null,cmSet.hd?(()=>{ const t=new Date().toISOString(); return {hid:true,hidAt:t,hidH:[t]}; })():null);   // Settings Hide On: নতুন comment / reply / reply-to-reply Send হলেই hidden   // Settings: Like / Dislike / Reply off থাকলে নতুন comment / reply / sub reply-তে তা off থাকবে
+  // Auto send: object এখনই তৈরি হয় কিন্তু x.cmts / reps-এ ঢোকে না; সময় হলে নিচের sweep যোগ করে
+  const asQueue=(x,p)=>{ p.at=Date.now()+cmSet.as*1000; p.id=p.o.id; (x.pend=x.pend||[]).push(p); saveC(); const d=new Date(p.at), z=n=>String(n).padStart(2,'0'), h=d.getHours()%12||12; toast((p.mode==='c'?'Comment':'Reply')+' will be sent at '+h+' : '+z(d.getMinutes())+' : '+z(d.getSeconds())+(d.getHours()<12?' AM':' PM')); };
   function sendCm(){
     const x=curX(), v=cmIn.value.trim(); if(!x||(!v&&!cmAtt)) return;
     if(cmEdit){   // Edit comment / Edit reply
@@ -6873,10 +6950,11 @@ function askDelete(title,cb,yesLabel,slideSel){
     if(cmBlocked) return;
     if(cmMode==='list'){   // Add comment
       if(cLive(x)>=MAXC) return;
-      const c=mk(v); c.reps=[]; if(cmAtt) c.att=attCommit(); x.cmts.push(c); saveC(); resetIn(); drawCm(); drawPosts(); cmBody.scrollTop=0; return;
+      const c=mk(v); c.reps=[]; if(cmAtt) c.att=attCommit(); if(cmSet.as>0){ asQueue(x,{mode:'c',o:c}); resetIn(); return; } x.cmts.push(c); saveC(); resetIn(); drawCm(); drawPosts(); cmBody.scrollTop=0; return;
     }
     const c=x.cmts.find(y=>y.id===cmOpen); if(!c||repCount(x)>=MAXR) return;   // Add reply
     const nr=mk(v), f=cmReplyTo&&findR(c.reps,cmReplyTo); if(cmAtt) nr.att=attCommit();
+    if(cmSet.as>0){ asQueue(x,{mode:'r',cid:c.id,to:f?cmReplyTo:null,o:nr}); cmReplyTo=null; resetIn(); return; }
     if(f){ nr.to=ME; f.r.reps.push(nr); const has=(l,t)=>l.some(q=>q===t||has(q.reps,t)), top=c.reps.find(m=>m===f.r||has(m.reps,f.r)); if(top) cmColl.delete(String(top.id)); }   // reply-র reply → ওই reply-র ভেতরে (সর্বোচ্চ স্তরে হলে একই স্তরে নিচে)
     else c.reps.push(nr);
     cmReplyTo=null; saveC(); resetIn(); drawCm();
@@ -6903,6 +6981,23 @@ function askDelete(title,cb,yesLabel,slideSel){
         saveC(); if(cmS.classList.contains('show')) drawCm(); drawPosts(); if(window.searchRedraw) window.searchRedraw();
       }finally{ busy=false; } }); };
     setInterval(sweep,1000); }
+  // ---- Auto send timer: সময় হলে pending comment / reply আসল সময়ে (posted) Comments window-এ যোগ হয় ----
+  { const deliver=(x,p)=>{ const o=p.o, now=Date.now(); if(!String(o.txt||'').trim()&&!o.att) return false; o.posted=new Date(now).toISOString(); if(o.ad>0) o.adAt=now+o.ad*1000; if(o.hid){ o.hidAt=o.posted; o.hidH=[o.posted]; }
+      if(p.mode==='c'){ x.cmts.push(o); return true; }
+      const c=x.cmts.find(y=>y.id===p.cid); if(!c) return false;
+      const f=p.to&&findR(c.reps,p.to);
+      if(f){ o.to=ME; f.r.reps.push(o); } else c.reps.push(o); return true; };
+    // পাঠানোর আগে শর্ত ভাঙলে (parent hide / delete, Block from comment, post-এর comment off, parent-এর Reply off) pending মাঝপথে বাতিল হয়ে Scheduled comments থেকে মুছে যায়
+    const pathTo=(list,id,acc)=>{ for(const r of (list||[])){ const a=(acc||[]).concat(r); if(String(r.id)===String(id)) return a; const f=pathTo(r.reps,id,a); if(f) return f; } return null; };
+    const pendOk=(x,p)=>{ if(cmBlocked||x.cmOff) return false; if(p.mode==='c') return true;
+      const c=(x.cmts||[]).find(y=>String(y.id)===String(p.cid)); if(!c||c.del||c.hid||c.rpOff) return false;
+      if(p.to){ const path=pathTo(c.reps,p.to); if(!path||path.some(r=>r.del||r.hid||r.rpOff)) return false; }
+      return true; };
+    const sweepSend=()=>{ const now=Date.now(); let chg=false, sv=false; const gone=[];
+      posts.forEach(x=>{ if(!x.pend||!x.pend.length) return; { const keep=x.pend.filter(p=>pendOk(x,p)); if(keep.length!==x.pend.length){ x.pend.forEach(p=>{ if(keep.indexOf(p)<0) gone.push(p); }); x.pend=keep; sv=true; } } const due=x.pend.filter(p=>p.at<=now); if(!due.length) return; x.pend=x.pend.filter(p=>p.at>now); due.forEach(p=>{ if(deliver(x,p)) chg=true; }); sv=true; });
+      if(gone.length){ const nc=gone.filter(p=>p.mode==='c').length, nr=gone.length-nc; toast(gone.length===1?(nc?'Scheduled comment cancelled':'Scheduled reply cancelled'):(nc&&nr?'Scheduled comments and replies cancelled':nc?'Scheduled comments cancelled':'Scheduled replies cancelled')); }
+      if(!sv) return; saveC(); if(window.__mcSchedRefresh) window.__mcSchedRefresh(); if(window.__acCounts) window.__acCounts(); if(!chg) return; if(cmS.classList.contains('show')) drawCm(); drawPosts(); if(window.searchRedraw) window.searchRedraw(); };
+    setInterval(sweepSend,1000); }
   // ---- Auto delete ring: CSS + প্রতি আধ সেকেন্ডে progress আপডেট ----
   { const st=document.createElement('style'); st.textContent='.cmad{position:relative;flex:none;width:28px;height:28px;align-self:flex-start;display:inline-flex;align-items:center;justify-content:center;margin-right:-8px;cursor:pointer;-webkit-tap-highlight-color:transparent}.cmad svg{pointer-events:none}.cmad svg{position:absolute;inset:0;transform:rotate(-90deg)}.cmad circle{fill:none;stroke-width:2.5}.cmad .adtr{stroke:rgba(255,255,255,.18)}.cmad .adpg{stroke:#3ea6ff;stroke-linecap:round;transition:stroke-dashoffset .5s linear,stroke .3s}.cmad.red .adpg{stroke:#ff4d4d}.cmad .material-symbols-outlined{font-size:16px;color:var(--cmic,#fff);position:relative}';
     document.head.appendChild(st);
@@ -7967,6 +8062,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   const atLink=async(kind,id,share)=>{ try{ const url=typeof window.contentLink==='function'?await window.contentLink({kind:kind,id:id}):null; if(!url){ toast('Link will be available once the server is connected'); return; } if(!share||!navigator.share) await copyLink(url); else await navigator.share({url:url}); }catch(err){ if(err&&err.name==='AbortError') return; toast(share?'Could not share':'Could not copy link'); } };
   function atMenuItems(it){
     const a=it.a, ic=(n,t,k)=>({n:n,t:t,k:k});
+    if(a.k==='table') return [{i:'picture_as_pdf',t:'Export to PDF',f:()=>{ if(window.__tbExportPdf) window.__tbExportPdf(a.table); }}];
     if(a.k==='photo'||a.k==='gif'){
       const gif=a.k==='gif', obj={id:a.src,pic:a.src,_tmp:1,_lk:gif?'comment-gif':'comment-photo',_pb:()=>atBlob(a.src)};
       return [
@@ -8012,7 +8108,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     const w=atMn.offsetWidth, h=atMn.offsetHeight; atMn.style.left=Math.max(8,Math.min(x,innerWidth-w-8))+'px'; atMn.style.top=Math.max(8,Math.min(y,innerHeight-h-8))+'px';
   }
   // Hold on a comment / reply attachment (photo, GIF, video, audio) in Comments / Replies / this post / this channel / my comments -> the attachment's own options (no Quality / Playback speed / Show in ...)
-  { const SEL='#cmBody .cmatt,#cmBody .cmaud,#mcList .cmatt,#mcList .cmaud', OKK=/^(photo|gif|video|voice|link|pdf)$/, NM=/^(sticker|poll|table|form)$/;
+  { const SEL='#cmBody .cmatt,#cmBody .cmaud,#mcList .cmatt,#mcList .cmaud', OKK=/^(photo|gif|video|voice|link|pdf|table)$/, NM=/^(sticker|poll|form)$/;
     const attOf=t=>{ try{
         const m=t.closest('#mcList .mci'); if(m){ const k=m.dataset.key, it=[].concat(mcVis(),mcAll0()).find(z=>mcKey(z)===k); return (it&&it.o&&it.o.att)||null; }
         const x=curX(); if(!x) return null;
@@ -8103,7 +8199,8 @@ function askDelete(title,cb,yesLabel,slideSel){
   let mcPid=null, mcTab='v', mcTT='all', mcSort=0, mcSearch=false, mcQ='', mcSMode='text', mcSelMode=false; const mcSel=new Set(); let mcCid=null;   // Hidden comments / Hidden replies window (data-hi=2): My comments-এর মতো interface, শুধু Hide করা item; mcCid থাকলে ওই main comment-এর hidden reply
   const mcLK=()=>mcPg.dataset.hi==='2'?new Set(mcAll0().map(mcKey)):null;   // Hidden window-এ list-এ থাকা item ছাড়া select / count হবে না
   const mcHF=i=>mcPg.dataset.hi!=='2'||(!!i.o.hid&&(mcCid==null||(i.r===1&&String(i.c)===String(mcCid))));
-  const mcAll0=()=>{ const a=[]; const hi=mcPg.dataset.hi==='1'||mcPg.dataset.hi==='2'; posts.filter(y=>mcPid==null||y.id===mcPid).forEach(x=>(x.cmts||[]).forEach(c=>{ const ch=hi&&!!c.hid, cat=ch?c.hidAt:null; if(!c.del) a.push({x,o:c,c:c.id,r:0,ih:ch,hat:cat}); const w=(l,ih,iat)=>(l||[]).forEach(r=>{ const eh=hi&&(ih||!!r.hid), at=(hi&&r.hid)?r.hidAt:iat; if(!r.del) a.push({x,o:r,c:c.id,r:1,ih:eh,ah:!!ih,hat:at}); w(r.reps,eh,at); }); w(c.reps,ch,cat); })); const lat=(p,q)=>new Date(q.o.posted)-new Date(p.o.posted);
+  const mcAll0=()=>{ if(mcPg.dataset.hi==='3'){ const a3=[]; posts.filter(y=>mcPid==null||y.id===mcPid).forEach(x=>(x.pend||[]).forEach(p=>a3.push({x,o:p.o,p:p,c:p.mode==='c'?p.o.id:p.cid,r:p.mode==='r'?1:0,ih:false}))); return a3.sort((p,q)=>p.p.at-q.p.at); }   // Scheduled comments: Send-এর সময় অনুযায়ী (আগে যাবে যেটা)
+    const a=[]; const hi=mcPg.dataset.hi==='1'||mcPg.dataset.hi==='2'; posts.filter(y=>mcPid==null||y.id===mcPid).forEach(x=>(x.cmts||[]).forEach(c=>{ const ch=hi&&!!c.hid, cat=ch?c.hidAt:null; if(!c.del) a.push({x,o:c,c:c.id,r:0,ih:ch,hat:cat}); const w=(l,ih,iat)=>(l||[]).forEach(r=>{ const eh=hi&&(ih||!!r.hid), at=(hi&&r.hid)?r.hidAt:iat; if(!r.del) a.push({x,o:r,c:c.id,r:1,ih:eh,ah:!!ih,hat:at}); w(r.reps,eh,at); }); w(c.reps,ch,cat); })); const lat=(p,q)=>new Date(q.o.posted)-new Date(p.o.posted);
     return a.filter(mcHF).sort((p,q)=>{ if(mcSort===4) return (new Date(p.o.t0||p.o.posted)-new Date(q.o.t0||q.o.posted)); if(mcSort===1) return (rTot(q.o.reps||[])-rTot(p.o.reps||[]))||lat(p,q); if(mcSort===2) return (likeN(q.o)-likeN(p.o))||lat(p,q); if(mcSort===3) return (disN(q.o)-disN(p.o))||lat(p,q); return lat(p,q); }); };
   const mcKey=i=>i.x.id+':'+i.o.id;
   const mcHid=i=>mcPg.dataset.hi==='1'&&(!!i.o.hid||!!i.ih);   // শুধু channel/post window-এ Hide করা item; My comments-এ কাজ করে না
@@ -8126,18 +8223,20 @@ function askDelete(title,cb,yesLabel,slideSel){
   new MutationObserver(()=>{ if(mcPg.classList.contains('show')) return;
     $('mcList').querySelectorAll('.cmatt.cmvid,.cmatt.cmgif').forEach(cmStop);
     $('mcList').querySelectorAll('audio').forEach(a=>{ try{ a.pause(); }catch(_){} }); }).observe(mcPg,{attributes:true,attributeFilter:['class']});
-  function mcDraw(){ const a=mcVis(), box=$('mcList'); { const allK=new Set(mcAll0().map(mcKey)); [...mcSel].forEach(k=>{ if(!allK.has(k)) mcSel.delete(k); }); } box.innerHTML=a.length?'':'<p class="empty">'+((mcSearch&&mcQ)?'No results':(mcPg.dataset.hi==='2'?(mcCid!=null?'No hidden replies':'No hidden comments'):(mcTT==='r'?'No replies yet':'No comments yet')))+'</p>';
-    a.forEach(i=>{ const d=document.createElement('div'); d.className='mci'+(mcSelMode&&mcSel.has(mcKey(i))?' on':''); d.dataset.pid=i.x.id; d.dataset.cid=i.c; d.dataset.rid=i.r?i.o.id:''; d.dataset.key=mcKey(i); if(mcPg.dataset.hi==='2'&&i.ah) d.dataset.ah='1'; const s=document.createElement('small'); const hh=mcHid(i); s.textContent=(i.r?'Reply':'Comment')+' \u2022 '+timeAgo((hh&&(i.hat||i.o.hidAt))||i.o.posted)+(i.o.ed&&!hh?' (edited)':'')+(mcPid==null?' \u2022 ':''); const cl=document.createElement('span'); cl.className='mcnm'; cl.innerHTML=mcHl(String(i.x.txt||'').slice(0,40)||'Post',mcSMode==='content'); if(mcPid==null) s.appendChild(cl); d.appendChild(s);   // Comments in this post-এ post-এর নাম থাকে না
+  function mcDraw(){ const a=mcVis(), box=$('mcList'); { const allK=new Set(mcAll0().map(mcKey)); [...mcSel].forEach(k=>{ if(!allK.has(k)) mcSel.delete(k); }); } box.innerHTML=a.length?'':'<p class="empty">'+((mcSearch&&mcQ)?'No results':(mcPg.dataset.hi==='2'?(mcCid!=null?'No hidden replies':'No hidden comments'):(mcPg.dataset.hi==='3'?(mcTT==='r'?'No scheduled replies':'No scheduled comments'):(mcTT==='r'?'No replies yet':'No comments yet'))))+'</p>';
+    a.forEach(i=>{ const d=document.createElement('div'); d.className='mci'+(mcSelMode&&mcSel.has(mcKey(i))?' on':''); d.dataset.pid=i.x.id; d.dataset.cid=i.c; d.dataset.rid=i.r?i.o.id:''; d.dataset.key=mcKey(i); if(mcPg.dataset.hi==='2'&&i.ah) d.dataset.ah='1'; const s=document.createElement('small'); const hh=mcHid(i); s.textContent=(i.r?'Reply':'Comment')+' \u2022 '+(mcPg.dataset.hi==='3'?schWhen(i.p.at):(timeAgo((hh&&(i.hat||i.o.hidAt))||i.o.posted)+(i.o.ed&&!hh?' (edited)':'')))+(mcPid==null?' \u2022 ':''); const cl=document.createElement('span'); cl.className='mcnm'; cl.innerHTML=mcHl(String(i.x.txt||'').slice(0,40)||'Post',mcSMode==='content'); if(mcPid==null) s.appendChild(cl); d.appendChild(s);   // Comments in this post-এ post-এর নাম থাকে না
       if(hh){ d.classList.add('mchid'); d.dataset.hid='1'; const t=document.createElement('div'); t.className='mct'; const hs=document.createElement('span'); hs.className='cmhid'; hs.textContent=i.r?'This reply has been hidden':'This comment has been hidden'; t.appendChild(hs); d.appendChild(t); box.appendChild(d); return; }   // channel/post window: Hide করা item শুধু এই লেখা দেখায়, কোনো attachment নয়, tap/hold/swipe কিছুই হয় না
       if(String(i.o.txt||'').trim()){ const t=document.createElement('div'); t.className='mct'; t.innerHTML=mcHl(i.o.txt,mcSMode==='text'); d.appendChild(t); }
       const ah=attHTML(i.o); if(ah){ const w=document.createElement('div'); w.className='mcatt'; w.innerHTML=ah; d.appendChild(w); }
       box.appendChild(d); });
     mcTabsUI(); mcScan(); mcPaint(); }
-  const mcMeta=n=>{ const d=n.closest('.mci'); if(!d) return null; if(mcPg.dataset.hi==='2'&&d.dataset.ah==='1') return {};   // Hidden window: parent hidden হলে viewer খোলে কিন্তু Show in... থাকে না, comment / reply-এ নিয়ে যাবে না
+  const mcMeta=n=>{ const d=n.closest('.mci'); if(!d) return null; if(mcPg.dataset.hi==='3') return {};   // Scheduled: comment এখনো list-এ নেই, তাই Show in ... নেই
+    if(mcPg.dataset.hi==='2'&&d.dataset.ah==='1') return {};   // Hidden window: parent hidden হলে viewer খোলে কিন্তু Show in... থাকে না, comment / reply-এ নিয়ে যাবে না
     const rid=d.dataset.rid; return {lbl:rid?'Show in replies':'Show in comments',go:()=>{ if(mcPg.style.zIndex>=80){ mcPg.classList.remove('show'); if(mcPg.style.zIndex==80&&window.__closePr) window.__closePr(); } openCmAt(+d.dataset.pid,d.dataset.cid,d.dataset.rid); }}; };
   $('mcList').addEventListener('contextmenu',e=>{ if(!e.target.closest('.mci')) e.preventDefault(); });
   $('mcList').onclick=e=>{
     if(mcSelMode&&!e.target.closest('.cmatt')){ const r0=e.target.closest('.mci'); if(r0) mcToggle(r0); return; }
+    if(mcPg.dataset.hi==='3'&&!e.target.closest('.cmatt,.mcnm')) return;   // Scheduled comment-এ tap করলে কিছু হয় না (এখনো Comments window-এ নেই)
     if(e.target.closest('.mci.mchid')&&!e.target.closest('.mcnm')) return;   // Hide করা item-এ tap করলে কিছু হয় না (শুধু নীল post নাম চাপলে post খোলে)
     { const pvI=e.target.closest('.cmatt img[data-pv]'); if(pvI&&!pvI.closest('.cmgif')){ window.__openMixSeq($('mcList'),pvI,null,mcMeta); return; } }
     { const gf=e.target.closest('.cmatt.cmgif'); if(gf){ const im=gf.querySelector('img'); if(im) window.__openMixSeq($('mcList'),im,null,mcMeta); return; } }
@@ -8151,6 +8250,10 @@ function askDelete(title,cb,yesLabel,slideSel){
   $('mcTT').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||b.dataset.t===mcTT) return; mcTT=b.dataset.t; mcDraw(); mcPg.scrollTop=0; });
   $('mcBack').onclick=()=>{ if(mcSearch){ mcSetSearch(false); return; } if(mcSelMode){ mcLeaveSel(); return; } mcClose(); };
   document.addEventListener('click',e=>{ if(e.target.closest('#acMC')){ mcReset(); mcPid=null; mcBaseT('My comments'); mcPg.style.zIndex=19; mcPg.dataset.hi='0'; mcFab.style.zIndex=23; mcDraw(); mcPg.classList.add('show'); mcPg.scrollTop=0; } });
+  const schWhen=at=>{ const d=new Date(at), n=new Date(), z=q=>String(q).padStart(2,'0'), h=d.getHours()%12||12, same=d.toDateString()===n.toDateString(); return 'Sends '+(same?'':d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' ')+'at '+h+' : '+z(d.getMinutes())+' : '+z(d.getSeconds())+(d.getHours()<12?' AM':' PM'); };
+  document.addEventListener('click',e=>{ if(e.target.closest('#acSchd')){ mcReset(); mcPid=null; mcBaseT('Scheduled comments'); mcPg.style.zIndex=19; mcPg.dataset.hi='3'; mcFab.style.zIndex=23; mcDraw(); mcPg.classList.add('show'); mcPg.scrollTop=0; } });   // Profile → Scheduled comments: My comments-এর একই window, শুধু pending comment / reply
+  window.__mcSchedRefresh=()=>{ if(mcPg.classList.contains('show')&&mcPg.dataset.hi==='3') mcDraw(); };
+  window.__schCount=()=>posts.reduce((n,x)=>n+((x.pend&&x.pend.length)||0),0);
   window.__mcHidden=(pid,cid)=>{ mcReset(); mcTab='q'; mcPid=pid; mcCid=(cid==null?null:cid); mcBaseT(cid==null?'Hidden comments':'Hidden replies'); mcPg.style.zIndex=81; mcPg.dataset.hi='2'; mcFab.style.zIndex=83; mcDraw(); mcPg.classList.add('show'); mcPg.scrollTop=0; };
   window.__mcOpen=(pid,w)=>{ const h=document.querySelector('.head h1'); mcReset(); mcTab='q'; mcPid=pid==null?null:pid; mcBaseT((h?h.textContent.trim():'Channel')+' comments in this '+(w==='po'?'post':'channel')); mcPg.style.zIndex=80; mcPg.dataset.hi='1'; mcFab.style.zIndex=82; mcDraw(); mcPg.classList.add('show'); mcPg.scrollTop=0; };
   // ---- My comments / channel / post comments windows: Sort by, Select, Delete all, Search, swipe & hold to delete ----
@@ -8199,6 +8302,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     mcPaint(); }   // main comment / reply select করলে তার সব reply ও sub reply-ও select / unselect
   function mcAfter(){ saveC(); mcDraw(); try{ drawPosts(); }catch(_){} try{ if(cmS.classList.contains('show')) drawCm(); }catch(_){} if(window.__paintPr) window.__paintPr(); if(window.__acCounts) window.__acCounts(); }
   function mcDelOne(pid,cid,rid){
+    if(mcPg.dataset.hi==='3'){ const x3=posts.find(y=>y.id===pid); if(!x3) return false; const id3=String(rid||cid), n3=(x3.pend||[]).length; x3.pend=(x3.pend||[]).filter(q=>String(q.o.id)!==id3); if(x3.pend.length===n3) return false; mcAfter(); return true; }
     const x=posts.find(y=>y.id===pid); if(!x) return false; const c=(x.cmts||[]).find(y=>String(y.id)===String(cid)); if(!c) return false;
     if(rid){ const f=findR(c.reps,rid); if(!f) return false; f.list.splice(f.list.indexOf(f.r),1); }
     else{ if(PINS.has('c'+x.id,c.id)) PINS.toggle('c'+x.id,c.id); x.cmts=x.cmts.filter(y=>y!==c); }
@@ -8217,6 +8321,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     mcP.querySelector('.mcdiv').style.display=(mcSearch&&mcSelMode)?'':'none';
     mcSub.querySelectorAll('button').forEach(d=>{ const m=+d.dataset.m; d.classList.toggle('on',m===mcSort); d.classList.toggle('dis',(m===1&&!all.some(i=>rTot(i.o.reps||[])>0))||(m===2&&!all.some(i=>likeN(i.o)>0))||(m===3&&!all.some(i=>disN(i.o)>0))); });
     { const h2=mcPg.dataset.hi==='2'; mcP.querySelector('[data-k="del"] .dl').textContent=h2?'Delete all hidden comments':'Delete all comments'; mcP.querySelector('[data-k="delr"] .dl').textContent=h2?'Delete all hidden replies':'Delete all replies'; }
+    if(mcPg.dataset.hi==='3'){ set('sort',false); mcP.querySelector('[data-k="del"] .dl').textContent='Delete all scheduled comments'; mcP.querySelector('[data-k="delr"] .dl').textContent='Delete all scheduled replies'; }
     mcP.classList.remove('subshow'); mcP.classList.add('show');
     const r=$('mcMore').getBoundingClientRect(), w=mcP.offsetWidth, h=mcP.offsetHeight; let left=Math.max(8,Math.min(r.right+8,innerWidth-8)-w), top=r.bottom+4; if(top+h>innerHeight-16) top=Math.max(8,r.top-h-4); mcP.style.left=left+'px'; mcP.style.top=top+'px';
   };
@@ -8230,17 +8335,19 @@ function askDelete(title,cb,yesLabel,slideSel){
     if(k==='att'){ window.__maOpenScoped(mcPid); return; }   // Comments in this channel / post: এই window-এর comment-এর attachments
     if(k==='all'||k==='none'){ const lk=mcLK(); mcVis().forEach(i=>{ if(!mcSelOk(i)) return; const ks=[mcKey(i)].concat(mcDescObjs({dataset:{pid:String(i.x.id),cid:String(i.c),rid:i.r?String(i.o.id):''}}).map(o=>i.x.id+':'+o.id).filter(kk=>!lk||lk.has(kk))); ks.forEach(kk=>{ if(k==='all') mcSel.add(kk); else mcSel.delete(kk); }); }); mcDraw(); return; }
     if(k==='bytext'||k==='bycont'){ mcSMode=k==='bycont'?'content':'text'; mcInp.placeholder=mcPh(); mcDraw(); return; }
+    if((k==='del'||k==='delr')&&mcPg.dataset.hi==='3'){ const rp=k==='delr'; askDelete(rp?'Delete all scheduled replies?':'Delete all scheduled comments?',()=>{ mcScope().forEach(x=>{ x.pend=(x.pend||[]).filter(q=>(q.mode==='r')!==rp); }); mcAfter(); },'Delete',rp?'#mcList .mci:not([data-rid=""])':'#mcList .mci[data-rid=""]'); return; }
     if(k==='del'&&mcPg.dataset.hi==='2'){ askDelete('Delete all hidden comments?',()=>{ mcScope().forEach(x=>{ (x.cmts||[]).forEach(c=>{ if(c.hid&&PINS.has('c'+x.id,c.id)) PINS.toggle('c'+x.id,c.id); }); x.cmts=(x.cmts||[]).filter(c=>!c.hid); }); mcAfter(); },'Delete','#mcList .mci[data-rid=""]'); return; }
     if(k==='delr'&&mcPg.dataset.hi==='2'){ askDelete('Delete all hidden replies?',()=>{ mcScope().forEach(x=>(x.cmts||[]).forEach(c=>{ if(mcCid==null||String(c.id)===String(mcCid)) bulkDel(c.reps||[],r=>!!r.hid); })); mcAfter(); },'Delete','#mcList .mci:not([data-rid=""])'); return; }
     if(k==='del'){ askDelete('Delete all comments?',()=>{ mcScope().forEach(x=>{ (x.cmts||[]).forEach(c=>{ if(PINS.has('c'+x.id,c.id)) PINS.toggle('c'+x.id,c.id); }); x.cmts=(x.cmts||[]).filter(c=>false); }); mcAfter(); },'Delete','#mcList .mci[data-rid=""]'); }   // comments only; replies stay
     if(k==='delr'){ askDelete('Delete all replies?',()=>{ mcScope().forEach(x=>(x.cmts||[]).forEach(c=>{ c.reps=[]; })); mcAfter(); },'Delete','#mcList .mci:not([data-rid=""])'); }   // replies only; comments stay
   });
   mcFab.onclick=()=>{ if(!mcSel.size) return;
+    if(mcPg.dataset.hi==='3'){ askDelete('Delete selected scheduled comments?',()=>{ posts.forEach(x=>{ if(x.pend) x.pend=x.pend.filter(q=>!mcSel.has(x.id+':'+q.o.id)); }); mcSelMode=false; mcSel.clear(); mcAfter(); },'Delete','#mcList .mci.on'); return; }
     askDelete('Delete selected comments?',()=>{ mcScope().forEach(x=>{ (x.cmts||[]).forEach(c=>{ if(mcSel.has(x.id+':'+c.id)&&PINS.has('c'+x.id,c.id)) PINS.toggle('c'+x.id,c.id); }); bulkDel(x.cmts||[],r=>mcSel.has(x.id+':'+r.id)); });
       mcSelMode=false; mcSel.clear(); mcAfter(); },'Delete','#mcList .mci.on'); };
   // hold / right-click -> Delete this comment? ; swipe left -> delete
   const mcAsk=rr=>{ if(!rr) return false; const pid=+rr.dataset.pid, cid=rr.dataset.cid, rid=rr.dataset.rid||null;
-    const dob=mcDescObjs(rr), ds=mcDescRows(rr); let ttl=rid?'Delete this reply?':'Delete this comment?', yes='Delete';
+    const dob=mcDescObjs(rr), ds=mcDescRows(rr); let ttl=mcPg.dataset.hi==='3'?(rid?'Delete this scheduled reply?':'Delete this scheduled comment?'):(rid?'Delete this reply?':'Delete this comment?'), yes='Delete';
     if(dob.length){ const nc=(rid?0:1), nr=(rid?1:0)+dob.length, pc=nc+(nc===1?' comment':' comments'), pr=nr+(nr===1?' reply':' replies');
       ttl='Delete '+[nc?pc:'',nr?pr:''].filter(Boolean).join(' and ')+'?'; }   // ভেতরে reply / sub reply থাকলে: Delete 2 replies? / Delete 1 comment and 2 replies?
     askDelete(ttl,()=>{ mcDelOne(pid,cid,rid); },yes,[rr].concat(ds)); return true; };
@@ -8637,7 +8744,7 @@ body.member :is(.video,.hcard,.rres,.avrow,.post,.pl):has(.priv),body.member :is
   </div>
   <div class="hhd2" id="acHD"><span class="t">History</span><span class="acn z" data-c="hs">0</span><span class="material-symbols-outlined">chevron_right</span></div>
   <div id="acHist"></div>
-  <div class="aopts"><div class="aopt" id="acWL"><span class="material-symbols-outlined">schedule</span><span class="t">Watch later</span><span class="acn z" data-c="wl">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acLK"><span class="material-symbols-outlined">thumb_up</span><span class="t">Liked contents</span><span class="acn z" data-c="lk">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acDK"><span class="material-symbols-outlined">thumb_down</span><span class="t">Disliked contents</span><span class="acn z" data-c="dk">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acDL"><span class="material-symbols-outlined">download</span><span class="t">Downloaded contents</span><span class="acn z" data-c="dl">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acSP"><span class="material-symbols-outlined">bookmarks</span><span class="t">Saved playlists</span><span class="acn z" data-c="sp">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acMC"><span class="material-symbols-outlined">chat</span><span class="t">My comments</span><span class="acn z" data-c="mc">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acMA"><span class="material-symbols-outlined">attach_file</span><span class="t">My attachments</span><span class="acn z" data-c="ma">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acSC"><span class="material-symbols-outlined">subscriptions</span><span class="t">Subscribed channels</span><span class="acn z" data-c="sc">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acBL"><span class="material-symbols-outlined">block</span><span class="t">Blocked from reaction, share and comment</span><span class="acn z" data-c="bl">0</span><span class="material-symbols-outlined">chevron_right</span></div></div>
+  <div class="aopts"><div class="aopt" id="acWL"><span class="material-symbols-outlined">schedule</span><span class="t">Watch later</span><span class="acn z" data-c="wl">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acLK"><span class="material-symbols-outlined">thumb_up</span><span class="t">Liked contents</span><span class="acn z" data-c="lk">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acDK"><span class="material-symbols-outlined">thumb_down</span><span class="t">Disliked contents</span><span class="acn z" data-c="dk">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acDL"><span class="material-symbols-outlined">download</span><span class="t">Downloaded contents</span><span class="acn z" data-c="dl">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acSP"><span class="material-symbols-outlined">bookmarks</span><span class="t">Saved playlists</span><span class="acn z" data-c="sp">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acMC"><span class="material-symbols-outlined">chat</span><span class="t">My comments</span><span class="acn z" data-c="mc">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acSchd"><span class="material-symbols-outlined">schedule_send</span><span class="t">Scheduled comments</span><span class="acn z" data-c="sch">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acMA"><span class="material-symbols-outlined">attach_file</span><span class="t">My attachments</span><span class="acn z" data-c="ma">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acSC"><span class="material-symbols-outlined">subscriptions</span><span class="t">Subscribed channels</span><span class="acn z" data-c="sc">0</span><span class="material-symbols-outlined">chevron_right</span></div><div class="aopt" id="acBL"><span class="material-symbols-outlined">block</span><span class="t">Blocked from reaction, share and comment</span><span class="acn z" data-c="bl">0</span><span class="material-symbols-outlined">chevron_right</span></div></div>
 </div>
 <script>
 (function(){
@@ -8686,7 +8793,7 @@ body.member :is(.video,.hcard,.rres,.avrow,.post,.pl):has(.priv),body.member :is
     const ss=window.WL?window.WL.ids('s').filter(id=>allS.some(x=>x.id===id)).length:0;
     const rx=m=>videos.filter(x=>x.my===m).length+(window.LK?window.LK.shorts(m).length+window.LK.posts(m).length:0);
     const wc=(window.WL&&window.__maCollect)?(function(){ const all=window.__maCollect(); return window.WL.ids('cv').filter(id=>all.some(i=>i.a.k==='video'&&String(i.a.bid||i.a.src)===String(id))).length; })():0;
-    const n={wl:vs+ss+wc,lk:rx('like'),dk:rx('dislike'),dl:(window.DLS?window.DLS.ids('v').filter(id=>videos.some(x=>x.id===id)).length+window.DLS.ids('s').filter(id=>allS.some(x=>x.id===id)).length+window.DLS.ids('p').filter(id=>window.plById&&window.plById(id)).length:0),sp:(window.SPL?window.SPL.ids().filter(id=>window.plById&&window.plById(id)).length:0),hs:(window.histItems?window.histItems().length:0),mc:(window.__extraStats?window.__extraStats().c:0),ma:(window.__maCount?window.__maCount():0),sc:(typeof subscribed!=='undefined'&&subscribed)?1:0,bl:(window.__blk?['lk','dl','sh','cm'].filter(k=>window.__blk.get(k)).length:0)};
+    const n={wl:vs+ss+wc,lk:rx('like'),dk:rx('dislike'),dl:(window.DLS?window.DLS.ids('v').filter(id=>videos.some(x=>x.id===id)).length+window.DLS.ids('s').filter(id=>allS.some(x=>x.id===id)).length+window.DLS.ids('p').filter(id=>window.plById&&window.plById(id)).length:0),sp:(window.SPL?window.SPL.ids().filter(id=>window.plById&&window.plById(id)).length:0),hs:(window.histItems?window.histItems().length:0),mc:(window.__extraStats?window.__extraStats().c:0),sch:(window.__schCount?window.__schCount():0),ma:(window.__maCount?window.__maCount():0),sc:(typeof subscribed!=='undefined'&&subscribed)?1:0,bl:(window.__blk?['lk','dl','sh','cm'].filter(k=>window.__blk.get(k)).length:0)};
     acct.querySelectorAll('.acn').forEach(e=>{ const v=n[e.dataset.c]||0; e.textContent=v; e.classList.toggle('z',v===0); });
   }
   new MutationObserver(()=>{ if(acct.classList.contains('show')) paintCounts(); }).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});
