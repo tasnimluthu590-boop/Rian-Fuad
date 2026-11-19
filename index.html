@@ -7377,11 +7377,12 @@ function askDelete(title,cb,yesLabel,slideSel){
       const cr=cmBody.getBoundingClientRect(), st=cmBody.scrollTop;
       let sc=Math.min(3,Math.max(2,window.devicePixelRatio||2)); sc=Math.max(1,Math.min(sc,Math.sqrt(14e6/Math.max(1,cr.width*cr.height))));
       let cv; {   // live sheet-এর ভেতরে নয়: দৃশ্যমান অংশের কপি transform / scroll / animation-মুক্ত আলাদা জায়গায় এনে ছবি তোলা হয় (লেখা উপরে ওঠা / উল্টে যাওয়া এড়াতে)
-        const stage=document.createElement('div'); stage.className='cmsheet'; stage.setAttribute('aria-hidden','true');
+        const stage=document.createElement('div'); stage.className=cmS.className; stage.setAttribute('aria-hidden','true');   // live sheet-এর সব class (bxmode / bxhhid / bxrep…) একই রাখা হয়, যাতে hidden row লুকানো সহ layout হুবহু মিলে সিলেক্ট করা বক্সের জায়গা ঠিক থাকে
         stage.style.cssText='position:fixed;left:0;top:0;width:'+cr.width+'px;height:'+cr.height+'px;max-height:none;transform:none;transition:none;visibility:visible;display:block;border-radius:0;overflow:hidden;z-index:-1;pointer-events:none;background:'+bg+';';
         const sty=document.createElement('style'); sty.textContent='.__cs,.__cs *{transition:none!important;animation:none!important;transform:none!important}.__cs .cmt{word-break:normal!important;overflow-wrap:break-word!important}';
         const wrap=document.createElement('div'); wrap.className='__cs'; wrap.style.cssText='position:relative;width:100%;height:100%;overflow:hidden;';
         const cl=cmBody.cloneNode(true); cl.removeAttribute('id'); cl.style.cssText+=';flex:none;overflow:visible;height:auto;max-height:none;position:relative;top:'+(-st)+'px;width:100%;transform:none;transition:none;';
+        try{ if(window.__cmVidFix) await window.__cmVidFix(cmBody,cl); }catch(_){}
         wrap.appendChild(cl); stage.appendChild(sty); stage.appendChild(wrap); document.body.appendChild(stage);
         try{ await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
           cv=await window.html2canvas(stage,{backgroundColor:bg,scale:sc,logging:false,useCORS:true});
@@ -7535,6 +7536,18 @@ function askDelete(title,cb,yesLabel,slideSel){
   { const sst=document.createElement('style'); sst.textContent='#cmFab.ss{background:#3ea6ff;color:#0f0f0f}.cmsheet.sssel #cmFabH{display:none}'; document.head.appendChild(sst);
     const wait=ms=>new Promise(r=>setTimeout(r,ms)), frame=()=>new Promise(r=>requestAnimationFrame(()=>r()));
     const solid=c=>!!c&&c!=='transparent'&&!/^rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0\s*\)$/.test(c);
+    // html2canvas <video> আঁকতে পারে না (কালো দেখায়) — তাই কপির <video>-র জায়গায় ভিডিওর একটি ফ্রেমের ছবি বসানো হয়
+    window.__cmVidFix=async(live,clone)=>{
+      const grab=el=>{ try{ if(!el.videoWidth||el.readyState<2) return null; const c=document.createElement('canvas'); c.width=el.videoWidth; c.height=el.videoHeight; c.getContext('2d').drawImage(el,0,0,c.width,c.height); return c.toDataURL('image/jpeg',.92); }catch(_){ return null; } };
+      const frameOf=async v=>{ let u=grab(v); if(u) return u; const src=v.currentSrc||v.src; if(!src) return null;
+        return await new Promise(res=>{ const t=document.createElement('video'); t.crossOrigin='anonymous'; t.muted=true; t.playsInline=true; t.preload='auto'; let done=false; const tm=setTimeout(()=>fin(null),6000);
+          const fin=x=>{ if(done) return; done=true; clearTimeout(tm); try{ t.removeAttribute('src'); t.load(); }catch(_){} res(x); };
+          t.onloadeddata=()=>{ try{ t.currentTime=Math.min(0.1,(t.duration||1)/2); }catch(_){ fin(grab(t)); } }; t.onseeked=()=>fin(grab(t)); t.onerror=()=>fin(null); t.src=src; }); };
+      const lv=[...live.querySelectorAll('video')], cv=[...clone.querySelectorAll('video')];
+      for(let i=0;i<cv.length&&i<lv.length;i++){ const u=await frameOf(lv[i]), r=lv[i].getBoundingClientRect(); let n;
+        if(u){ n=document.createElement('img'); n.src=u; } else n=document.createElement('div');
+        n.style.cssText='display:block;width:'+r.width+'px;height:'+r.height+'px;object-fit:cover;background:#222;'; cv[i].replaceWith(n); }
+    };
     window.__cmShotGo=async()=>{
       if(!cmShot||!cmSel.size||window.__cmShotBusy) return;
       const rep=cmMode==='rep', BS=window.__cmBxS||{}; let rows=cmRows().filter(r=>cmSel.has(cmRid(r)));   // দেখানোর ক্রমে (উপর থেকে নিচে) — আলাদা জায়গা থেকে select করলেও পরপর বসে
@@ -7557,6 +7570,7 @@ function askDelete(title,cb,yesLabel,slideSel){
           const cl=r.cloneNode(true); cl.classList.remove('on'); cl.style.opacity='1'; cl.style.transition='none'; cl.style.background='transparent';
           if(BS.act) cl.querySelectorAll('.cma,.cmmore,.cmtr').forEach(n=>{ n.style.display='none'; });
           if(BS.att) cl.querySelectorAll('.cmatt,.cmfsub').forEach(n=>{ n.style.display='none'; });
+          try{ if(window.__cmVidFix) await window.__cmVidFix(r,cl); }catch(_){}
           wrap.appendChild(cl); stage.appendChild(sty); stage.appendChild(wrap); document.body.appendChild(stage);
           try{
             await frame(); await frame();
