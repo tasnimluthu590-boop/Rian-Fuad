@@ -5324,12 +5324,33 @@ function askDelete(title,cb,yesLabel,slideSel){
     new MutationObserver(()=>{ if(!setB.classList.contains('show')) trClose(); }).observe(setB,{attributes:true,attributeFilter:['class']});
     trList.addEventListener('click',e=>{ const d=e.target.closest('div[data-v]'); if(!d) return; cmSet.tr=d.dataset.v; trClose(); window.__cmTrPaint(); });
     const boxIn=document.getElementById('cmBox'), trB=document.createElement('span'); trB.id='cmTr'; trB.className='material-symbols-outlined'; trB.title='Translate'; trB.textContent='translate'; boxIn.appendChild(trB);
-    let trBusy=false, trOrig=null, trOut=null;
-    window.__cmTrDo=async()=>{ const ta=document.getElementById('cmIn'); if(trBusy||cmSet.tr==='none') return; const cur=ta.value;
-      if(trOrig!=null&&trOut!=null&&cur===trOut){ ta.value=trOrig; trOrig=trOut=null; ta.dispatchEvent(new Event('input',{bubbles:true})); return; }
-      const t=cur.trim(); if(!t){ toast('Write something to translate'); return; }
+    let trBusy=false, trSegs=[], trPrevL=null;
+    // পোস্ট হওয়া লেখা সম্পূর্ণ অনুবাদ করা হলে তার ভাষা + মূল লেখা ফেরত (comment/reply-তে সেভ হয়)
+    window.__cmTrSnap=v=>{ v=String(v||''); if(!v.trim()||!trSegs.length) return null; let rest=v; const used=[];
+      for(const sg of trSegs){ if(!sg.t) continue; const i=rest.indexOf(sg.t); if(i>=0){ rest=rest.slice(0,i)+rest.slice(i+sg.t.length); used.push(sg); } }
+      if(!used.length||rest.trim()) return null; const l=used[0].l; if(used.some(q=>q.l!==l)) return null;
+      return {l:l,s:used.map(q=>({o:q.o,t:q.t}))}; };
+    // Edit comment / Edit reply শুরু: লেখাটি যে ভাষায় অনুবাদ হয়েছিল সেটা Settings > Translation-এ সিলেক্ট, মূলও পাওয়া যায়
+    window.__cmTrEditBegin=o=>{ trSegs=[]; if(o&&o.trl&&o.trs&&o.trs.length){ if(trPrevL==null) trPrevL=cmSet.tr; cmSet.tr=o.trl; trSegs=o.trs.map(q=>({o:q.o,t:q.t,l:o.trl})); window.__cmTrPaint(); } };
+    window.__cmTrEditEnd=()=>{ if(trPrevL!=null){ cmSet.tr=trPrevL; trPrevL=null; trSegs=[]; window.__cmTrPaint(); } };   // trSegs: প্রতিটি translate-এর {o:মূল, t:অনুবাদ, l:ভাষা} — পুরো টেক্সটের মূল ফেরত দিতে
+    window.__cmTrDo=async()=>{ const ta=document.getElementById('cmIn'); if(trBusy||cmSet.tr==='none') return; const cur=ta.value, L=cmSet.tr;
+      // ১) বর্তমান টেক্সটে আগের অনুবাদ করা অংশগুলো কোথায় আছে খুঁজি (ইউজার এডিট করে ফেললে সেটা বাদ)
+      const found=[]; trSegs.forEach(sg=>{ if(!sg.t) return; let from=0; while(true){ const i=cur.indexOf(sg.t,from); if(i<0) break; if(!found.some(f=>i<f.e&&i+sg.t.length>f.s)){ found.push({s:i,e:i+sg.t.length,sg}); break; } from=i+1; } });
+      found.sort((x,y)=>x.s-y.s);
+      const parts=[]; let pos=0; found.forEach(f=>{ if(f.s>pos) parts.push({g:cur.slice(pos,f.s)}); parts.push({sg:f.sg}); pos=f.e; }); if(pos<cur.length) parts.push({g:cur.slice(pos)});
+      const gaps=parts.filter(q=>q.g!=null&&q.g.trim());
+      const stale=parts.filter(q=>q.sg&&q.sg.l!==L);   // অন্য ভাষায় অনুবাদ করা অংশ (ভাষা বদলানো হয়েছে)
+      // ২) নতুন লেখাও নেই, ভাষাও বদলায়নি -> পুরো টেক্সটের মূল (original) ফেরত
+      if(!gaps.length&&!stale.length){
+        if(found.length){ ta.value=parts.map(q=>q.sg?q.sg.o:q.g).join(''); trSegs=[]; ta.dispatchEvent(new Event('input',{bubbles:true})); if(window.__cmInputRefresh) window.__cmInputRefresh(); return; }
+        toast('Write something to translate'); return; }
+      // ৩) নতুন লেখা বা ভাষা বদল: নতুন লেখা ও অন্য ভাষার অংশ নতুন ভাষায় অনুবাদ; মূল (o) সবসময় একদম শুরুরটাই থাকে
       trBusy=true; cmAdd.style.opacity='.5';
-      try{ const o=await window.__trFetch(t,cmSet.tr); if(!o) throw new Error('x'); trOrig=cur; trOut=o; ta.value=o; ta.dispatchEvent(new Event('input',{bubbles:true})); }
+      try{ for(const q of parts){
+          if(q.g!=null){ if(!q.g.trim()) continue; const lead=q.g.match(/^\s*/)[0], tail=q.g.match(/\s*$/)[0], core=q.g.trim(); const o=await window.__trFetch(core,L); if(!o) throw new Error('x'); q.pre=lead; q.post=tail; q.ns={o:core,t:o,l:L}; }
+          else if(q.sg.l!==L){ const o=await window.__trFetch(q.sg.o,L); if(!o) throw new Error('x'); q.ns={o:q.sg.o,t:o,l:L}; } }
+        ta.value=parts.map(q=>q.g!=null?(q.ns?q.pre+q.ns.t+q.post:q.g):(q.ns?q.ns.t:q.sg.t)).join('');
+        trSegs=parts.map(q=>q.ns||q.sg).filter(Boolean); ta.dispatchEvent(new Event('input',{bubbles:true})); if(window.__cmInputRefresh) window.__cmInputRefresh(); }
       catch(_){ toast('Translation unavailable'); }
       trBusy=false; cmAdd.style.opacity=''; };
     window.__cmTrPaint(); }
@@ -6590,7 +6611,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   cmIn.addEventListener('input',()=>{ if(!cmSet.ty||cmEdit||cmIn.disabled||!cmIn.value.trim()){ cmTypStop(); return; } cmTypers.add('me'); cmTypPaint(); clearTimeout(cmTypTm); cmTypTm=setTimeout(cmTypStop,CM_TYP_IDLE); });   // থেমে গেলে প্রায় সাথে সাথে (০.৪ সেকেন্ড) বন্ধ — প্রতিটি key-তে এই সময় আবার শুরু হয়
   cmIn.addEventListener('blur',cmTypStop);
   new MutationObserver(()=>{ if(!cmS.classList.contains('show')) cmTypStop(); }).observe(cmS,{attributes:true,attributeFilter:['class']});
-  const resetIn=()=>{ if(window.__tsReset) window.__tsReset(); cmTypStop(); cmEdit=null; cmMultiTo=null; cmIn.value=''; cmBox.classList.remove('has'); clearAtt(); cmLockPaint(); growIn(); updRt(); };
+  const resetIn=()=>{ if(window.__tsReset) window.__tsReset(); if(window.__cmTrEditEnd) window.__cmTrEditEnd(); cmTypStop(); cmEdit=null; cmMultiTo=null; cmIn.value=''; cmBox.classList.remove('has'); clearAtt(); cmLockPaint(); growIn(); updRt(); };
   // Editing / Replying চলাকালীন: যে comment/reply edit বা reply করা হচ্ছে তার উপর কপি-animation অনবরত চলে
   function cmBusyPaint(){
     // Editing / Replying চলাকালীন: যেটা edit বা reply করা হচ্ছে তার উপর দিয়ে Shimmer / Sheen অনবরত চলে
@@ -7355,7 +7376,16 @@ function askDelete(title,cb,yesLabel,slideSel){
       let bg=getComputedStyle(cmBody).backgroundColor; if(!bxSolid(bg)) bg=getComputedStyle(cmS).backgroundColor; if(!bxSolid(bg)) bg='#0f0f0f';
       const cr=cmBody.getBoundingClientRect(), st=cmBody.scrollTop;
       let sc=Math.min(3,Math.max(2,window.devicePixelRatio||2)); sc=Math.max(1,Math.min(sc,Math.sqrt(14e6/Math.max(1,cr.width*cr.height))));
-      const cv=await window.html2canvas(cmBody,{backgroundColor:bg,scale:sc,logging:false,useCORS:true,onclone:d=>{ try{ const c=d.getElementById('cmBody'); if(c) c.scrollTop=st; }catch(_){} }});
+      let cv; {   // live sheet-এর ভেতরে নয়: দৃশ্যমান অংশের কপি transform / scroll / animation-মুক্ত আলাদা জায়গায় এনে ছবি তোলা হয় (লেখা উপরে ওঠা / উল্টে যাওয়া এড়াতে)
+        const stage=document.createElement('div'); stage.className='cmsheet'; stage.setAttribute('aria-hidden','true');
+        stage.style.cssText='position:fixed;left:0;top:0;width:'+cr.width+'px;height:'+cr.height+'px;max-height:none;transform:none;transition:none;visibility:visible;display:block;border-radius:0;overflow:hidden;z-index:-1;pointer-events:none;background:'+bg+';';
+        const sty=document.createElement('style'); sty.textContent='.__cs,.__cs *{transition:none!important;animation:none!important;transform:none!important}.__cs .cmt{word-break:normal!important;overflow-wrap:break-word!important}';
+        const wrap=document.createElement('div'); wrap.className='__cs'; wrap.style.cssText='position:relative;width:100%;height:100%;overflow:hidden;';
+        const cl=cmBody.cloneNode(true); cl.removeAttribute('id'); cl.style.cssText+=';flex:none;overflow:visible;height:auto;max-height:none;position:relative;top:'+(-st)+'px;width:100%;transform:none;transition:none;';
+        wrap.appendChild(cl); stage.appendChild(sty); stage.appendChild(wrap); document.body.appendChild(stage);
+        try{ await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+          cv=await window.html2canvas(stage,{backgroundColor:bg,scale:sc,logging:false,useCORS:true});
+        } finally{ try{ stage.remove(); }catch(_){} } }
       if(!cv||!cv.width||!cv.height) throw new Error('empty');
       const k=cv.width/cr.width, sx=Math.round(bxR.x*k), sy=Math.round(bxR.y*k), sw=Math.max(1,Math.min(cv.width-sx,Math.round(bxR.w*k))), sh=Math.max(1,Math.min(cv.height-sy,Math.round(bxR.h*k)));
       const out=document.createElement('canvas'); out.width=sw; out.height=sh; const g=out.getContext('2d'); g.fillStyle=bg; g.fillRect(0,0,sw,sh); g.drawImage(cv,sx,sy,sw,sh,0,0,sw,sh);
@@ -7518,11 +7548,21 @@ function askDelete(title,cb,yesLabel,slideSel){
         const wCss=Math.ceil(Math.max(...rows.map(r=>r.getBoundingClientRect().width))), hCss=rows.reduce((a,r)=>a+r.getBoundingClientRect().height,0);
         let sc=Math.min(3,Math.max(2,window.devicePixelRatio||2)); sc=Math.max(1,Math.min(sc,Math.sqrt(14e6/Math.max(1,wCss*(hCss+16))),30000/Math.max(1,hCss+16)));   // canvas সীমা ছাড়ালে scale কমে
         const cvs=[];
-        for(const r of rows){
-          const br=cmBody.getBoundingClientRect(), rr=r.getBoundingClientRect();
-          if(rr.top<br.top||rr.bottom>br.bottom){ cmBody.scrollTop+=rr.top-br.top; await frame(); await frame(); }   // overflow clip এড়াতে row-টা দৃশ্যমান জায়গায় আনা
-          const cv=await window.html2canvas(r,{backgroundColor:bg,scale:sc,logging:false,useCORS:true,onclone:(d,el)=>{ try{ el.classList.remove('on'); el.style.transform='none'; el.style.opacity='1'; el.style.transition='none'; el.style.background='transparent'; if(BS.act) el.querySelectorAll('.cma,.cmmore,.cmtr').forEach(n=>{ n.style.display='none'; }); if(BS.att) el.querySelectorAll('.cmatt,.cmfsub').forEach(n=>{ n.style.display='none'; }); }catch(_){} }});
-          if(cv&&cv.width&&cv.height) cvs.push(cv);
+        for(const r of rows){   // হুবহু একই row-এর কপি আলাদা, transform / scroll / animation-মুক্ত জায়গায় এনে ছবি তোলা হয় (live sheet-এর ভেতরে নয়) — তাই লেখা উপরে ওঠে না বা উল্টে যায় না
+          const rw=Math.ceil(r.getBoundingClientRect().width);
+          const stage=document.createElement('div'); stage.className='cmsheet'; stage.setAttribute('aria-hidden','true');
+          stage.style.cssText='position:fixed;left:0;top:0;width:'+rw+'px;height:auto;max-height:none;transform:none;transition:none;visibility:visible;display:block;border-radius:0;overflow:visible;z-index:-1;pointer-events:none;background:'+bg+';';
+          const sty=document.createElement('style'); sty.textContent='.__cs,.__cs *{transition:none!important;animation:none!important;transform:none!important}.__cs .cmt{word-break:normal!important;overflow-wrap:break-word!important}.__cs .cmmore,.__cs .cmad{visibility:hidden}';
+          const wrap=document.createElement('div'); wrap.className='__cs '+cmBody.className; wrap.style.cssText='position:static;overflow:visible;height:auto;max-height:none;width:100%;margin:0;padding:0;transform:none;';
+          const cl=r.cloneNode(true); cl.classList.remove('on'); cl.style.opacity='1'; cl.style.transition='none'; cl.style.background='transparent';
+          if(BS.act) cl.querySelectorAll('.cma,.cmmore,.cmtr').forEach(n=>{ n.style.display='none'; });
+          if(BS.att) cl.querySelectorAll('.cmatt,.cmfsub').forEach(n=>{ n.style.display='none'; });
+          wrap.appendChild(cl); stage.appendChild(sty); stage.appendChild(wrap); document.body.appendChild(stage);
+          try{
+            await frame(); await frame();
+            const cv=await window.html2canvas(cl,{backgroundColor:bg,scale:sc,logging:false,useCORS:true});
+            if(cv&&cv.width&&cv.height) cvs.push(cv);
+          } finally{ try{ stage.remove(); }catch(_){} }
         }
         if(!cvs.length) throw new Error('empty');
         const pad=Math.round(8*sc), W=Math.max(...cvs.map(c=>c.width)), H=cvs.reduce((a,c)=>a+c.height,0)+pad*2;
@@ -7612,8 +7652,8 @@ function askDelete(title,cb,yesLabel,slideSel){
     if(cmEdit){ const go=()=>{ resetIn(); cmIn.blur(); }; if(repDraft()){ cmIn.blur(); askDelete('Discard this edit?',go,'Discard'); } else go(); return; }
     if(repDraft()){ cmIn.blur(); askDelete('Discard this reply?',()=>{ cmReplyTo=null; resetIn(); },'Discard'); return; }   // reply-to-reply সরাতে চাইলে, লেখা থাকলে Discard dialog
     cmReplyTo=null; updRt(); };
-  cmIn.addEventListener('input',cmInput);
-  const mk=v=>Object.assign({id:uid(),txt:v,posted:new Date().toISOString(),my:null,l:0,dl:0,reps:[]},cmSet.lk?null:{lkOff:true},cmSet.dl?null:{dlOff:true},cmSet.rp?null:{rpOff:true},cmSet.ad>0?{adAt:Date.now()+cmSet.ad*1000,ad:cmSet.ad,adv:cmSet.adv,adc:cmSet.adc}:null,cmSet.hd?(()=>{ const t=new Date().toISOString(); return {hid:true,hidAt:t,hidH:[t]}; })():null,(window.__tsStr&&window.__tsStr())?{ts:window.__tsStr()}:null);   // Settings Hide On: নতুন comment / reply / reply-to-reply Send হলেই hidden   // Settings: Like / Dislike / Reply off থাকলে নতুন comment / reply / sub reply-তে তা off থাকবে
+  cmIn.addEventListener('input',cmInput); window.__cmInputRefresh=cmInput;
+  const mk=v=>Object.assign({id:uid(),txt:v,posted:new Date().toISOString(),my:null,l:0,dl:0,reps:[]},cmSet.lk?null:{lkOff:true},cmSet.dl?null:{dlOff:true},cmSet.rp?null:{rpOff:true},cmSet.ad>0?{adAt:Date.now()+cmSet.ad*1000,ad:cmSet.ad,adv:cmSet.adv,adc:cmSet.adc}:null,cmSet.hd?(()=>{ const t=new Date().toISOString(); return {hid:true,hidAt:t,hidH:[t]}; })():null,(window.__tsStr&&window.__tsStr())?{ts:window.__tsStr()}:null,(()=>{ const t=window.__cmTrSnap&&window.__cmTrSnap(v); return t?{trl:t.l,trs:t.s}:null; })());   // Settings Hide On: নতুন comment / reply / reply-to-reply Send হলেই hidden   // Settings: Like / Dislike / Reply off থাকলে নতুন comment / reply / sub reply-তে তা off থাকবে
   // Auto send: object এখনই তৈরি হয় কিন্তু x.cmts / reps-এ ঢোকে না; সময় হলে নিচের sweep যোগ করে
   const asQueue=(x,p)=>{ p.at=Date.now()+cmSet.as*1000; p.id=p.o.id; (x.pend=x.pend||[]).push(p); saveC(); const d=new Date(p.at), z=n=>String(n).padStart(2,'0'), h=d.getHours()%12||12; toast((p.mode==='c'?'Comment':'Reply')+' will be sent at '+h+' : '+z(d.getMinutes())+' : '+z(d.getSeconds())+(d.getHours()<12?' AM':' PM')); };
   function sendCm(){
@@ -7626,7 +7666,7 @@ function askDelete(title,cb,yesLabel,slideSel){
       const o=cmEdit.o, ac=attChg(), sc=window.__cmEditSetChg(o), tsC=window.__tsStr()!==(o.ts||'');
       if(cmSetOnly()){ if(!sc) return; window.__cmEditSetApply(o); saveC(); resetIn(); drawCm(); cmIn.blur(); return; }   // শুধু Like / Dislike সেটিং সেভ; লেখা, attachment ও Reply অপশন অপরিবর্তিত
       if(v===o.txt&&!ac&&!sc&&!tsC) return;
-      if(v!==o.txt||ac){ if(!o.t0) o.t0=o.posted; (o.hist=o.hist||[]).push({txt:o.txt,at:o.posted,att:o.att}); o.txt=v; if(ac){ const na=attCommit(); if(na) o.att=na; else delete o.att; } o.posted=new Date().toISOString(); o.ed=true; }
+      if(v!==o.txt||ac){ if(!o.t0) o.t0=o.posted; (o.hist=o.hist||[]).push({txt:o.txt,at:o.posted,att:o.att}); o.txt=v; { const t=window.__cmTrSnap&&window.__cmTrSnap(v); if(t){ o.trl=t.l; o.trs=t.s; } else{ delete o.trl; delete o.trs; } } if(ac){ const na=attCommit(); if(na) o.att=na; else delete o.att; } o.posted=new Date().toISOString(); o.ed=true; }
       if(tsC){ const t=window.__tsStr(); if(t) o.ts=t; else delete o.ts; }
       window.__cmEditSetApply(o);
       saveC(); resetIn(); drawCm(); cmIn.blur(); return;
@@ -7935,7 +7975,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     if(isReply){ const oc0=x.cmts.find(y=>y.id===cmOpen); if(oc0&&ancDel(oc0,o.id)) return; }
     const go=()=>{
       cmReplyTo=null; cmEdit={o,isReply}; if(window.__tsEditBegin) window.__tsEditBegin(o.ts||''); drawCm(); cmAtt=o.att?{k:o.att.k,src:o.att.src,base:o.att.base,tn:o.att.tn,dur:o.att.dur,bid:o.att.bid,name:o.att.name,icon:o.att.icon,logo:o.att.logo,giphy:o.att.giphy,poll:o.att.poll,table:o.att.table,form:o.att.form,subs:o.att.subs,pages:o.att.pages}:null; cmAttOrig=null; drawPrev();
-      cmIn.value=o.txt; cmInput(); updRt(); cmIn.focus();
+      cmIn.value=o.txt; if(window.__cmTrEditBegin) window.__cmTrEditBegin(o); cmInput(); updRt(); cmIn.focus();
       try{ cmIn.setSelectionRange(cmIn.value.length,cmIn.value.length); }catch(_){}
       growIn(); cmIn.scrollTop=cmIn.scrollHeight;
     };
