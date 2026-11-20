@@ -1264,7 +1264,7 @@ const toastEl=document.getElementById('toast');
     if(e.target.closest('.apl')){ if(a.paused){ const pr=a.play(); if(pr&&pr.catch) pr.catch(()=>{}); } else a.pause(); return; }
     if(e.target.closest('.amt')){ const b=e.target.closest('.amt'), ic=b.querySelector('.material-symbols-outlined'); a.muted=!a.muted; if(ic) ic.textContent=a.muted?'volume_off':'volume_up'; b.title=a.muted?'Unmute':'Mute'; return; }
     if(e.target.closest('.aspd')){ spdOpen(e.target.closest('.aspd'),a); return; }
-    if(e.target.closest('.aop')){ if(!a.paused) a.pause(); if(window.audPlayOpen) window.audPlayOpen(a.getAttribute('src'),{id:c.dataset.bid||a.getAttribute('src'),dur:+c.dataset.dur||0,menu:true,xm:!!c.closest('#ehList')}); return; }
+    if(e.target.closest('.aop')){ if(!a.paused) a.pause(); if(window.audPlayOpen) window.audPlayOpen(a.getAttribute('src'),{id:c.dataset.bid||a.getAttribute('src'),dur:+c.dataset.dur||0,menu:true,xm:!!c.closest('#ehList .ehi:not([data-cur="1"])')}); return; }
   });
   // seek bar: হাত দিয়ে টেনে / চেপে নিজের মতো সরানো যায় (pointer দিয়ে, touch-action ঝামেলা ছাড়া)
   const seekTo=(c,a,e)=>{ const sk=c.querySelector('.aseek'), r=sk.getBoundingClientRect(), f=Math.max(0,Math.min(1,(e.clientX-r.left)/(r.width||1))), t=tot(c,a); fill(c,f); if(t){ try{ a.currentTime=f*t; }catch(_){} } c.querySelector('.atm').textContent=tf(f*t); };
@@ -4495,13 +4495,13 @@ function askDelete(title,cb,yesLabel,slideSel){
   eh.innerHTML='<div class="abar"><span class="material-symbols-outlined" id="ehBack" style="cursor:pointer">arrow_back</span><span class="ttl2">Edit history</span></div><div id="ehList"></div>';
   document.body.appendChild(eh); $('ehBack').onclick=()=>eh.classList.remove('show');
   let ehCtx=null;
-  const ehMeta=n=>ehCtx?{xm:1,lbl:ehCtx.r?'Show in replies':'Show in comments',go:()=>{ eh.classList.remove('show'); window.__cmShowIn({c:ehCtx.c,r:ehCtx.r,id:ehCtx.id}); }}:null;
+  const ehMeta=n=>(n&&n.closest&&n.closest('#ehList .ehi[data-cur="1"]'))?{xm:0}:ehCtx?{xm:1,lbl:ehCtx.r?'Show in replies':'Show in comments',go:()=>{ eh.classList.remove('show'); window.__cmShowIn({c:ehCtx.c,r:ehCtx.r,id:ehCtx.id}); }}:null;
   function ehOpen(a,ctx){ ehCtx=ctx||null;   // a: newest first [{txt,pic,att,at,cur,del,delTxt}]
     const box=$('ehList'); box.innerHTML='';
-    const AL={link:'Link',photo:'Photo',video:'Video',gif:'GIF',sticker:'Sticker',voice:'Audio',poll:'Poll',table:'Table',form:'Form',loc:'Location'}, AK=z=>z?(z.bid||z.src||''):'', AN=z=>(z&&z.k==='poll'&&z.poll&&z.poll.quiz)?'Quiz':(AL[z&&z.k]||'Attachment');
-    a.forEach((v,i)=>{ const d=document.createElement('div'); d.className='ehi'; const s=document.createElement('small'); const o=a[i+1];
+    const AL={link:'Link',photo:'Photo',video:'Video',gif:'GIF',sticker:'Sticker',voice:'Audio',poll:'Poll',table:'Table',form:'Form',loc:'Location'}, AK=z=>z?(z.bid||z.src||'')+((z.k==='loc'&&z.live)?'|'+(z.live.lid||'L'):''):'', AN=z=>(z&&z.k==='poll'&&z.poll&&z.poll.quiz)?'Quiz':((z&&z.k==='loc'&&z.live)?'Live location':(AL[z&&z.k]||'Attachment'));
+    window.__ehCurAtt=null; a.forEach((v,i)=>{ const d=document.createElement('div'); d.className='ehi'; if(v.cur&&!v.del){ d.dataset.cur='1'; window.__ehCurAtt=v.att||null; } const s=document.createElement('small'); const o=a[i+1];
       let note=''; if(!v.del&&o&&(v.pic||'')!==(o.pic||'')) note=v.pic?(o.pic?' \u2022 Image changed':' \u2022 Image added'):' \u2022 Image removed';
-      if(!v.del&&o&&(v.att||o.att)){ if(v.att&&!o.att) note=' \u2022 '+AN(v.att)+' added'; else if(!v.att&&o.att) note=' \u2022 '+AN(o.att)+' deleted'; else if(AK(v.att)!==AK(o.att)) note=(v.att.k===o.att.k)?' \u2022 '+AN(v.att)+' changed':' \u2022 '+AN(o.att)+' deleted \u2022 '+AN(v.att)+' added'; }
+      if(!v.del&&o&&(v.att||o.att)){ if(v.att&&!o.att) note=' \u2022 '+AN(v.att)+' added'; else if(!v.att&&o.att) note=' \u2022 '+AN(o.att)+' deleted'; else if(AK(v.att)!==AK(o.att)) note=(v.att.k===o.att.k&&AN(v.att)===AN(o.att))?' \u2022 '+AN(v.att)+' changed':' \u2022 '+AN(o.att)+' deleted \u2022 '+AN(v.att)+' added'; }
       s.textContent=(v.cur?'Current version \u2022 ':'')+timeAgo(v.at)+note; d.appendChild(s);
       if(v.del){ const t=document.createElement('div'); t.className='eht cmdel'; t.textContent=v.delTxt; d.appendChild(t); }
       else{
@@ -4686,7 +4686,7 @@ function askDelete(title,cb,yesLabel,slideSel){
       const S=140, z=15, n=Math.pow(2,z), la=CL*Math.PI/180, px=(CN+180)/360*n*256, py=(1-Math.log(Math.tan(la)+1/Math.cos(la))/Math.PI)/2*n*256; let im='';
       for(let ty=Math.floor((py-S/2)/256);ty<=Math.floor((py+S/2)/256);ty++) for(let tx=Math.floor((px-S/2)/256);tx<=Math.floor((px+S/2)/256);tx++){ if(ty<0||ty>=n) continue; im+='<img src="https://tile.openstreetmap.org/'+z+'/'+(((tx%n)+n)%n)+'/'+ty+'.png" crossorigin="anonymous" alt="" draggable="false" style="left:'+(tx*256-px+S/2).toFixed(2)+'px;top:'+(ty*256-py+S/2).toFixed(2)+'px">'; }
       const lv=a.live&&a.live.end?a.live:null, ls=lv?window.__lvState(lv.lid,lv.end):null;
-      return '<div class="cmatt cmloc'+(lv?' cmlive':'')+'" data-lat="'+CL+'" data-lng="'+CN+'"'+(lv?' data-end="'+lv.end+'" data-lid="'+esc(lv.lid||'')+'"':'')+' role="link" title="'+(lv?'Live location':'Open in Google Maps')+'">'+im+'<span class="material-symbols-outlined lcpn">location_on</span>'+(CNM?'<b>'+esc(CNM)+'</b>':'')+(lv?'<span class="lvf'+(ls.ended?' end':'')+(ls.paused?' ps':'')+(ls.pending?' pd':'')+'">'+esc(ls.text)+'</span>':'')+'</div>'; }
+      return '<div class="cmatt cmloc'+(lv?' cmlive':'')+'" data-lat="'+CL+'" data-lng="'+CN+'"'+(lv?' data-end="'+lv.end+'" data-sec="'+(+lv.sec||0)+'" data-lid="'+esc(lv.lid||'')+'"':'')+' role="link" title="'+(lv?'Live location':'Open in Google Maps')+'">'+im+'<span class="material-symbols-outlined lcpn">location_on</span>'+(CNM?'<b>'+esc(CNM)+'</b>':'')+(lv?'<span class="lvf'+(ls.ended?' end':'')+(ls.paused?' ps':'')+(ls.pending?' pd':'')+'">'+esc(ls.text)+'</span>':'')+'</div>'; }
     return ''; }
   { const st=document.createElement('style'); st.textContent='.cmatt.cmloc{position:relative;width:140px;height:140px;border-radius:10px;overflow:hidden;background:#272727;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}.cmloc img{position:absolute!important;display:block;width:256px!important;height:256px!important;max-width:none!important;max-height:none!important;border-radius:0!important;pointer-events:none;-webkit-user-drag:none}.cmloc .lcpn{position:absolute;left:50%;top:50%;width:36px;height:36px;margin-left:-18px;margin-top:-34px;font-size:36px;line-height:36px;color:#ea4335;font-variation-settings:"FILL" 1;text-shadow:0 1px 3px rgba(0,0,0,.5);pointer-events:none}.cmloc b{position:absolute;left:0;right:0;bottom:0;padding:18px 8px 6px;font-size:12px;font-weight:500;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.72));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}'; document.head.appendChild(st); }
 
@@ -4708,7 +4708,7 @@ function askDelete(title,cb,yesLabel,slideSel){
       const p=window.__lvPos(el.dataset.lid); if(p&&(+el.dataset.lat!==p.lat||+el.dataset.lng!==p.lng)){ el.querySelectorAll(':scope>img').forEach(i=>i.remove()); el.insertAdjacentHTML('afterbegin',window.__locTiles(p.lat,p.lng)); el.dataset.lat=p.lat; el.dataset.lng=p.lng; }
       if(p&&p.name!=null){ let b=el.querySelector(':scope>b'); if(p.name){ if(!b){ b=document.createElement('b'); el.insertBefore(b,f); } b.textContent=p.name; } else if(b) b.remove(); } }); };
     setInterval(window.__lvTick,10000); }
-  { const st=document.createElement('style'); st.textContent='#cmLvBar.ps{color:#f9ab00!important}#cmLiveWin .lvs.lvp{color:#f9ab00}#cmLiveWin .lvs.lvp.rs{color:#3ea6ff}.cmloc .lvf{position:absolute;left:0;right:0;bottom:0;padding:5px 8px;font-size:11px;line-height:1.25;font-weight:500;text-align:left;color:#ff3b30;background:rgba(18,18,18,.92);pointer-events:none}.cmloc .lvf.end{color:#9a9a9a}.cmloc .lvf.ps{color:#f9ab00}.cmloc .lvf.pd{color:#3ea6ff}#cmLvBar.pd{color:#3ea6ff!important}.cmloc.cmlive b{top:0;bottom:auto;padding:6px 8px 18px;background:linear-gradient(rgba(0,0,0,.72),transparent)}'; document.head.appendChild(st); }
+  { const st=document.createElement('style'); st.textContent='#cmLvPgW{flex-shrink:0;height:4px;background:#2a2a2a;position:relative;z-index:900}#cmLvPg{height:100%;width:100%;background:#ff3b30;transition:width 1s linear,background .3s}#cmLvPg.ps{background:#f9ab00}#cmLvBar.ps{color:#f9ab00!important}#cmLiveWin .lvs.lvp{color:#f9ab00}#cmLiveWin .lvs.lvp.rs{color:#3ea6ff}.cmloc .lvf{position:absolute;left:0;right:0;bottom:0;padding:5px 8px;font-size:11px;line-height:1.25;font-weight:500;text-align:left;color:#ff3b30;background:rgba(18,18,18,.92);pointer-events:none}.cmloc .lvf.end{color:#9a9a9a}.cmloc .lvf.ps{color:#f9ab00}.cmloc .lvf.pd{color:#3ea6ff}#cmLvBar.pd{color:#3ea6ff!important}.cmloc.cmlive b{top:0;bottom:auto;padding:6px 8px 18px;background:linear-gradient(rgba(0,0,0,.72),transparent)}'; document.head.appendChild(st); }
   document.addEventListener('click',e=>{ const el=e.target.closest&&e.target.closest('.cmloc'); if(!el) return; const sh=el.closest('.cmsheet'); if(sh&&sh.classList.contains('bxmode')) return; if(window.__attHeldNow&&window.__attHeldNow()) return; e.preventDefault(); /* Select মোডেও tap করলে Location / Live location-এর নিজের window খোলে */ if(el.classList.contains('cmlive')){ if(window.__lvOpen) window.__lvOpen(el); return; } const la=el.dataset.lat, ln=el.dataset.lng; if(la==null||ln==null) return; window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(la+','+ln),'_blank','noopener'); });
   { const st=document.createElement('style'); st.textContent='.cmatt.cmpdf{display:flex;align-items:center;gap:12px;background:#000;border:1px solid #3f3f3f;border-radius:12px;padding:12px 20px 12px 14px;min-width:150px;cursor:default;-webkit-user-select:none;user-select:none}.cmpdf .pfi{font-size:36px;color:#ff5a4d;cursor:default}.cmpdf .pft{display:flex;flex-direction:column;line-height:1.25}.cmpdf .pft b{font-size:16px;font-weight:500;color:#fff}.cmpdf .pft i{font-style:normal;font-size:13px;color:#aaa}.cmatt.cmpdf.attsq{transform:scale(.88)!important;filter:brightness(.82)}'; document.head.appendChild(st); }
   { const st=document.createElement('style'); st.textContent='.cmatt.cmform{display:flex;align-items:center;gap:12px;background:#000;border:1px solid #3f3f3f;border-radius:12px;padding:12px 20px 12px 14px;min-width:150px;max-width:300px;cursor:pointer;-webkit-user-select:none;user-select:none}.cmform .pfi{font-size:36px;color:#3ea6ff;flex-shrink:0}.cmform .pft{display:flex;flex-direction:column;line-height:1.25;min-width:0}.cmform .pft b{font-size:16px;font-weight:500;color:#fff;overflow-wrap:anywhere}.cmform .pft i{font-style:normal;font-size:13px;color:#aaa}.cmform .pft i.fsd{color:#8a8a8a}'; document.head.appendChild(st); }
@@ -5415,7 +5415,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   let lsCust=false;
   { const st=document.createElement('style'); st.textContent='#cmLsBack{z-index:125}#cmLsBack .dlg{max-width:340px;padding:22px 18px 12px}#cmLsBack h2{font-size:20px;font-weight:500;padding:0 4px 14px}#cmLsBack .lsrow{display:flex;align-items:center;gap:14px;padding:4px 4px 10px}#cmLsBack .lsn{font-size:17px;flex:0 0 auto}#cmLsBox{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;border:1px solid #4a4a4a;border-radius:8px;padding:8px 4px 8px 10px;font-size:14px;background:#181818;cursor:pointer}#cmLsBox.open{border-color:#3ea6ff}#cmLsBox .lsv{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#cmLsBox .material-symbols-outlined{font-size:22px;color:#aaa}#cmLsBack .lsact{display:flex;justify-content:flex-end;gap:12px;margin-top:10px}#cmLsBack .lsact button{background:none;border:0;color:#fff;font-size:16px;padding:10px 14px;cursor:pointer;border-radius:20px}#cmLsBack .lsact button:active{background:#333}#cmLsShare{color:#3ea6ff!important}'
     +'#cmLsList{position:fixed;z-index:300;display:none;background:#383838;border-radius:10px;padding:6px 0;box-shadow:0 6px 24px rgba(0,0,0,.55);overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}#cmLsList.show{display:block}#cmLsList div{padding:12px 16px;font-size:15px;cursor:pointer;white-space:nowrap}#cmLsList div:active{background:#4a4a4a}#cmLsList div.on{color:#3ea6ff}'
-    +'#cmLiveWin{position:fixed;left:0;top:0;right:0;bottom:0;z-index:210;background:#0f0f0f;display:none;flex-direction:column;color:#fff}#cmLiveWin.show{display:flex}#cmLiveWin .lch{display:flex;align-items:center;gap:2px;height:56px;padding:env(safe-area-inset-top,0px) 12px 0 4px;background:#0f0f0f;border-bottom:1px solid #272727;flex-shrink:0;box-sizing:content-box;position:relative;z-index:900}#cmLiveWin .lcb{cursor:pointer;padding:8px;font-size:24px;color:#fff}#cmLiveWin .lct{flex:1;min-width:0;font-size:20px;font-weight:500;padding-left:4px}#cmLiveWin .lvs{color:#ff3b30;font-size:16px;font-weight:500;cursor:pointer;padding:8px 6px 8px 10px;-webkit-user-select:none;user-select:none}#cmLiveWin .lvs.off{display:none}#cmLiveWin .lvp{color:#3ea6ff}#cmLvBar{flex-shrink:0;background:#3a3a3a;color:#e6e6e6;text-align:center;font-size:15px;font-weight:500;padding:14px 12px calc(14px + env(safe-area-inset-bottom,0px));position:relative;z-index:900}#cmLvBar.act{color:#ff3b30}#cmLiveMap{flex:1;min-height:0;position:relative;background:#1a1a1a;isolation:isolate}'; document.head.appendChild(st); }
+    +'#cmLiveWin{position:fixed;left:0;top:0;right:0;bottom:0;z-index:210;background:#0f0f0f;display:none;flex-direction:column;color:#fff}#cmLiveWin.show{display:flex}#cmLiveWin .lch{display:flex;align-items:center;gap:2px;height:56px;padding:env(safe-area-inset-top,0px) 12px 0 4px;background:#0f0f0f;border-bottom:1px solid #272727;flex-shrink:0;box-sizing:content-box;position:relative;z-index:900}#cmLiveWin .lcb{cursor:pointer;padding:8px;font-size:24px;color:#fff}#cmLiveWin .lcw{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}#cmLiveWin .lct{flex:none;font-size:20px;font-weight:500;line-height:1.2;padding-left:4px}#cmLiveWin .lcs{font-size:13px;line-height:1.3;color:#9a9a9a;padding-left:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#cmLiveWin .lvs{color:#ff3b30;font-size:16px;font-weight:500;cursor:pointer;padding:8px 6px 8px 10px;-webkit-user-select:none;user-select:none}#cmLiveWin .lvs.off{display:none}#cmLiveWin .lvp{color:#3ea6ff}#cmLvBar{flex-shrink:0;background:#3a3a3a;color:#e6e6e6;text-align:center;font-size:15px;font-weight:500;padding:14px 12px calc(14px + env(safe-area-inset-bottom,0px));position:relative;z-index:900}#cmLvBar.act{color:#ff3b30}#cmLiveMap{flex:1;min-height:0;position:relative;background:#1a1a1a;isolation:isolate}'; document.head.appendChild(st); }
   const LS_OPTS=[['900','15 minutes',900],['1800','30 minutes',1800],['3600','1 hour',3600],['7200','2 hours',7200],['10800','3 hours',10800],['14400','4 hours',14400],['18000','5 hours',18000],['custom','Custom',-1]];
   let lsSel={v:'3600',sec:3600,c:{h:0,m:0,s:0}}, lsPend=null;
   const lsB=document.createElement('div'); lsB.className='dlg-back'; lsB.id='cmLsBack';
@@ -5455,19 +5455,21 @@ function askDelete(title,cb,yesLabel,slideSel){
       ()=>{ cmChg=false; toast('Allow location access to share live location'); },{enableHighAccuracy:true,timeout:15000,maximumAge:10000}); };
   // Live location viewer
   const lvW=document.createElement('div'); lvW.id='cmLiveWin';
-  lvW.innerHTML='<div class="lch"><span class="material-symbols-outlined lcb" id="cmLvBack" role="button" aria-label="Back">arrow_back</span><span class="lct">Live location</span><span class="lvs lvp" id="cmLvPause" role="button">Pause</span><span class="lvs" id="cmLvStop" role="button">Stop</span></div><div id="cmLiveMap"></div><div id="cmLvBar"></div>';
+  lvW.innerHTML='<div class="lch"><span class="material-symbols-outlined lcb" id="cmLvBack" role="button" aria-label="Back">arrow_back</span><div class="lcw"><span class="lct">Live location</span><span class="lcs" id="cmLvSub"></span></div><span class="lvs lvp" id="cmLvPause" role="button">Pause</span><span class="lvs" id="cmLvStop" role="button">Stop</span></div><div id="cmLiveMap"></div><div id="cmLvPgW"><div id="cmLvPg"></div></div><div id="cmLvBar"></div>';
   document.body.appendChild(lvW);
   let lvMap=null, lvMk=null, lvCur=null, lvWatch=null;
   const lvActive=()=>{ if(!lvCur) return false; const s=window.__lvState(lvCur.lid,lvCur.end); return !s.ended&&!s.pending; };
   const lvClose=()=>{ lvW.classList.remove('show'); if(lvWatch!=null&&navigator.geolocation){ try{ navigator.geolocation.clearWatch(lvWatch); }catch(e){} } lvWatch=null; };
-  window.__lvOpen=el=>{ lvCur={lat:+el.dataset.lat,lng:+el.dataset.lng,end:+el.dataset.end,lid:el.dataset.lid||''}; { const lp=window.__lvPos(lvCur.lid); if(lp){ lvCur.lat=lp.lat; lvCur.lng=lp.lng; } } lvBar(); lvW.classList.add('show');
+  window.__lvOpen=el=>{ lvCur={lat:+el.dataset.lat,lng:+el.dataset.lng,end:+el.dataset.end,sec:+el.dataset.sec||0,lid:el.dataset.lid||'',nm:((el.querySelector('b')||{}).textContent)||''}; { const lp=window.__lvPos(lvCur.lid); if(lp){ lvCur.lat=lp.lat; lvCur.lng=lp.lng; } } lvBar(); lvW.classList.add('show');
     lcLoad().then(()=>{ const L=window.L; if(!lvMap){ lvMap=L.map('cmLiveMap',{zoomControl:false,attributionControl:true,worldCopyJump:true,minZoom:2}); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'\u00a9 OpenStreetMap'}).addTo(lvMap); lvMap.attributionControl.setPrefix(false); L.control.zoom({position:'bottomright'}).addTo(lvMap); }
       lvMap.invalidateSize(); lvMap.setView([lvCur.lat,lvCur.lng],16); if(!lvMk) lvMk=L.marker([lvCur.lat,lvCur.lng],{icon:lcPin()}).addTo(lvMap); else lvMk.setLatLng([lvCur.lat,lvCur.lng]);
       lvStartWatch();
     }).catch(()=>{ lvClose(); toast('Could not load map. Check internet.'); }); };
   function lvStartWatch(){ if(!lvCur||!lvActive()||window.__lvPaused(lvCur.lid)||!navigator.geolocation||!navigator.permissions) return; navigator.permissions.query({name:'geolocation'}).then(pm=>{ if(pm.state!=='granted'||!lvW.classList.contains('show')||lvWatch!=null||window.__lvPaused(lvCur.lid)) return; lvWatch=navigator.geolocation.watchPosition(p=>{ if(!lvActive()||!lvMk||window.__lvPaused(lvCur.lid)) return; const ll=[p.coords.latitude,p.coords.longitude]; lvMk.setLatLng(ll); lvMap.panTo(ll); lvCur.lat=ll[0]; lvCur.lng=ll[1]; const lid0=lvCur.lid; window.__lvSetPos(lid0,ll[0],ll[1]); window.__lvTick(); const nw=Date.now(); if(!window.__lvRevT||nw-window.__lvRevT>15000){ window.__lvRevT=nw; try{ fetch('https://photon.komoot.io/reverse?lon='+ll[1]+'&lat='+ll[0]).then(r=>r.json()).then(j=>{ const f=j&&j.features&&j.features[0]; if(!f) return; const q=lcName(f); window.__lvSetPos(lid0,ll[0],ll[1],q.name||q.addr||''); window.__lvTick(); }).catch(()=>{}); }catch(e){} } },()=>{},{enableHighAccuracy:true}); }).catch(()=>{}); }
-  const lvBar=()=>{ if(!lvCur) return; const s=window.__lvState(lvCur.lid,lvCur.end), b=document.getElementById('cmLvBar'); b.textContent=s.text; b.classList.toggle('act',!s.ended&&!s.paused&&!s.pending); b.classList.toggle('ps',!!s.paused); b.classList.toggle('pd',!!s.pending); document.getElementById('cmLvStop').classList.toggle('off',s.ended||!!s.pending); const p=document.getElementById('cmLvPause'); p.classList.toggle('off',s.ended||!!s.pending); p.textContent=s.paused?'Resume':'Pause'; p.classList.toggle('rs',!!s.paused); };
+  const lvPg=s=>{ const g=document.getElementById('cmLvPg'); if(!g||!lvCur) return; let f=0; if(s.pending) f=1; else if(!s.ended){ let tot=(lvCur.sec||0)*1000; if(!(tot>0)){ let st=0; try{ st=+(JSON.parse(localStorage.getItem('cmLiveSt')||'{}')||{})[lvCur.lid]||0; }catch(e){} tot=st?lvCur.end-st:3600000; } let pa=0; if(s.paused){ try{ pa=+(JSON.parse(localStorage.getItem('cmLivePause')||'{}')||{})[lvCur.lid]||0; }catch(e){} } const t=(s.paused&&pa)?Math.min(Date.now(),pa):Date.now(); f=Math.max(0,Math.min(1,(lvCur.end-t)/Math.max(1000,tot))); } g.style.width=(f*100).toFixed(2)+'%'; g.classList.toggle('ps',!!s.paused); };   // map-এর নিচের border-এ progress bar: চললে লাল, pause থাকলে হলুদ ও স্থির
+  const lvBar=()=>{ if(!lvCur) return; { const lp=window.__lvPos(lvCur.lid), sb=document.getElementById('cmLvSub'), nm=(lp&&lp.name)||lvCur.nm||''; if(sb) sb.textContent=nm||(lvCur.lat.toFixed(5)+', '+lvCur.lng.toFixed(5)); } const s=window.__lvState(lvCur.lid,lvCur.end), b=document.getElementById('cmLvBar'); b.textContent=s.text; b.classList.toggle('act',!s.ended&&!s.paused&&!s.pending); b.classList.toggle('ps',!!s.paused); b.classList.toggle('pd',!!s.pending); document.getElementById('cmLvStop').classList.toggle('off',s.ended||!!s.pending); const p=document.getElementById('cmLvPause'); p.classList.toggle('off',s.ended||!!s.pending); p.textContent=s.paused?'Resume':'Pause'; p.classList.toggle('rs',!!s.paused); lvPg(s); };
   setInterval(()=>{ if(lvW.classList.contains('show')) lvBar(); },5000);
+  setInterval(()=>{ if(lvW.classList.contains('show')&&lvCur) lvPg(window.__lvState(lvCur.lid,lvCur.end)); },1000);
   // Background tracking: চলমান (paused/stopped/শেষ নয়) সব live location-এর জন্য একটাই watch — Live location window বন্ধ থাকলেও শেষ লোকেশন আপডেট হয়
   let bgW=null;
   const bgAct=()=>{ let e={}; try{ e=JSON.parse(localStorage.getItem('cmLiveEnds')||'{}')||{}; }catch(_){} return Object.keys(e).filter(id=>{ const t=window.__lvState(id,+e[id]); return !t.ended&&!t.paused&&!t.pending; }); };
@@ -5657,9 +5659,10 @@ function askDelete(title,cb,yesLabel,slideSel){
   adPs.forEach(p=>{ let raf=0; p.addEventListener('scroll',()=>{ if(raf) return; raf=requestAnimationFrame(()=>{ raf=0; adMark(); }); },{passive:true});
     p.addEventListener('click',e=>{ const c=e.target.closest('.adp div'); if(!c) return; p.scrollTo({top:[].indexOf.call(p.children,c)*ADH,behavior:'smooth'}); }); });
   const adCustOpen=()=>{ adB.classList.add('show'); const c=adS().adc||{h:0,m:0,s:0}; adPs.forEach(p=>{ p.style.scrollBehavior='auto'; p.scrollTop=(c[p.dataset.u]||0)*ADH; }); adMark(); };
+  let chCb=null; const chCustOpen=cb=>{ chCb=cb; adB.querySelector('h2').textContent='Auto send'; adB.classList.add('show'); adPs.forEach(p=>{ p.style.scrollBehavior='auto'; p.scrollTop=0; }); adMark(); };   // Scheduled comments > Change schedule > Custom
   adB.addEventListener('click',e=>{ if(e.target===adB) adB.classList.remove('show'); });
   adB.querySelector('#cmAdNo').onclick=()=>adB.classList.remove('show');
-  adOk.onclick=()=>{ const v={}; adPs.forEach(p=>{ v[p.dataset.u]=adIdx(p); }); const t=v.h*3600+v.m*60+v.s; if(t<=0) return; if(lsCust){ lsSel.c=v; lsSel.v='custom'; lsSel.sec=t; adB.classList.remove('show'); lsPaint(); return; } if(asCust){ cmSet.asc=v; cmSet.asv='custom'; cmSet.as=t; adB.classList.remove('show'); asPaint(); return; } const S=adS(); S.adc=v; S.adv='custom'; S.ad=t; adB.classList.remove('show'); adPaint(); if(cmEdit) cmInput(); };
+  adOk.onclick=()=>{ const v={}; adPs.forEach(p=>{ v[p.dataset.u]=adIdx(p); }); const t=v.h*3600+v.m*60+v.s; if(t<=0) return; if(chCb){ const f=chCb; chCb=null; adB.classList.remove('show'); f(t,v); return; } if(lsCust){ lsSel.c=v; lsSel.v='custom'; lsSel.sec=t; adB.classList.remove('show'); lsPaint(); return; } if(asCust){ cmSet.asc=v; cmSet.asv='custom'; cmSet.as=t; adB.classList.remove('show'); asPaint(); return; } const S=adS(); S.adc=v; S.adv='custom'; S.ad=t; adB.classList.remove('show'); adPaint(); if(cmEdit) cmInput(); };
   adList.addEventListener('click',e=>{ const d=e.target.closest('div[data-v]'); if(!d) return; const v=d.dataset.v; adListClose();
     if(v==='custom'){ adCustOpen(); return; }
     const o=AD_OPTS.find(q=>q[0]===v), S=adS(); S.adv=v; S.ad=o?o[2]:0; adPaint(); if(cmEdit) cmInput(); });
@@ -5680,7 +5683,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   new MutationObserver(()=>{ if(!setB.classList.contains('show')) asListClose(); }).observe(setB,{attributes:true,attributeFilter:['class']});
   let asCust=false;   // Custom picker: Auto delete-এর window-ই Auto send-এর জন্য ব্যবহার হয়
   const asCustOpen=()=>{ asCust=true; adB.querySelector('h2').textContent='Auto send'; adB.classList.add('show'); const c=cmSet.asc||{h:0,m:0,s:0}; adPs.forEach(p=>{ p.style.scrollBehavior='auto'; p.scrollTop=(c[p.dataset.u]||0)*ADH; }); adMark(); };
-  new MutationObserver(()=>{ if(!adB.classList.contains('show')){ asCust=false; lsCust=false; adB.querySelector('h2').textContent='Auto delete'; } }).observe(adB,{attributes:true,attributeFilter:['class']});
+  new MutationObserver(()=>{ if(!adB.classList.contains('show')){ asCust=false; lsCust=false; chCb=null; adB.querySelector('h2').textContent='Auto delete'; } }).observe(adB,{attributes:true,attributeFilter:['class']});
   asList.addEventListener('click',e=>{ const d=e.target.closest('div[data-v]'); if(!d) return; const v=d.dataset.v; asListClose();
     if(v==='custom'){ asCustOpen(); return; }
     const o=AD_OPTS.find(q=>q[0]===v); cmSet.asv=v; cmSet.as=o?o[2]:0; asPaint(); });
@@ -6660,7 +6663,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     }catch(e){ if(tok===pdTok){ pdClose(); toast('Could not open this PDF'); } } }
   window.__pdfView=pdfViewOpen;
   document.addEventListener('click',e=>{ const el=e.target.closest&&e.target.closest('.cmatt.cmpdf'); if(!el||pdW.classList.contains('show')) return; if(window.__attHeldNow&&window.__attHeldNow()) return;
-    e.stopPropagation(); e.preventDefault(); pdfViewOpen({k:'pdf',src:el.dataset.psrc,bid:el.dataset.bid||'',pages:+el.dataset.pages||1,name:el.dataset.pname||'',xm:!!el.closest('#ehList')},()=>{ if(window.__scrollBack) window.__scrollBack(el); }); },true);
+    e.stopPropagation(); e.preventDefault(); pdfViewOpen({k:'pdf',src:el.dataset.psrc,bid:el.dataset.bid||'',pages:+el.dataset.pages||1,name:el.dataset.pname||'',xm:!!el.closest('#ehList .ehi:not([data-cur="1"])')},()=>{ if(window.__scrollBack) window.__scrollBack(el); }); },true);
   // ---- Table viewer: Comments / Replies / My comments / Hidden / this channel / this post / Edit history-তে table-এ চাপলে আলাদা window (সাদা পেইজে table, চার দিকে scroll); Title menu-তে Back (প্রথমে) ও horizontal 3 dot (শেষে) → Export to PDF; Edit history-তে 3 dot নেই ----
   { const st=document.createElement('style'); st.textContent='#cmTbView{position:fixed;inset:0;z-index:140;display:none;flex-direction:column;background:var(--bg,#0f0f0f);color:#fff;padding-top:env(safe-area-inset-top,0px)}#cmTbView.show{display:flex}'
     +'#cmTbView .tvh{display:flex;align-items:center;gap:16px;height:56px;padding:0 16px;flex:none;border-bottom:1px solid var(--line,#3f3f3f)}#cmTbView .tvh>.material-symbols-outlined{cursor:pointer;padding:6px;border-radius:50%;-webkit-user-select:none;user-select:none}#cmTbView .tvh>.material-symbols-outlined:active{background:#333}#cmTbView .tvsp{flex:1}#cmTbView.xm #cmTvMore{display:none}'
@@ -6723,7 +6726,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   tvMn.querySelector('button').onclick=e=>{ e.stopPropagation(); tvMnHide(); if(tvR) tvExport(tvR); };
   tvW.addEventListener('click',e=>{ if(!e.target.closest('#cmTvMn,#cmTvMore')) tvMnHide(); });
   document.addEventListener('click',e=>{ const el=e.target.closest&&e.target.closest('.cmatt.cmtable'); if(!el||tvW.classList.contains('show')) return; if(window.__attHeldNow&&window.__attHeldNow()) return; const rows=tvRead(el); if(!rows) return;
-    e.stopPropagation(); e.preventDefault(); tvR=rows; tvDraw(rows); tvW.classList.toggle('xm',!!el.closest('#ehList')); tvSc.scrollTop=0; tvSc.scrollLeft=0; tvMnHide(); tvW.classList.add('show'); tvFit(); tvSc.scrollTop=0; tvSc.scrollLeft=0; tvBack=()=>{ if(window.__scrollBack) window.__scrollBack(el); }; },true);
+    e.stopPropagation(); e.preventDefault(); tvR=rows; tvDraw(rows); tvW.classList.toggle('xm',!!el.closest('#ehList .ehi:not([data-cur="1"])')); tvSc.scrollTop=0; tvSc.scrollLeft=0; tvMnHide(); tvW.classList.add('show'); tvFit(); tvSc.scrollTop=0; tvSc.scrollLeft=0; tvBack=()=>{ if(window.__scrollBack) window.__scrollBack(el); }; },true);
   // comment box-এর PDF thumbnail-এর edit icon: বর্তমান PDF একই window-তে খোলে (Done-এর জায়গায় Save)
   async function pdfEditAtt(){ const a=cmAtt; if(!a||a.k!=='pdf') return; let b=a.blob||(window.__cmBlobs&&window.__cmBlobs[a.src]);
     if(!b){ try{ b=await (await fetch(a.src)).blob(); }catch(e){ toast('Could not open this PDF'); return; } }
@@ -7457,7 +7460,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     document.body.appendChild(B);
     const g=id=>B.querySelector('#'+id), inp=g('cbIn'), chips=g('cbChips'), hint=g('cbHint');
     const HINT='Comments and replies that contain these words are blocked when sent. Separate several words with commas.';
-    const ATT=[['link','link','Link'],['photo','photo_library','Photo'],['video','videocam','Video'],['gif','gif_box','GIF'],['sticker','sticky_note_2','Sticker'],['voice','headphones','Audio'],['pdf','picture_as_pdf','PDF'],['table','table_chart','Table'],['poll','poll','Poll'],['quiz','quiz','Quiz'],['form','assignment','Form']];
+    const ATT=[['link','link','Link'],['photo','photo_library','Photo'],['video','videocam','Video'],['gif','gif_box','GIF'],['sticker','sticky_note_2','Sticker'],['voice','headphones','Audio'],['pdf','picture_as_pdf','PDF'],['table','table_chart','Table'],['poll','poll','Poll'],['quiz','quiz','Quiz'],['form','assignment','Form'],['loc','location_on','Location'],['live','share_location','Live location']];
     const pA=g('cbPA'), pT=g('cbPT');
     pA.innerHTML=[['noEdit','edit_off','Remove restrictions on editing comments and replies']].map(r=>'<div class="cbAR" data-k="'+r[0]+'"><span class="material-symbols-outlined">'+r[1]+'</span><span class="cbn">'+r[2]+'</span><span class="cbSw'+(atts[r[0]]?' on':'')+'" role="switch" aria-checked="'+(!!atts[r[0]])+'"><i></i></span></div>').join('')+'<div style="height:1px;background:#3f3f3f;margin:6px 0"></div>'+ATT.map(r=>'<div class="cbAR" data-k="'+r[0]+'"><span class="material-symbols-outlined">'+r[1]+'</span><span class="cbn">'+r[2]+'</span><span class="cbSw'+(atts[r[0]]?' on':'')+'" role="switch" aria-checked="'+(!!atts[r[0]])+'"><i></i></span></div>').join('');
     pA.addEventListener('click',e=>{ const r=e.target.closest('.cbAR'); if(!r) return; const k=r.dataset.k; atts[k]=!atts[k]; saveA(); const w=r.querySelector('.cbSw'); w.classList.toggle('on',!!atts[k]); w.setAttribute('aria-checked',!!atts[k]); });
@@ -7541,7 +7544,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     g('cbSet').onclick=()=>{ showers.forEach(f=>f()); B2.classList.add('show'); };
     const close=()=>{ close2(); B.classList.remove('show'); };
     window.__cbOpen=()=>{ draw(); say(HINT,false); tab('t'); B.classList.add('show'); setTimeout(()=>inp.focus(),50); };
-    window.__cbAttHit=(a,ed)=>{ if(!a||(ed&&atts.noEdit)) return false; let k=a.k; if(k==='poll'&&a.poll&&a.poll.quiz) k='quiz'; return !!atts[k]; };   // Attachment tab: toggle On থাকা attachment Send করলে block
+    window.__cbAttHit=(a,ed)=>{ if(!a||(ed&&atts.noEdit)) return false; let k=a.k; if(k==='poll'&&a.poll&&a.poll.quiz) k='quiz'; else if(k==='loc') k=a.live?'live':'loc'; return !!atts[k]; };   // Attachment tab: toggle On থাকা attachment Send করলে block
     window.__cbHit=text=>{ if(!words.length||!text) return false; const t=String(text).toLowerCase(); return words.some(w=>t.indexOf(w.toLowerCase())!==-1); };
     g('cbAdd').onclick=add; g('cbX').onclick=close;
     inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); add(); } });
@@ -7616,27 +7619,35 @@ function askDelete(title,cb,yesLabel,slideSel){
   cmS.addEventListener('click',e=>{ if(cmBx&&e.target.closest&&e.target.closest('#cmClose')){ e.stopImmediatePropagation(); e.stopPropagation(); e.preventDefault(); if(!window.__cmShotBusy) bxClose(); } },true);
   new MutationObserver(()=>{ if(cmBx&&!cmS.classList.contains('show')) bxExit(); }).observe(cmS,{attributes:true,attributeFilter:['class']});
   const bxSolid=c=>!!c&&c!=='transparent'&&!/^rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0\s*\)$/.test(c);
+  // ---- Capture loading: Comments title menu-র নিচের border-এ নীল progress bar; ছবি তোলার আলাদা stage-এর কপি আর স্ক্রিনে দেখা যায় না ----
+  { const st=document.createElement('style'); st.textContent='#cmLd{position:absolute;left:0;bottom:-1px;height:3px;width:0;background:#3ea6ff;display:none;z-index:3;transition:width .35s ease;pointer-events:none}#cmLd.on{display:block}#cmShotCover{position:fixed;left:0;top:0;right:0;bottom:0;z-index:-1;display:none;pointer-events:none}#cmShotCover.on{display:block}'; document.head.appendChild(st); }
+  const ldBar=document.createElement('div'); ldBar.id='cmLd'; cmS.querySelector('.cmhead').appendChild(ldBar);
+  const shotCover=document.createElement('div'); shotCover.id='cmShotCover'; document.body.appendChild(shotCover);
+  window.__shotLd=p=>{
+    if(p===null){ ldBar.style.width='100%'; shotCover.classList.remove('on'); setTimeout(()=>{ if(window.__cmShotBusy) return; ldBar.classList.remove('on'); ldBar.style.transition='none'; ldBar.style.width='0'; void ldBar.offsetWidth; ldBar.style.transition=''; },400); return; }
+    if(!ldBar.classList.contains('on')){ ldBar.style.transition='none'; ldBar.style.width='0'; ldBar.classList.add('on'); void ldBar.offsetWidth; ldBar.style.transition=''; const bg=getComputedStyle(document.body).backgroundColor; shotCover.style.background=(bg&&bg!=='rgba(0, 0, 0, 0)'&&bg!=='transparent')?bg:'#0f0f0f'; shotCover.classList.add('on'); }
+    ldBar.style.width=Math.max(3,Math.min(97,p))+'%'; };
   const bxGo=async()=>{
     if(!cmBx||window.__cmShotBusy) return;
-    window.__cmShotBusy=true; bxCap.style.pointerEvents='none'; bxCap.style.opacity='.6';
+    window.__cmShotBusy=true; bxCap.style.pointerEvents='none'; bxCap.style.opacity='.6'; window.__shotLd(8);
     const wait=ms=>new Promise(r=>setTimeout(r,ms));
     try{
       if(!window.html2canvas){ if(window.__loadH2C) window.__loadH2C(); for(let i=0;i<120&&!window.html2canvas;i++){ await wait(100); if(i===60&&!window.__h2cL&&window.__loadH2C) window.__loadH2C(); } }
       if(!window.html2canvas){ toast('Could not load screenshot engine. Check internet.'); return; }
       let bg=getComputedStyle(cmBody).backgroundColor; if(!bxSolid(bg)) bg=getComputedStyle(cmS).backgroundColor; if(!bxSolid(bg)) bg='#0f0f0f';
-      const cr=cmBody.getBoundingClientRect(), st=cmBody.scrollTop;
+      const cr=cmBody.getBoundingClientRect(), st=cmBody.scrollTop; window.__shotLd(25);
       const rw=Math.max(1,Math.round(bxR.w)), rh=Math.max(1,Math.round(bxR.h));   // শুধু সিলেক্ট করা অংশই ছবি হয় — পুরো chat body বড় করে নিয়ে ক্রপ করা হয় না, তাই রেজোলিউশন সীমা সিলেকশনকেই পায়
       let sc=Math.min(3,Math.max(2,window.devicePixelRatio||2)); sc=Math.max(1,Math.min(sc,Math.sqrt(14e6/Math.max(1,rw*rh))));
       let cv; {   // live sheet-এর ভেতরে নয়: দৃশ্যমান অংশের কপি transform / scroll / animation-মুক্ত আলাদা জায়গায় এনে ছবি তোলা হয় (লেখা উপরে ওঠা / উল্টে যাওয়া এড়াতে)
         const stage=document.createElement('div'); stage.className=cmS.className; stage.setAttribute('aria-hidden','true');   // live sheet-এর সব class (bxmode / bxhhid / bxrep…) একই রাখা হয়, যাতে hidden row লুকানো সহ layout হুবহু মিলে সিলেক্ট করা বক্সের জায়গা ঠিক থাকে
-        stage.style.cssText='position:fixed;left:0;top:0;width:'+rw+'px;height:'+rh+'px;max-height:none;transform:none;transition:none;visibility:visible;display:block;border-radius:0;overflow:hidden;z-index:-1;pointer-events:none;background:'+bg+';';
+        stage.style.cssText='position:fixed;left:0;top:0;width:'+rw+'px;height:'+rh+'px;max-height:none;transform:none;transition:none;visibility:visible;display:block;border-radius:0;overflow:hidden;z-index:-2;pointer-events:none;background:'+bg+';';
         const sty=document.createElement('style'); sty.textContent='.__cs,.__cs *{transition:none!important;animation:none!important;transform:none!important}.__cs .cmt{word-break:normal!important;overflow-wrap:break-word!important}';
         const wrap=document.createElement('div'); wrap.className='__cs'; wrap.style.cssText='position:relative;width:100%;height:100%;overflow:hidden;';
         const cl=cmBody.cloneNode(true); cl.removeAttribute('id'); cl.style.cssText+=';flex:none;overflow:visible;height:auto;max-height:none;position:absolute;left:'+(-bxR.x)+'px;top:'+(-(bxR.y+st))+'px;width:'+cr.width+'px;margin:0;transform:none;transition:none;';
         try{ if(window.__cmVidFix) await window.__cmVidFix(cmBody,cl); }catch(_){}
         wrap.appendChild(cl); stage.appendChild(sty); stage.appendChild(wrap); document.body.appendChild(stage);
         try{ await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-          cv=await window.html2canvas(stage,{backgroundColor:bg,scale:sc,logging:false,useCORS:true});
+          window.__shotLd(45); cv=await window.html2canvas(stage,{backgroundColor:bg,scale:sc,logging:false,useCORS:true}); window.__shotLd(80);
         } finally{ try{ stage.remove(); }catch(_){} } }
       if(!cv||!cv.width||!cv.height) throw new Error('empty');
       const out=cv;
@@ -7645,7 +7656,7 @@ function askDelete(title,cb,yesLabel,slideSel){
       const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.style.display='none'; document.body.appendChild(a); a.click(); setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); a.remove(); }catch(_){} },4000);
       bxExit(); cmBody.scrollTop=st; toast('Screenshot saved');
     }catch(e){ toast('Could not make screenshot'); }
-    finally{ window.__cmShotBusy=false; bxCap.style.pointerEvents=''; bxCap.style.opacity=''; }
+    finally{ window.__cmShotBusy=false; bxCap.style.pointerEvents=''; bxCap.style.opacity=''; window.__shotLd(null); }
   };
   bxCap.onclick=e=>{ e.stopPropagation(); bxGo(); };
   // ---- Bounding box: Capture-এর ডানে ⋯ (Search | Capture settings) + Capture settings window ----
@@ -7803,7 +7814,7 @@ function askDelete(title,cb,yesLabel,slideSel){
       const rep=cmMode==='rep', BS=window.__cmBxS||{}; let rows=cmRows().filter(r=>cmSel.has(cmRid(r)));   // দেখানোর ক্রমে (উপর থেকে নিচে) — আলাদা জায়গা থেকে select করলেও পরপর বসে
       if(!rows.length){ toast('Nothing selected'); return; }
       if(BS.hid){ rows=rows.filter(r=>!r.querySelector(rep?':scope>.cmc>.cmt>.cmhid':':scope>.cmi>.cmc>.cmt>.cmhid')); if(!rows.length){ toast(rep?'Nothing to capture (hidden replies are skipped)':'Nothing to capture (hidden comments are skipped)'); return; } }   // Capture settings: Hide hidden comments / replies
-      window.__cmShotBusy=true; const fb=$('cmFab'); fb.style.pointerEvents='none'; const top0=cmBody.scrollTop;
+      window.__cmShotBusy=true; const fb=$('cmFab'); fb.style.pointerEvents='none'; const top0=cmBody.scrollTop; window.__shotLd(6);
       try{
         if(!window.html2canvas){ if(window.__loadH2C) window.__loadH2C(); for(let i=0;i<120&&!window.html2canvas;i++){ await wait(100); if(i===60&&!window.__h2cL&&window.__loadH2C) window.__loadH2C(); } }
         if(!window.html2canvas){ toast('Could not load screenshot engine. Check internet.'); return; }
@@ -7814,7 +7825,7 @@ function askDelete(title,cb,yesLabel,slideSel){
         for(const r of rows){   // হুবহু একই row-এর কপি আলাদা, transform / scroll / animation-মুক্ত জায়গায় এনে ছবি তোলা হয় (live sheet-এর ভেতরে নয়) — তাই লেখা উপরে ওঠে না বা উল্টে যায় না
           const rw=Math.ceil(r.getBoundingClientRect().width);
           const stage=document.createElement('div'); stage.className='cmsheet'; stage.setAttribute('aria-hidden','true');
-          stage.style.cssText='position:fixed;left:0;top:0;width:'+rw+'px;height:auto;max-height:none;transform:none;transition:none;visibility:visible;display:block;border-radius:0;overflow:visible;z-index:-1;pointer-events:none;background:'+bg+';';
+          stage.style.cssText='position:fixed;left:0;top:0;width:'+rw+'px;height:auto;max-height:none;transform:none;transition:none;visibility:visible;display:block;border-radius:0;overflow:visible;z-index:-2;pointer-events:none;background:'+bg+';';
           const sty=document.createElement('style'); sty.textContent='.__cs,.__cs *{transition:none!important;animation:none!important;transform:none!important}.__cs .cmt{word-break:normal!important;overflow-wrap:break-word!important}.__cs .cmmore,.__cs .cmad{visibility:hidden}';
           const wrap=document.createElement('div'); wrap.className='__cs '+cmBody.className; wrap.style.cssText='position:static;overflow:visible;height:auto;max-height:none;width:100%;margin:0;padding:0;transform:none;';
           const cl=r.cloneNode(true); cl.classList.remove('on'); cl.style.opacity='1'; cl.style.transition='none'; cl.style.background='transparent';
@@ -7825,7 +7836,7 @@ function askDelete(title,cb,yesLabel,slideSel){
           try{
             await frame(); await frame();
             const cv=await window.html2canvas(cl,{backgroundColor:bg,scale:sc,logging:false,useCORS:true});
-            if(cv&&cv.width&&cv.height) cvs.push(cv);
+            if(cv&&cv.width&&cv.height) cvs.push(cv); window.__shotLd(10+80*cvs.length/rows.length);
           } finally{ try{ stage.remove(); }catch(_){} }
         }
         if(!cvs.length) throw new Error('empty');
@@ -7838,7 +7849,7 @@ function askDelete(title,cb,yesLabel,slideSel){
         cmSelMode=false; cmShot=false; cmSel.clear(); drawCm(); cmBody.scrollTop=top0;
         toast('Screenshot saved ('+rows.length+(rep?(rows.length===1?' reply)':' replies)'):(rows.length===1?' comment)':' comments)')));
       }catch(e){ try{ cmBody.scrollTop=top0; }catch(_){} toast('Could not make screenshot'); }
-      finally{ window.__cmShotBusy=false; fb.style.pointerEvents=''; }
+      finally{ window.__cmShotBusy=false; fb.style.pointerEvents=''; window.__shotLd(null); }
     };
   }
   $('cmFab').onclick=()=>{
@@ -7919,7 +7930,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   cmIn.addEventListener('input',cmInput); window.__cmInputRefresh=cmInput;
   const mk=v=>Object.assign({id:uid(),txt:v,posted:new Date().toISOString(),my:null,l:0,dl:0,reps:[]},cmSet.lk?null:{lkOff:true},cmSet.dl?null:{dlOff:true},cmSet.rp?null:{rpOff:true},cmSet.ad>0?{adAt:Date.now()+cmSet.ad*1000,ad:cmSet.ad,adv:cmSet.adv,adc:cmSet.adc}:null,cmSet.hd?(()=>{ const t=new Date().toISOString(); return {hid:true,hidAt:t,hidH:[t]}; })():null,(window.__tsStr&&window.__tsStr())?{ts:window.__tsStr()}:null,(()=>{ const t=window.__cmTrSnap&&window.__cmTrSnap(v); return t?{trl:t.l,trs:t.s}:null; })());   // Settings Hide On: নতুন comment / reply / reply-to-reply Send হলেই hidden   // Settings: Like / Dislike / Reply off থাকলে নতুন comment / reply / sub reply-তে তা off থাকবে
   // Auto send: object এখনই তৈরি হয় কিন্তু x.cmts / reps-এ ঢোকে না; সময় হলে নিচের sweep যোগ করে
-  const asQueue=(x,p)=>{ p.at=Date.now()+cmSet.as*1000; p.id=p.o.id; { const lv=p.o.att&&p.o.att.k==='loc'&&p.o.att.live; if(lv){ lv.end=p.at+(+lv.sec||0)*1000; try{ const m=JSON.parse(localStorage.getItem('cmLiveSt')||'{}')||{}; m[lv.lid]=p.at; localStorage.setItem('cmLiveSt',JSON.stringify(m)); }catch(e){} } } (x.pend=x.pend||[]).push(p); saveC(); const d=new Date(p.at), z=n=>String(n).padStart(2,'0'), h=d.getHours()%12||12; toast((p.mode==='c'?'Comment':'Reply')+' will be sent at '+h+' : '+z(d.getMinutes())+' : '+z(d.getSeconds())+(d.getHours()<12?' AM':' PM')); };
+  const asQueue=(x,p)=>{ p.at=Date.now()+cmSet.as*1000; p.t0=Date.now(); p.dur=cmSet.as; p.asv=cmSet.asv; p.asc=cmSet.asv==='custom'?Object.assign({},cmSet.asc):null; p.id=p.o.id; { const lv=p.o.att&&p.o.att.k==='loc'&&p.o.att.live; if(lv){ lv.end=p.at+(+lv.sec||0)*1000; try{ const m=JSON.parse(localStorage.getItem('cmLiveSt')||'{}')||{}; m[lv.lid]=p.at; localStorage.setItem('cmLiveSt',JSON.stringify(m)); }catch(e){} } } (x.pend=x.pend||[]).push(p); saveC(); const d=new Date(p.at), z=n=>String(n).padStart(2,'0'), h=d.getHours()%12||12; toast((p.mode==='c'?'Comment':'Reply')+' will be sent at '+h+' : '+z(d.getMinutes())+' : '+z(d.getSeconds())+(d.getHours()<12?' AM':' PM')); };
   function sendCm(){
     const x=curX(), v=cmIn.value.trim(); if(!x||(!v&&!cmAtt)) return;
     if(cmEdit){   // Edit comment / Edit reply
@@ -8021,7 +8032,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   const cmDotsTick=()=>{ if(!cpDotBtn||!cp.classList.contains('show')) return; cmDotsSet(!cmDotsCovered()); cpDotRaf=requestAnimationFrame(cmDotsTick); };
   const cmDotsOn=btn=>{ cmDotsOff(); if(!btn||!btn.isConnected) return; cpDotBtn=btn; cpDotAnim=false; cmDotsTick(); };
   new MutationObserver(()=>{ if(!cp.classList.contains('show')) cmDotsOff(); }).observe(cp,{attributes:true,attributeFilter:['class']});
-  document.addEventListener('click',e=>{ if(!cp.contains(e.target)&&!e.target.closest('#cmTrSub')) closeCP(); });
+  document.addEventListener('click',e=>{ if(!cp.contains(e.target)&&!e.target.closest('#cmTrSub,#cmCpSub')) closeCP(); });
   // ---- Smiley sticker expression animation: শুধু comment reply page-এ sticker-এ চাপলে প্রত্যেক smiley নিজস্ব expression বদলে আবার আগের মুখে ফেরে ----
   { const ST={"😀":"😯 😃 😁 😆","😃":"😮 😀 😄 🤩","😄":"😊 😁 😆 🥰","😁":"😬 😄 😆 😂","😆":"😅 😄 😝 🤣","😅":"😓 😰 😆","🤣":"😂 😆 😭","😂":"🤣 😭 😆 😅","🙂":"😐 😊 😉 😄","😉":"🙂 😏 😘 😜","😊":"🙂 😌 🥰 😍","😇":"😊 😌 🥺","🥰":"😊 😍 😘","😍":"🥰 🤩 😘","🤩":"😍 😲 😆","😘":"😗 😙 😍","😋":"😛 😜 🤤","😛":"😝 😜 😋","😜":"😉 😝 🤪","🤪":"😜 🤯 😝","😎":"🙂 😏 😆","🤓":"🧐 😳 😅","🥳":"🤩 😆 😍","😏":"🙂 😒 😉","😒":"😐 😑 🙄","😞":"😔 😟 😢","😔":"😞 😪 😢","😟":"😕 😥 😰","😕":"🙁 😟 😐","🙁":"😕 🥺 😢","😣":"😖 😫 😩","😖":"😣 😫 😭","😫":"😩 😖 😭","😩":"😫 😭 😤","🥺":"🙁 😢 😭","😢":"😥 😭 😞","😭":"😢 😫 😩","😤":"😠 😡 😤","😠":"😤 😡 🤬","😡":"😠 🤬 😤","🤬":"😡 😠 🤯","🤯":"😲 😱 🤪","😳":"😶 😅 😊","🥵":"😓 😩 😵","🥶":"😬 😨 😖","😱":"😨 😰 😳","😨":"😰 😱 😧","😰":"😥 😨 😱","😥":"😢 😰 😓","😓":"😅 😥 😞","🤗":"😊 😄 🥰","🤔":"🧐 🙄 😲","🤭":"😆 😂 🤫","🤫":"🤭 😶 🙂","😶":"😐 😑 🙄","😐":"😑 😒 🙄","😑":"😐 😒 😤","😬":"😁 😅 😰","🙄":"😒 😏 😑","😯":"😮 😲 😳","😮":"😯 😲 😱","😲":"😮 😳 🤯","🥱":"😪 😴 😮","😴":"🥱 😪 😌","🤤":"😋 😍 😛","😷":"🤒 🤢 🤧","🤒":"🤕 🥵 😷","🤕":"😖 😣 🤒","🤢":"🤮 😖 😷","🤮":"🤢 😵 😖","🤧":"😷 😳 😖","😈":"😏 👿 😂","👿":"😠 😈 😡","💀":"😵 ☠️ 😱","💩":"😂 😳 🤢","🤡":"😝 😆 😭","👻":"😱 😮 😂","👽":"😮 🤪 😎","🤖":"😐 🤓 😎"}, MAP={}, s2=t=>String(t).replace(/\uFE0F/g,'');
     Object.keys(ST).forEach(k=>{ MAP[s2(k)]=ST[k].split(' '); });
@@ -8067,6 +8078,26 @@ function askDelete(title,cb,yesLabel,slideSel){
       if(d.dataset.v==='orig'){ delete M[o.id]; delete LG[o.id]; S.on.delete(key); drawCm(); return; }
       toast('Translating\u2026'); try{ const t=await window.__trFetch(String(o.txt||''),d.dataset.v); M[o.id]=t; LG[o.id]=d.dataset.v; S.on.delete(key); drawCm(); }catch(_){ toast('Translation unavailable'); } });
   }
+  // ---- Copy: লেখা অনুবাদ করা থাকলে Copy-তে তীরচিহ্ন; চাপলে Copy original text / Copy translated text ----
+  { const sub=document.createElement('div'); sub.id='cmCpSub'; document.body.appendChild(sub);
+    const st=document.createElement('style'); st.textContent='#cmCpSub{position:fixed;z-index:120;display:none;background:#383838;border-radius:12px;padding:6px 0;box-shadow:0 6px 24px rgba(0,0,0,.55);max-width:calc(100vw - 16px)}#cmCpSub.show{display:block}#cmCpSub div{padding:12px 16px;font-size:15px;cursor:pointer;white-space:nowrap}#cmCpSub div:active{background:#4a4a4a}'; document.head.appendChild(st);
+    const close=()=>sub.classList.remove('show');
+    const cb=cp.querySelector('[data-k="copy"]'), chev=document.createElement('span'); chev.className='material-symbols-outlined'; chev.style.cssText='margin-left:auto;display:none'; chev.textContent='chevron_right'; cb.appendChild(chev);
+    const objOf=pr=>{ const x=curX(), c=x&&x.cmts.find(y=>y.id===pr.cid); return c&&(pr.rid?(findR(c.reps,pr.rid)||{}).r:c); };
+    const trOf=pr=>{ const o=pr&&objOf(pr); if(!o) return null; const M=window.__trMap||{}; if(M[o.id]!=null) return M[o.id]; const S=window.__cmTrSt; if(!S) return null; if(S.on.has((pr.rid?'r':'c')+o.id)){ const t=S.cache.get(window.__trBtn.key(String(o.txt||''))); if(t!=null) return t; } return null; };
+    const paint=()=>{ chev.style.display=(cp.classList.contains('show')&&trOf(cpO)!=null)?'':'none'; };
+    new MutationObserver(()=>{ if(!cp.classList.contains('show')) close(); paint(); }).observe(cp,{attributes:true,attributeFilter:['class']});
+    cp.addEventListener('click',e=>{ const b=e.target.closest('button'); if(b&&b.dataset.k!=='copy') close(); },true);
+    window.__cmCpSubToggle=b=>{ const pr=cpO; if(trOf(pr)==null) return false; if(sub.classList.contains('show')){ close(); return true; }
+      const ts=document.getElementById('cmTrSub'); if(ts) ts.classList.remove('show');
+      sub._pr=pr; sub.innerHTML='<div data-v="o">Copy original text</div><div data-v="t">Copy translated text</div>';
+      const br=b.getBoundingClientRect(), cr=cp.getBoundingClientRect(); sub.style.visibility='hidden'; sub.classList.add('show');
+      const w=sub.offsetWidth, h=sub.offsetHeight; let left=cr.right+6; if(left+w>innerWidth-8) left=cr.left-w-6; if(left<8) left=Math.max(8,innerWidth-w-8);
+      let top=br.top; if(top+h>innerHeight-8) top=Math.max(8,innerHeight-h-8); sub.style.left=left+'px'; sub.style.top=top+'px'; sub.style.visibility=''; return true; };
+    sub.addEventListener('click',e=>{ const d=e.target.closest('div[data-v]'); if(!d) return; const pr=sub._pr, o=pr&&objOf(pr), t=pr&&trOf(pr); close(); closeCP(); if(!o) return;
+      const el=pr.rid?cmBody.querySelector('[data-rid="'+pr.rid+'"]'):cmBody.querySelector('.thr[data-cid="'+pr.cid+'"] .cmi');
+      if(d.dataset.v==='o') cmCopy(o.txt,'Copied',el); else if(t!=null) cmCopy(t,'Copied',el); });
+  }
   // ---- Translation settings: Translate to dropdown-এর Search-এর ডান পাশের settings আইকন ----
   { const st=document.createElement('style'); st.textContent='#cmTrSub .ddsr .trset{margin-left:auto;cursor:pointer;color:#aaa;padding:4px;margin-right:-6px}#cmTrSub .ddsr.on .trset{display:none}'
       +'#cmTrSetBack{z-index:135!important}#cmTrSetBack .dlg{max-width:340px;padding:18px 18px 24px}#cmTrSetBack .tshd{display:flex;align-items:center;padding:0 0 12px 4px}#cmTrSetBack h2{flex:1;min-width:0;font-size:20px;font-weight:500;padding:0}#cmTrSetBack .tsx{cursor:pointer;padding:6px;font-size:24px;color:#fff}'
@@ -8080,8 +8111,8 @@ function askDelete(title,cb,yesLabel,slideSel){
     document.body.appendChild(back);
     const tl=document.createElement('div'); tl.id='cmTbList'; document.body.appendChild(tl);
     const box=back.querySelector('#cmTbBox'), lbl=()=>{ const v=window.__trBtn.get(); return v==='none'?'None':v==='auto'?'Automatic':window.__trBtn.name(v); };
-    const sw=back.querySelector('#cmTbNoEn'), paint=()=>{ box.querySelector('.lsv').textContent=lbl(); const none=window.__trBtn.get()==='none', on=!none&&window.__trBtn.noEn(); sw.classList.toggle('on',on); sw.classList.toggle('dis',none); sw.setAttribute('aria-checked',on); sw.setAttribute('aria-disabled',none); };   // None: toggle disabled + Off দেখায় (সংরক্ষিত মান বদলায় না, অন্য ভাষা / Automatic বাছলে আগের মানে ফেরে)
-    sw.onclick=()=>{ if(window.__trBtn.get()==='none') return; try{ localStorage.setItem('cmTrNoEn',window.__trBtn.noEn()?'0':'1'); }catch(_){} paint(); drawCm(); };
+    const sw=back.querySelector('#cmTbNoEn'), paint=()=>{ box.querySelector('.lsv').textContent=lbl(); const lg0=window.__trBtn.lang(), none=!lg0||lg0==='en', on=!none&&window.__trBtn.noEn(); sw.classList.toggle('on',on); sw.classList.toggle('dis',none); sw.setAttribute('aria-checked',on); sw.setAttribute('aria-disabled',none); };   // None: toggle disabled + Off দেখায় (সংরক্ষিত মান বদলায় না, অন্য ভাষা / Automatic বাছলে আগের মানে ফেরে)
+    sw.onclick=()=>{ { const lg1=window.__trBtn.lang(); if(!lg1||lg1==='en') return; } try{ localStorage.setItem('cmTrNoEn',window.__trBtn.noEn()?'0':'1'); }catch(_){} paint(); drawCm(); };
     const lClose=()=>{ tl.classList.remove('show'); box.classList.remove('open'); };
     const shut=()=>{ lClose(); back.classList.remove('show'); };
     back.querySelector('.tsx').onclick=shut;
@@ -8324,6 +8355,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   cp.addEventListener('click',e=>{ if(e.target.closest('button:not(:disabled)')) return; const hit=[...cp.querySelectorAll('button:disabled')].find(b=>{ if(!b.getClientRects().length) return false; const r=b.getBoundingClientRect(); return e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom; }); if(hit){ e.stopPropagation(); window.__limShake(hit); try{ const xx=curX(); if(hit.dataset.k==='reply'&&xx&&!cmBlocked&&!cmOffX(xx)&&repCount(xx)>=MAXR) toast('Reply limit reached'); }catch(_){} } });
   cp.querySelectorAll('button').forEach(b=>b.onclick=()=>{
     if(b.dataset.k==='trn'){ if(window.__cmTrSubToggle) window.__cmTrSubToggle(b); return; }
+    if(b.dataset.k==='copy'&&window.__cmCpSubToggle&&window.__cmCpSubToggle(b)) return;   // অনুবাদ করা থাকলে Copy original / translated text
     const x=curX(), pr=cpO; closeCP(); if(!x||!pr) return;
     const c=x.cmts.find(y=>y.id===pr.cid), o=c&&(pr.rid?(findR(c.reps,pr.rid)||{}).r:c); if(!o) return;
     if((b.dataset.k==='reply'||b.dataset.k==='edit')&&((pr.rid&&ancDel(c,pr.rid))||o.hid||(b.dataset.k==='reply'&&(o.rpOff||(pr.rid&&ancRp(c,pr.rid)))))) return;
@@ -8417,7 +8449,9 @@ function askDelete(title,cb,yesLabel,slideSel){
   function openPr(m){ prMode=(m==='rx'||m==='sh')?m:'cm'; prSeq=prMakeSeq(); paintPr(); prOv.classList.add('show'); prS.classList.add('show'); }
   function closePr(){ prMode='cm'; prSeq=null; prOv.classList.remove('show'); prS.classList.remove('show'); prPop.classList.remove('show'); prS.style.transition=''; prS.style.transform=''; prOv.style.transition=''; prOv.style.opacity=''; }
   window.__openPr=openPr; window.__closePr=closePr;
-  prS.addEventListener('click',e=>{ const t=e.target.closest('.prcm'); if(t&&(t.dataset.w==='lk'||t.dataset.w==='dk')){ { const lk=t.dataset.w==='lk', pg=document.getElementById(lk?'lcPage':'dcPage'), btn=document.getElementById(lk?'acLK':'acDK');   // Liked / Disliked contents window খুলবে (Reactions window নয়)
+  let prGoOk=false;   // Select মোড: Discard-এর পরে আবার click পাঠালে dialog বাইপাস
+  prS.addEventListener('click',e=>{ { const g=e.target.closest('.prcm[data-w="ch"],.prcm[data-w="po"],.subtap'); if(g&&!prGoOk&&prMode==='cm'&&cmSelMode){ e.stopPropagation(); e.preventDefault(); const go=()=>{ cmExitSel(); prGoOk=true; try{ g.click(); }finally{ prGoOk=false; } }; if(cmSel.size) askDelete('Discard this selection?',go,'Discard'); else go(); return; } }   // Comments in this channel / Comments in this post / subscribers: Select মোডে Discard dialog
+    const t=e.target.closest('.prcm'); if(t&&(t.dataset.w==='lk'||t.dataset.w==='dk')){ { const lk=t.dataset.w==='lk', pg=document.getElementById(lk?'lcPage':'dcPage'), btn=document.getElementById(lk?'acLK':'acDK');   // Liked / Disliked contents window খুলবে (Reactions window নয়)
         if(pg&&btn){ pg.classList.add('prx'); if(!pg._prx){ pg._prx=1; new MutationObserver(()=>{ if(!pg.classList.contains('show')) setTimeout(()=>{ if(!pg.classList.contains('show')) pg.classList.remove('prx'); },320); }).observe(pg,{attributes:true,attributeFilter:['class']}); } btn.click(); }
         else if(window.__rcOpen) window.__rcOpen(lk?'like':'dislike'); }
       return; } if(!t||!window.__mcOpen) return; const x=curX(); if(t.dataset.w==='po'){ if(!x) return; window.__mcOpen(x.id,'po'); } else window.__mcOpen(null,'ch'); });
@@ -9206,8 +9240,9 @@ function askDelete(title,cb,yesLabel,slideSel){
     const w=atMn.offsetWidth, h=atMn.offsetHeight; atMn.style.left=Math.max(8,Math.min(x,innerWidth-w-8))+'px'; atMn.style.top=Math.max(8,Math.min(y,innerHeight-h-8))+'px';
   }
   // Hold on a comment / reply attachment (photo, GIF, video, audio) in Comments / Replies / this post / this channel / my comments -> the attachment's own options (no Quality / Playback speed / Show in ...)
-  { const SEL='#cmBody .cmatt,#cmBody .cmaud,#mcList .cmatt,#mcList .cmaud', OKK=/^(photo|gif|video|voice|link|pdf|table)$/, NM=/^(sticker|poll|form|loc)$/;
+  { const SEL='#cmBody .cmatt,#cmBody .cmaud,#mcList .cmatt,#mcList .cmaud,#ehList .ehi[data-cur="1"] .cmatt,#ehList .ehi[data-cur="1"] .cmaud', OKK=/^(photo|gif|video|voice|link|pdf|table)$/, NM=/^(sticker|poll|form|loc)$/;
     const attOf=t=>{ try{
+        if(t.closest('#ehList .ehi[data-cur="1"]')) return window.__ehCurAtt||null;   // Edit history: শুধু current version
         const m=t.closest('#mcList .mci'); if(m){ const k=m.dataset.key, it=[].concat(mcVis(),mcAll0()).find(z=>mcKey(z)===k); return (it&&it.o&&it.o.att)||null; }
         const x=curX(); if(!x) return null;
         const rp=t.closest('.cmi[data-rid]');
@@ -9291,6 +9326,12 @@ function askDelete(title,cb,yesLabel,slideSel){
   const mcCss=document.createElement('style');
   mcCss.textContent='.mcnm{color:#3ea6ff;cursor:pointer}@keyframes cmFl{0%,60%{background:rgba(62,166,255,.25)}100%{background:transparent}}.cmflash{animation:cmFl 1.6s ease-out}#mcList .mci{padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer}#mcList .mci small{display:block;color:var(--sub);font-size:13px;margin-bottom:4px}#mcList .mci .mct{white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.4}#mcList .mci .mcatt{margin-top:2px}#mcList .mci .mcatt .cmatt{margin-top:8px}#mcList .mci .mcatt .cmaud{margin-top:8px}#mcList .mci{touch-action:pan-y}#mcList .mci.on{background:rgba(62,166,255,.2)}#mcList mark{background:#ffd54f;color:#000;border-radius:3px;padding:0 1px}#mcPage{overflow-x:hidden}.cmi.rdis [data-reply]{opacity:.35;cursor:not-allowed}.cpdis{opacity:.4!important;cursor:not-allowed}#mcPage .mchd{position:sticky;top:56px;z-index:2;background:var(--bg)}#mcPage .wltabs{display:flex;border-bottom:1px solid var(--line)}#mcPage .wltabs button{flex:1;padding:14px 0;background:none;border:0;border-bottom:3px solid transparent;color:var(--sub);font-size:15px;font-weight:500;cursor:pointer}#mcPage .wltabs button.on{color:#fff;border-bottom-color:#fff}#mcPage .wlc{color:#888;font-weight:400}#mcPage .stabs{padding-top:12px}#mcPage .abar #mcInp{margin-left:26px}#mcList .mci.mchid{cursor:default;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}#mcList .mct .cmhid{color:#aaa;font-style:italic}body:has(#mcPage.show[data-hi="1"]) .dlg-back,body:has(#mcPage.show[data-hi="2"]) .dlg-back{z-index:95}.mcpop{z-index:95!important}';
   document.head.appendChild(mcCss);
+  // ---- Scheduled comments: Send icon-কে ঘিরে ডান পাশে circular progress (১ মিনিট বা কম = লাল, বেশি = নীল) ----
+  const SCH_C=2*Math.PI*17;
+  const schTot=p=>{ const st=p.t0||new Date(p.o.posted).getTime(); return Math.max(1000,(p.dur?p.dur*1000:(p.at-st))||60000); };
+  const schRing=p=>{ const tot=schTot(p), rem=Math.max(0,p.at-Date.now()), f=Math.min(1,rem/tot); return '<span class="schr'+(rem<=60000?' red':'')+'" data-at="'+p.at+'" data-tot="'+tot+'"><svg viewBox="0 0 40 40" width="40" height="40"><circle class="sctr" cx="20" cy="20" r="17"/><circle class="scpg" cx="20" cy="20" r="17" stroke-dasharray="'+SCH_C.toFixed(2)+'" stroke-dashoffset="'+(SCH_C*(1-f)).toFixed(2)+'"/></svg><span class="material-symbols-outlined">send</span></span>'; };
+  { const st=document.createElement('style'); st.textContent='#mcList .mci.sch{position:relative;padding-right:74px}#mcList .schr{position:absolute;right:14px;top:50%;width:40px;height:40px;margin-top:-20px;display:flex;align-items:center;justify-content:center;pointer-events:none}.schr svg{position:absolute;inset:0;transform:rotate(-90deg)}.schr circle{fill:none;stroke-width:3}.schr .sctr{stroke:rgba(255,255,255,.18)}.schr .scpg{stroke:#3ea6ff;stroke-linecap:round;transition:stroke-dashoffset .5s linear,stroke .3s}.schr.red .scpg{stroke:#ff4d4d}.schr .material-symbols-outlined{font-size:20px;color:#fff;position:relative}'; document.head.appendChild(st); }
+  setInterval(()=>{ if(!mcPg.classList.contains('show')||mcPg.dataset.hi!=='3') return; const now=Date.now(); $('mcList').querySelectorAll('.schr').forEach(e=>{ const at=+e.dataset.at, tot=+e.dataset.tot, rem=Math.max(0,at-now), f=Math.min(1,rem/tot), pg=e.querySelector('.scpg'); if(pg) pg.setAttribute('stroke-dashoffset',(SCH_C*(1-f)).toFixed(2)); e.classList.toggle('red',rem<=60000); }); },500);
   const mcPg=document.createElement('div'); mcPg.className='about'; mcPg.id='mcPage'; mcPg.style.zIndex=19;
   mcPg.innerHTML='<div class="abar"><span class="material-symbols-outlined" id="mcBack" style="cursor:pointer">arrow_back</span><span class="ttl2" id="mcTitle">My comments</span><input class="avinp" id="mcInp" type="text" enterkeyhint="search" placeholder="Search by comment" autocomplete="off" autocapitalize="off" spellcheck="false"><span class="material-symbols-outlined" id="mcClr" style="display:none;cursor:pointer;color:#aaa" aria-label="Clear text">cancel</span><span class="material-symbols-outlined ico-r" id="mcSrch" style="cursor:pointer">search</span><span class="material-symbols-outlined ico-r" id="mcMore" style="cursor:pointer">more_vert</span></div><div class="mchd"><div class="wltabs" id="mcCT"><button class="on" data-t="v" type="button">Videos <span class="wlc">(0)</span></button><button data-t="s" type="button">Shorts <span class="wlc">(0)</span></button><button data-t="q" type="button">Posts <span class="wlc">(0)</span></button></div><div class="stabs" id="mcTT"><button class="active" data-t="all" type="button">All</button><button data-t="c" type="button">Comments</button><button data-t="r" type="button">Replies</button></div></div><div id="mcList"></div>';
   document.body.appendChild(mcPg);
@@ -9299,7 +9340,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   const mcHF=i=>mcPg.dataset.hi!=='2'||(!!i.o.hid&&(mcCid==null||(i.r===1&&String(i.c)===String(mcCid))));
   const svAll=()=>{ const a=[]; posts.forEach(x=>(x.cmts||[]).forEach(c=>{ if(!c.del&&!c.hid&&c.sv) a.push({x,o:c,c:c.id,r:0,ih:false}); const w=(l,ih)=>(l||[]).forEach(r=>{ const eh=ih||!!r.hid; if(!r.del&&!eh&&r.sv) a.push({x,o:r,c:c.id,r:1,ih:false}); w(r.reps,eh); }); w(c.reps,!!c.hid); })); return a; };   // Saved comments: Save করা, Hide / Delete নয় এমন comment ও reply
   window.__svCount=()=>svAll().length;
-  const mcAll0=()=>{ if(mcPg.dataset.hi==='3'){ const a3=[]; posts.filter(y=>mcPid==null||y.id===mcPid).forEach(x=>(x.pend||[]).forEach(p=>a3.push({x,o:p.o,p:p,c:p.mode==='c'?p.o.id:p.cid,r:p.mode==='r'?1:0,ih:false}))); return a3.sort((p,q)=>p.p.at-q.p.at); }   // Scheduled comments: Send-এর সময় অনুযায়ী (আগে যাবে যেটা)
+  const mcAll0=()=>{ if(mcPg.dataset.hi==='3'){ const a3=[]; posts.filter(y=>mcPid==null||y.id===mcPid).forEach(x=>(x.pend||[]).forEach(p=>a3.push({x,o:p.o,p:p,c:p.mode==='c'?p.o.id:p.cid,r:p.mode==='r'?1:0,ih:false}))); return a3.sort((p,q)=>mcSort===4?(p.p.at-q.p.at):(q.p.at-p.p.at)); }   // Scheduled comments: Latest = যেটা দেরিতে Send হবে সেটা আগে, Oldest = যেটা আগে Send হবে সেটা আগে
     const a=mcPg.dataset.hi==='4'?svAll().filter(i=>mcPid==null||i.x.id===mcPid):[]; const hi=mcPg.dataset.hi==='1'||mcPg.dataset.hi==='2'; (mcPg.dataset.hi==='4'?[]:posts).filter(y=>mcPid==null||y.id===mcPid).forEach(x=>(x.cmts||[]).forEach(c=>{ const ch=hi&&!!c.hid, cat=ch?c.hidAt:null; if(!c.del) a.push({x,o:c,c:c.id,r:0,ih:ch,hat:cat}); const w=(l,ih,iat)=>(l||[]).forEach(r=>{ const eh=hi&&(ih||!!r.hid), at=(hi&&r.hid)?r.hidAt:iat; if(!r.del) a.push({x,o:r,c:c.id,r:1,ih:eh,ah:!!ih,hat:at}); w(r.reps,eh,at); }); w(c.reps,ch,cat); })); const lat=(p,q)=>new Date(q.o.posted)-new Date(p.o.posted);
     return a.filter(mcHF).sort((p,q)=>{ if(mcSort===4) return (new Date(p.o.t0||p.o.posted)-new Date(q.o.t0||q.o.posted)); if(mcSort===1) return (rTot(q.o.reps||[])-rTot(p.o.reps||[]))||lat(p,q); if(mcSort===2) return (likeN(q.o)-likeN(p.o))||lat(p,q); if(mcSort===3) return (disN(q.o)-disN(p.o))||lat(p,q); return lat(p,q); }); };
   const mcKey=i=>i.x.id+':'+i.o.id;
@@ -9328,6 +9369,7 @@ function askDelete(title,cb,yesLabel,slideSel){
       if(hh){ d.classList.add('mchid'); d.dataset.hid='1'; const t=document.createElement('div'); t.className='mct'; const hs=document.createElement('span'); hs.className='cmhid'; hs.textContent=i.r?'This reply has been hidden':'This comment has been hidden'; t.appendChild(hs); d.appendChild(t); box.appendChild(d); return; }   // channel/post window: Hide করা item শুধু এই লেখা দেখায়, কোনো attachment নয়, tap/hold/swipe কিছুই হয় না
       if(String(i.o.txt||'').trim()){ const t=document.createElement('div'); t.className='mct'; t.innerHTML=mcHl(i.o.txt,mcSMode==='text'); d.appendChild(t); }
       const ah=attHTML(i.o); if(ah){ const w=document.createElement('div'); w.className='mcatt'; w.innerHTML=ah; d.appendChild(w); }
+      if(mcPg.dataset.hi==='3'&&i.p){ d.classList.add('sch'); d.insertAdjacentHTML('beforeend',schRing(i.p)); }
       box.appendChild(d); });
     mcTabsUI(); mcScan(); mcPaint(); }
   const mcMeta=n=>{ const d=n.closest('.mci'); if(!d) return null; if(mcPg.dataset.hi==='3') return {};   // Scheduled: comment এখনো list-এ নেই, তাই Show in ... নেই
@@ -9422,10 +9464,10 @@ function askDelete(title,cb,yesLabel,slideSel){
     { const lv=mcAll0(); set('del',idle,!lv.some(i=>!i.r)); set('delr',idle,!lv.some(i=>i.r)); }
     [['bytext','text'],['bycont','content']].forEach(z=>{ const b=mcP.querySelector('[data-k="'+z[0]+'"]'), on=mcSMode===z[1]; b.querySelector('.cmtk').style.visibility=on?'visible':'hidden'; b.style.fontWeight=on?'700':''; });
     mcP.querySelector('.mcdiv').style.display=(mcSearch&&mcSelMode)?'':'none';
-    mcSub.querySelectorAll('button').forEach(d=>{ const m=+d.dataset.m; d.classList.toggle('on',m===mcSort); d.classList.toggle('dis',(m===1&&!all.some(i=>rTot(i.o.reps||[])>0))||(m===2&&!all.some(i=>likeN(i.o)>0))||(m===3&&!all.some(i=>disN(i.o)>0))); });
+    mcSub.querySelectorAll('button').forEach(d=>{ const m=+d.dataset.m; d.style.display=(mcPg.dataset.hi==='3'&&m!==0&&m!==4)?'none':''; d.classList.toggle('on',m===mcSort); d.classList.toggle('dis',(m===1&&!all.some(i=>rTot(i.o.reps||[])>0))||(m===2&&!all.some(i=>likeN(i.o)>0))||(m===3&&!all.some(i=>disN(i.o)>0))); });
     { const h2=mcPg.dataset.hi==='2'; mcP.querySelector('[data-k="del"] .dl').textContent=h2?'Delete all hidden comments':'Delete all comments'; mcP.querySelector('[data-k="delr"] .dl').textContent=h2?'Delete all hidden replies':'Delete all replies'; }
     if(mcPg.dataset.hi==='4'){ mcP.querySelector('[data-k="del"] .dl').textContent='Remove all saved comments'; mcP.querySelector('[data-k="delr"] .dl').textContent='Remove all saved replies'; }
-    if(mcPg.dataset.hi==='3'){ set('sort',false); mcP.querySelector('[data-k="del"] .dl').textContent='Delete all scheduled comments'; mcP.querySelector('[data-k="delr"] .dl').textContent='Delete all scheduled replies'; }
+    if(mcPg.dataset.hi==='3'){ set('sort',idle,n===0); mcP.querySelector('[data-k="del"] .dl').textContent='Delete all scheduled comments'; mcP.querySelector('[data-k="delr"] .dl').textContent='Delete all scheduled replies'; }
     mcP.classList.remove('subshow'); mcP.classList.add('show');
     const r=$('mcMore').getBoundingClientRect(), w=mcP.offsetWidth, h=mcP.offsetHeight; let left=Math.max(8,Math.min(r.right+8,innerWidth-8)-w), top=r.bottom+4; if(top+h>innerHeight-16) top=Math.max(8,r.top-h-4); mcP.style.left=left+'px'; mcP.style.top=top+'px';
   };
@@ -9451,8 +9493,34 @@ function askDelete(title,cb,yesLabel,slideSel){
     if(mcPg.dataset.hi==='3'){ askDelete('Delete selected scheduled comments?',()=>{ posts.forEach(x=>{ if(x.pend) x.pend=x.pend.filter(q=>!mcSel.has(x.id+':'+q.o.id)); }); mcSelMode=false; mcSel.clear(); mcAfter(); },'Delete','#mcList .mci.on'); return; }
     askDelete('Delete selected comments?',()=>{ mcScope().forEach(x=>{ (x.cmts||[]).forEach(c=>{ if(mcSel.has(x.id+':'+c.id)&&PINS.has('c'+x.id,c.id)) PINS.toggle('c'+x.id,c.id); }); bulkDel(x.cmts||[],r=>mcSel.has(x.id+':'+r.id)); });
       mcSelMode=false; mcSel.clear(); mcAfter(); },'Delete','#mcList .mci.on'); };
+  // ---- Scheduled comments: hold -> Change schedule (পাশে Auto send options) / Delete (কোনো dialog ছাড়া) ----
+  let mcPX=0, mcPY=0; ['pointerdown','contextmenu'].forEach(t=>$('mcList').addEventListener(t,e=>{ mcPX=e.clientX; mcPY=e.clientY; },true));
+  const mcH=document.createElement('div'); mcH.className='popup cmpop mcpop';
+  mcH.innerHTML='<button data-k="chg"><span class="material-symbols-outlined">schedule_send</span><span class="dl">Change schedule</span><span class="material-symbols-outlined cmchev">chevron_right</span></button><button data-k="del"><span class="material-symbols-outlined">delete</span><span class="dl">Delete</span></button>';
+  document.body.appendChild(mcH);
+  const mcHS=document.createElement('div'); mcHS.className='cmsub';
+  mcHS.innerHTML=AD_OPTS.filter(o=>o[0]!=='none').map(o=>'<button type="button" data-v="'+o[0]+'"><span class="material-symbols-outlined cmtk">check</span>'+o[1]+'</button>').join(''); mcH.appendChild(mcHS);
+  let mcHT=null;
+  const mcHClose=()=>{ mcH.classList.remove('show','subshow'); mcHT=null; };
+  const mcHPlace=()=>{ const w=mcH.offsetWidth, h=mcH.offsetHeight; mcH.style.left=Math.max(8,Math.min(mcPX,innerWidth-8-w))+'px'; mcH.style.top=Math.max(8,Math.min(mcPY,innerHeight-8-h))+'px'; };
+  const schFind=rr=>{ const x=posts.find(y=>y.id===+rr.dataset.pid), id=String(rr.dataset.rid||rr.dataset.cid); return x?(x.pend||[]).find(q=>String(q.o.id)===id):null; };
+  const schMenu=rr=>{ const p=schFind(rr); if(!p) return; mcP.classList.remove('show','subshow'); mcHT=rr; mcHS.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===p.asv)); mcH.classList.remove('subshow'); mcH.classList.add('show'); mcHPlace(); };
+  const schSet=(rr,sec,v,c)=>{ const p=schFind(rr); if(!p||!(sec>0)) return; const now=Date.now(); p.at=now+sec*1000; p.t0=now; p.dur=sec; p.asv=v; p.asc=c?Object.assign({},c):null;
+    { const lv=p.o.att&&p.o.att.k==='loc'&&p.o.att.live; if(lv){ lv.end=p.at+(+lv.sec||0)*1000; try{ const m=JSON.parse(localStorage.getItem('cmLiveSt')||'{}')||{}; m[lv.lid]=p.at; localStorage.setItem('cmLiveSt',JSON.stringify(m)); }catch(e){} } }
+    mcAfter(); const d=new Date(p.at), z=n=>String(n).padStart(2,'0'), h=d.getHours()%12||12; toast((p.mode==='c'?'Comment':'Reply')+' will be sent at '+h+' : '+z(d.getMinutes())+' : '+z(d.getSeconds())+(d.getHours()<12?' AM':' PM')); };
+  mcH.addEventListener('click',e=>{ e.stopPropagation(); const b=e.target.closest('button'); if(!b||!mcHT) return; const rr=mcHT;
+    if(b.dataset.k==='chg'){ mcH.classList.add('subshow'); mcHPlace(); return; }
+    if(b.dataset.k==='del'){ mcHClose(); const w=rr.offsetWidth; rr.style.transition='transform .2s ease,opacity .2s ease'; rr.style.transform='translateX(-'+w+'px)'; rr.style.opacity='0'; const a=+rr.dataset.pid, c0=rr.dataset.cid, r0=rr.dataset.rid||null;
+      setTimeout(()=>{ if(mcDelOne(a,c0,r0)) toast(r0?'Reply removed':'Comment removed'); else mcDraw(); },190); return; }
+    const v=b.dataset.v; if(!v) return; mcHClose();
+    if(v==='custom'){ chCustOpen((t,c)=>schSet(rr,t,'custom',c)); return; }
+    const o=AD_OPTS.find(q=>q[0]===v); if(o) schSet(rr,o[2],v,null); });
+  document.addEventListener('click',e=>{ if(mcH.classList.contains('show')&&!mcH.contains(e.target)) mcHClose(); });
+  mcPg.addEventListener('scroll',()=>{ if(mcH.classList.contains('show')) mcHClose(); },{passive:true});
+  new MutationObserver(()=>{ if(!mcPg.classList.contains('show')) mcHClose(); }).observe(mcPg,{attributes:true,attributeFilter:['class']});
   // hold / right-click -> Delete this comment? ; swipe left -> delete
   const mcAsk=rr=>{ if(!rr) return false; const pid=+rr.dataset.pid, cid=rr.dataset.cid, rid=rr.dataset.rid||null;
+    if(mcPg.dataset.hi==='3'){ schMenu(rr); return true; }
     if(mcPg.dataset.hi==='4'){ askDelete(rid?'Remove this reply from Saved comments?':'Remove this comment from Saved comments?',()=>{ mcDelOne(pid,cid,rid); },'Remove',[rr]); return true; }
     const dob=mcDescObjs(rr), ds=mcDescRows(rr); let ttl=mcPg.dataset.hi==='3'?(rid?'Delete this scheduled reply?':'Delete this scheduled comment?'):(rid?'Delete this reply?':'Delete this comment?'), yes='Delete';
     if(dob.length){ const nc=(rid?0:1), nr=(rid?1:0)+dob.length, pc=nc+(nc===1?' comment':' comments'), pr=nr+(nr===1?' reply':' replies');
