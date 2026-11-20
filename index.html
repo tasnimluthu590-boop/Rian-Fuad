@@ -4498,7 +4498,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   const ehMeta=n=>ehCtx?{xm:1,lbl:ehCtx.r?'Show in replies':'Show in comments',go:()=>{ eh.classList.remove('show'); window.__cmShowIn({c:ehCtx.c,r:ehCtx.r,id:ehCtx.id}); }}:null;
   function ehOpen(a,ctx){ ehCtx=ctx||null;   // a: newest first [{txt,pic,att,at,cur,del,delTxt}]
     const box=$('ehList'); box.innerHTML='';
-    const AL={link:'Link',photo:'Photo',video:'Video',gif:'GIF',sticker:'Sticker',voice:'Audio',poll:'Poll',table:'Table',form:'Form'}, AK=z=>z?(z.bid||z.src||''):'', AN=z=>(z&&z.k==='poll'&&z.poll&&z.poll.quiz)?'Quiz':(AL[z&&z.k]||'Attachment');
+    const AL={link:'Link',photo:'Photo',video:'Video',gif:'GIF',sticker:'Sticker',voice:'Audio',poll:'Poll',table:'Table',form:'Form',loc:'Location'}, AK=z=>z?(z.bid||z.src||''):'', AN=z=>(z&&z.k==='poll'&&z.poll&&z.poll.quiz)?'Quiz':(AL[z&&z.k]||'Attachment');
     a.forEach((v,i)=>{ const d=document.createElement('div'); d.className='ehi'; const s=document.createElement('small'); const o=a[i+1];
       let note=''; if(!v.del&&o&&(v.pic||'')!==(o.pic||'')) note=v.pic?(o.pic?' \u2022 Image changed':' \u2022 Image added'):' \u2022 Image removed';
       if(!v.del&&o&&(v.att||o.att)){ if(v.att&&!o.att) note=' \u2022 '+AN(v.att)+' added'; else if(!v.att&&o.att) note=' \u2022 '+AN(o.att)+' deleted'; else if(AK(v.att)!==AK(o.att)) note=(v.att.k===o.att.k)?' \u2022 '+AN(v.att)+' changed':' \u2022 '+AN(o.att)+' deleted \u2022 '+AN(v.att)+' added'; }
@@ -4667,7 +4667,13 @@ function askDelete(title,cb,yesLabel,slideSel){
     if(a.k==='form'&&a.form){ const n=(a.form.fields||[]).length, sn=(a.subs||[]).length; return '<div class="cmatt cmform" data-fsrc="'+u+'" data-form="'+encodeURIComponent(JSON.stringify(a.form))+'"><span class="material-symbols-outlined pfi">assignment</span><span class="pft"><b>'+esc(a.form.name||'Form')+'</b><i class=\"fmlbl'+(sn?' fsd':'')+'\" data-n=\"'+n+'\">'+(sn?'Submitted':n+(n<=1?' option':' options'))+'</i></span></div><div class="cmfsub'+(sn?'':' zero')+'" data-fsrc="'+u+'">'+sn+' submitted</div>'; }
     if(a.k==='sticker') return a.giphy?'<div class="cmatt stkimg"'+(a.base?' data-sb="'+esc(a.base)+'" data-stn="'+(a.tn||0)+'"':'')+'><img src="'+u+'" alt="" draggable="false"></div>':'<div class="cmatt stk">'+esc(a.src)+'</div>';
     if(a.k==='link') return '<a class="cmatt cmlink" href="'+esc(linkNorm(a.src))+'" target="_blank" rel="noopener noreferrer"><span class="lkic">'+linkIcon({icon:a.icon,logo:a.logo})+'</span><span class="lkt"><b>'+esc(a.name||linkText(a.src))+'</b><i>'+esc(linkText(a.src))+'</i></span></a>';
+    if(a.k==='loc'&&a.lat!=null&&a.lng!=null){   // See attachments > Photos 3-column grid-এর একটি cell-এর আকৃতি (বর্গাকার); OSM tile দিয়ে লোকেশনের preview
+      const S=140, z=15, n=Math.pow(2,z), la=a.lat*Math.PI/180, px=(a.lng+180)/360*n*256, py=(1-Math.log(Math.tan(la)+1/Math.cos(la))/Math.PI)/2*n*256; let im='';
+      for(let ty=Math.floor((py-S/2)/256);ty<=Math.floor((py+S/2)/256);ty++) for(let tx=Math.floor((px-S/2)/256);tx<=Math.floor((px+S/2)/256);tx++){ if(ty<0||ty>=n) continue; im+='<img src="https://tile.openstreetmap.org/'+z+'/'+(((tx%n)+n)%n)+'/'+ty+'.png" crossorigin="anonymous" alt="" draggable="false" style="left:'+(tx*256-px+S/2).toFixed(2)+'px;top:'+(ty*256-py+S/2).toFixed(2)+'px">'; }
+      return '<div class="cmatt cmloc" data-lat="'+a.lat+'" data-lng="'+a.lng+'" role="link" title="Open in Google Maps">'+im+'<span class="material-symbols-outlined lcpn">location_on</span>'+(a.name?'<b>'+esc(a.name)+'</b>':'')+'</div>'; }
     return ''; }
+  { const st=document.createElement('style'); st.textContent='.cmatt.cmloc{position:relative;width:140px;height:140px;border-radius:10px;overflow:hidden;background:#272727;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}.cmloc img{position:absolute!important;display:block;width:256px!important;height:256px!important;max-width:none!important;max-height:none!important;border-radius:0!important;pointer-events:none;-webkit-user-drag:none}.cmloc .lcpn{position:absolute;left:50%;top:50%;width:36px;height:36px;margin-left:-18px;margin-top:-34px;font-size:36px;line-height:36px;color:#ea4335;font-variation-settings:"FILL" 1;text-shadow:0 1px 3px rgba(0,0,0,.5);pointer-events:none}.cmloc b{position:absolute;left:0;right:0;bottom:0;padding:18px 8px 6px;font-size:12px;font-weight:500;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.72));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}'; document.head.appendChild(st); }
+  document.addEventListener('click',e=>{ const el=e.target.closest&&e.target.closest('.cmloc'); if(!el) return; const sh=el.closest('.cmsheet'); if(sh&&(sh.classList.contains('sel')||sh.classList.contains('bxmode'))) return; e.preventDefault(); const la=el.dataset.lat, ln=el.dataset.lng; if(la==null||ln==null) return; window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(la+','+ln),'_blank','noopener'); });
   { const st=document.createElement('style'); st.textContent='.cmatt.cmpdf{display:flex;align-items:center;gap:12px;background:#000;border:1px solid #3f3f3f;border-radius:12px;padding:12px 20px 12px 14px;min-width:150px;cursor:default;-webkit-user-select:none;user-select:none}.cmpdf .pfi{font-size:36px;color:#ff5a4d;cursor:default}.cmpdf .pft{display:flex;flex-direction:column;line-height:1.25}.cmpdf .pft b{font-size:16px;font-weight:500;color:#fff}.cmpdf .pft i{font-style:normal;font-size:13px;color:#aaa}.cmatt.cmpdf.attsq{transform:scale(.88)!important;filter:brightness(.82)}'; document.head.appendChild(st); }
   { const st=document.createElement('style'); st.textContent='.cmatt.cmform{display:flex;align-items:center;gap:12px;background:#000;border:1px solid #3f3f3f;border-radius:12px;padding:12px 20px 12px 14px;min-width:150px;max-width:300px;cursor:pointer;-webkit-user-select:none;user-select:none}.cmform .pfi{font-size:36px;color:#3ea6ff;flex-shrink:0}.cmform .pft{display:flex;flex-direction:column;line-height:1.25;min-width:0}.cmform .pft b{font-size:16px;font-weight:500;color:#fff;overflow-wrap:anywhere}.cmform .pft i{font-style:normal;font-size:13px;color:#aaa}.cmform .pft i.fsd{color:#8a8a8a}'; document.head.appendChild(st); }
   { const st=document.createElement('style'); st.textContent='.cmatt:not(.cmgif) img[data-pv].lan{width:220px;height:150px;max-width:100%;max-height:none;object-fit:cover}.cmatt:not(.cmgif) img[data-pv].por{width:150px;height:200px;max-width:100%;max-height:none;object-fit:cover}'; document.head.appendChild(st);
@@ -4895,7 +4901,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   attCss.textContent='#cmAttBack .dlg{max-width:340px;padding:10px 0}#cmAttBack .dlg button{display:flex;align-items:center;gap:22px;width:100%;padding:16px 22px;background:none;border:0;color:#fff;font-size:17px;text-align:left;cursor:pointer}#cmAttBack .dlg button:active{background:#333}#cmAttBack .dlg h2{font-size:20px;font-weight:500;padding:16px 22px 8px}#cmAttBack .dlg{position:relative;max-height:85vh;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain}#cmAttBack,#cmAttBack .dlg *{touch-action:pan-y}#cmAudFly{position:absolute;right:10px;bottom:6px;width:210px;background:#383838;border-radius:14px;padding:6px 0;box-shadow:0 6px 24px rgba(0,0,0,.55);display:none;z-index:2}#cmAudFly.show,#cmGifFly.show{display:block;animation:cmAudIn .18s ease-out}#cmGifFly{position:absolute;right:10px;width:230px;background:#383838;border-radius:14px;padding:6px 0;box-shadow:0 6px 24px rgba(0,0,0,.55);display:none;z-index:2}#cmAttBack #cmGifFly button{padding:14px 16px;gap:14px;font-size:16px}#cmAttBack #cmGifFly button:active{background:#4a4a4a}@keyframes cmAudIn{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}#cmAttBack #cmAudFly button{padding:14px 16px;gap:14px;font-size:16px}#cmAttBack #cmAudFly button:active{background:#4a4a4a}';
   document.head.appendChild(attCss);
   const attB=document.createElement('div'); attB.className='dlg-back'; attB.id='cmAttBack';
-  attB.innerHTML='<div class="dlg"><h2>Attachment</h2><button type="button" data-k="link"><span class="material-symbols-outlined">link</span>Link</button><button type="button" data-k="photo"><span class="material-symbols-outlined">photo_library</span>Photo</button><button type="button" data-k="video"><span class="material-symbols-outlined">videocam</span>Video<span style="margin-left:auto;color:#aaa;font-size:15px">1m</span></button><button type="button" data-k="gif"><span class="material-symbols-outlined">gif_box</span>GIF<span class="material-symbols-outlined" style="margin-left:auto;color:#aaa">chevron_right</span></button><button type="button" data-k="sticker"><span class="material-symbols-outlined">sticky_note_2</span>Sticker</button><button type="button" data-k="voice"><span class="material-symbols-outlined">headphones</span>Audio<span style="margin-left:auto;color:#aaa;font-size:15px">1m</span><span class="material-symbols-outlined" style="margin-left:-10px;color:#aaa">chevron_right</span></button><button type="button" data-k="pdf" id="cmPdfBtn"><span class="material-symbols-outlined">picture_as_pdf</span>PDF</button><button type="button" data-k="table" id="cmTableBtn"><span class="material-symbols-outlined">table_chart</span>Table</button><button type="button" data-k="poll" id="cmPollBtn"><span class="material-symbols-outlined">poll</span>Poll</button><button type="button" data-k="quiz" id="cmQuizBtn"><span class="material-symbols-outlined">quiz</span>Quiz</button><button type="button" data-k="form" id="cmFormBtn"><span class="material-symbols-outlined">assignment</span>Form</button><div class="cmtsRow" id="cmTsRow"><span class="material-symbols-outlined">text_format</span><span class="cmtsn">Text style</span><span class="cmtsb"><span class="material-symbols-outlined" data-ts="b" role="button" aria-pressed="false" title="Bold">format_bold</span><span class="material-symbols-outlined" data-ts="i" role="button" aria-pressed="false" title="Italic">format_italic</span><span class="material-symbols-outlined" data-ts="s" role="button" aria-pressed="false" title="Strikethrough">format_strikethrough</span><span class="material-symbols-outlined" data-ts="u" role="button" aria-pressed="false" title="Underline">format_underlined</span></span></div><div id="cmGifFly"><button type="button" data-k="gifdev"><span class="material-symbols-outlined">smartphone</span>Choose from Device</button><button type="button" data-k="gifgiphy"><span class="material-symbols-outlined">search</span>Choose from GIPHY</button></div><div id="cmAudFly"><button type="button" data-k="audfile"><span class="material-symbols-outlined">audio_file</span>Choose audio</button><button type="button" data-k="audrec"><span class="material-symbols-outlined">mic</span>Record voice</button></div></div>';
+  attB.innerHTML='<div class="dlg"><h2>Attachment</h2><button type="button" data-k="link"><span class="material-symbols-outlined">link</span>Link</button><button type="button" data-k="photo"><span class="material-symbols-outlined">photo_library</span>Photo</button><button type="button" data-k="video"><span class="material-symbols-outlined">videocam</span>Video<span style="margin-left:auto;color:#aaa;font-size:15px">1m</span></button><button type="button" data-k="gif"><span class="material-symbols-outlined">gif_box</span>GIF<span class="material-symbols-outlined" style="margin-left:auto;color:#aaa">chevron_right</span></button><button type="button" data-k="sticker"><span class="material-symbols-outlined">sticky_note_2</span>Sticker</button><button type="button" data-k="voice"><span class="material-symbols-outlined">headphones</span>Audio<span style="margin-left:auto;color:#aaa;font-size:15px">1m</span><span class="material-symbols-outlined" style="margin-left:-10px;color:#aaa">chevron_right</span></button><button type="button" data-k="pdf" id="cmPdfBtn"><span class="material-symbols-outlined">picture_as_pdf</span>PDF</button><button type="button" data-k="table" id="cmTableBtn"><span class="material-symbols-outlined">table_chart</span>Table</button><button type="button" data-k="poll" id="cmPollBtn"><span class="material-symbols-outlined">poll</span>Poll</button><button type="button" data-k="quiz" id="cmQuizBtn"><span class="material-symbols-outlined">quiz</span>Quiz</button><button type="button" data-k="form" id="cmFormBtn"><span class="material-symbols-outlined">assignment</span>Form</button><button type="button" data-k="loc" id="cmLocBtn"><span class="material-symbols-outlined">location_on</span>Location</button><div class="cmtsRow" id="cmTsRow"><span class="material-symbols-outlined">text_format</span><span class="cmtsn">Text style</span><span class="cmtsb"><span class="material-symbols-outlined" data-ts="b" role="button" aria-pressed="false" title="Bold">format_bold</span><span class="material-symbols-outlined" data-ts="i" role="button" aria-pressed="false" title="Italic">format_italic</span><span class="material-symbols-outlined" data-ts="s" role="button" aria-pressed="false" title="Strikethrough">format_strikethrough</span><span class="material-symbols-outlined" data-ts="u" role="button" aria-pressed="false" title="Underline">format_underlined</span></span></div><div id="cmGifFly"><button type="button" data-k="gifdev"><span class="material-symbols-outlined">smartphone</span>Choose from Device</button><button type="button" data-k="gifgiphy"><span class="material-symbols-outlined">search</span>Choose from GIPHY</button></div><div id="cmAudFly"><button type="button" data-k="audfile"><span class="material-symbols-outlined">audio_file</span>Choose audio</button><button type="button" data-k="audrec"><span class="material-symbols-outlined">mic</span>Record voice</button></div></div>';
   document.body.appendChild(attB);
   // ---- Text style: Bold / Italic / Strikethrough / Underline (on-off); চালু রেখে লিখলে ওই comment / reply-তে প্রযোজ্য। Add / Edit comment, reply, reply-to-reply সবখানে ----
   { const st=document.createElement('style');
@@ -4982,6 +4988,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     else if(a.k==='poll'){ th='<span class="material-symbols-outlined">'+(a.poll&&a.poll.quiz?'quiz':'poll')+'</span>'; lb=(a.poll&&a.poll.quiz?'Quiz':'Poll')+' \u2022 '+String((a.poll&&a.poll.q)||''); }
     else if(a.k==='table'){ const tr=(a.table&&a.table.rows)||[]; th='<span class="material-symbols-outlined">table_chart</span>'; lb='Table \u2022 '+tr.length+' x '+(tr[0]?tr[0].length:0); }
     else if(a.k==='form'){ const n=((a.form&&a.form.fields)||[]).length; th='<span class="material-symbols-outlined" style="color:#3ea6ff">assignment</span>'; lb='Form \u2022 '+((a.form&&a.form.name)||'Untitled')+' \u2022 '+n+(n<=1?' option':' options'); }
+    else if(a.k==='loc'){ th='<span class="material-symbols-outlined" style="color:#ea4335">location_on</span>'; lb='Location'+(a.name?' \u2022 '+a.name:''); }
     else if(a.k==='sticker') th='<span class="stk">'+a.src+'</span>';
     else if(a.k==='link'){ th=linkIcon({icon:a.icon,logo:a.logo}); lb='Link • '+(a.name||linkText(a.src)); }
     else if(a.k==='pdf'){ const n=Math.max(1,+a.pages||1); th='<span class="material-symbols-outlined" style="color:#ff5a4d">picture_as_pdf</span>'; lb='PDF \u2022 '+n+(n===1?' page':' pages'); }
@@ -4990,13 +4997,13 @@ function askDelete(title,cb,yesLabel,slideSel){
     cmPrev.innerHTML='<div class="pvth">'+th+'</div><span class="pvlb">'+lb+'</span>'
       +(a.k==='video'?'<span class="material-symbols-outlined" id="cmPvPlay" title="Play">play_arrow</span>':'')
       +(a.k==='voice'?'<span class="material-symbols-outlined" id="cmPvAud" title="Play">play_arrow</span>':'')
-      +((a.k==='photo'||a.k==='video'||a.k==='voice'||a.k==='pdf'||a.k==='table'||a.k==='poll'||a.k==='form')?'<span class="material-symbols-outlined" id="cmPvEdit" title="Edit">edit</span>':'')
+      +((a.k==='photo'||a.k==='video'||a.k==='voice'||a.k==='pdf'||a.k==='table'||a.k==='poll'||a.k==='form'||a.k==='loc')?'<span class="material-symbols-outlined" id="cmPvEdit" title="Edit">edit</span>':'')
       +(()=>{ const i=stkAttInfo(a); return i?'<span class="pvtn" id="cmPvTone" title="Color" style="background:'+STK_TC[i.tn]+'"></span>':''; })()
       +'<span class="material-symbols-outlined" id="cmPvDel" title="Delete">delete</span>';
     cmPrev.style.display='flex';
     { const th=cmPrev.querySelector('.pvth'); if(th){ th.title='Change'; th.onclick=changeAtt; } }
     if(cmSetOnly()){ const th=cmPrev.querySelector('.pvth'); if(th){ th.onclick=null; th.title=''; th.style.cursor='default'; } ['cmPvEdit','cmPvTone','cmPvDel'].forEach(id=>{ const e=$(id); if(e) e.style.display='none'; }); }
-    const ed=$('cmPvEdit'); if(ed) ed.onclick=()=>{ if(!cmAtt||cmBlocked) return; if(cmAtt.k==='photo') openPhotoCrop(cmAttOrig||cmAtt.src,true); else if(cmAtt.k==='pdf') pdfEditAtt(); else if(cmAtt.k==='table'){ cmChg=true; openTable(cmAtt); } else if(cmAtt.k==='poll'){ cmChg=true; openPoll(cmAtt); } else if(cmAtt.k==='form'){ cmChg=true; openForm(cmAtt); } else openTrimEdit(); };
+    const ed=$('cmPvEdit'); if(ed) ed.onclick=()=>{ if(!cmAtt||cmBlocked) return; if(cmAtt.k==='photo') openPhotoCrop(cmAttOrig||cmAtt.src,true); else if(cmAtt.k==='pdf') pdfEditAtt(); else if(cmAtt.k==='table'){ cmChg=true; openTable(cmAtt); } else if(cmAtt.k==='poll'){ cmChg=true; openPoll(cmAtt); } else if(cmAtt.k==='form'){ cmChg=true; openForm(cmAtt); } else if(cmAtt.k==='loc'){ cmChg=true; openLoc(cmAtt); } else openTrimEdit(); };
     const pa=$('cmPvAud'); if(pa) pa.onclick=()=>{ if(cmAtt) audPlayOpen(cmAtt.src,{id:cmAtt.bid||cmAtt.src,dur:cmAtt.dur}); };
     const pl=$('cmPvPlay'); if(pl) pl.onclick=()=>{ if(cmAtt&&window.openVideoViewer) window.openVideoViewer(cmAtt.src,cmAtt.dur,'',false); };   // 3 dot menu ছাড়া player
     const tp=$('cmPvTone'); if(tp) tp.onclick=()=>{ const i=stkAttInfo(cmAtt); if(!i||cmBlocked) return; stkToneShow(tp.getBoundingClientRect(),i.tn,n=>{ setAtt(Object.assign(stkMake(i.base,n),{base:i.base,tn:n})); }); };
@@ -5006,7 +5013,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   function clearAtt(){ trRelease(); cmAtt=null; cmAttOrig=null; cmAttRect=null; cmChg=false; drawPrev(); }
   // পোস্টের সময় attachment সেভ: video/voice-এর bytes IndexedDB-তে, comment-এ শুধু bid থাকে
   function attCommit(){ const a=cmAtt; if(!a) return undefined; const o={k:a.k,src:a.src,dur:a.dur}; if(a.k==='link'){ o.name=a.name; o.icon=a.icon; o.logo=a.logo; } if(a.k==='sticker'&&a.base){ o.base=a.base; o.tn=a.tn||0; }   // রঙ বদলানো sticker-এর মূল emoji + রঙ মনে রাখা; পরে Edit-এ Color অপশন আসে
-    if(a.k==='poll') o.poll=a.poll; if(a.k==='table') o.table=a.table; if(a.k==='form'){ o.form=a.form; if(a.subs) o.subs=a.subs; } if(a.k==='pdf'){ o.pages=a.pages; o.name=a.name; } if(a.giphy) o.giphy=1;
+    if(a.k==='poll') o.poll=a.poll; if(a.k==='table') o.table=a.table; if(a.k==='form'){ o.form=a.form; if(a.subs) o.subs=a.subs; } if(a.k==='pdf'){ o.pages=a.pages; o.name=a.name; } if(a.k==='loc'){ o.lat=a.lat; o.lng=a.lng; o.name=a.name; o.addr=a.addr; } if(a.giphy) o.giphy=1;
     if(a.blob){ o.bid=uid(); if(window.putBlob) window.putBlob('c'+o.bid,a.blob); } else if(a.bid) o.bid=a.bid;
     return o; }
   const attKey=a=>a?(a.bid||a.src||''):'';
@@ -5258,6 +5265,83 @@ function askDelete(title,cb,yesLabel,slideSel){
   // Link: About channel-এর Add links window-এর একই mechanism ও interface; ঠিক link হলে comment-এর attachment হয়
   function openCmLink(item){ if(!window.openLinkDialog){ toast('Link window is not available'); return; }
     window.openLinkDialog(l=>setAtt({k:'link',src:l.url,name:l.name,icon:l.icon,logo:l.logo}),item||null); }
+  // ---- Location attachment: আলাদা full-screen window (Leaflet map + Photon autocomplete search) ----
+  const lcCss=document.createElement('style');
+  lcCss.textContent='#cmLocWin{position:fixed;left:0;top:0;right:0;bottom:0;z-index:210;background:#0f0f0f;display:none;flex-direction:column;color:#fff}#cmLocWin.show{display:flex}'
+  +'#cmLocWin .lch{position:relative;z-index:900;display:flex;align-items:center;gap:2px;height:56px;padding:env(safe-area-inset-top,0px) 12px 0 4px;background:#0f0f0f;border-bottom:1px solid #272727;flex-shrink:0;box-sizing:content-box}'
+  +'#cmLocWin .lcb,#cmLocWin .lci{cursor:pointer;padding:8px;font-size:24px;color:#fff;-webkit-user-select:none;user-select:none}'
+  +'#cmLocWin .lct{flex:1;min-width:0;font-size:20px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:4px}'
+  +'#cmLocIn{display:none;flex:1;min-width:0;background:none;border:0;outline:0;color:#fff;font-size:18px;font-family:inherit;padding:8px 4px}#cmLocIn::placeholder{color:#888}'
+  +'#cmLocWin.sm .lct{display:none}#cmLocWin.sm #cmLocIn{display:block}#cmLocWin.sm #cmLocSrch{display:none}#cmLocClr{display:none}#cmLocWin.sm.hv #cmLocClr{display:block}'
+  +'#cmLocWin .lcd{color:#3ea6ff;font-size:17px;font-weight:500;cursor:pointer;padding:8px 6px 8px 10px;-webkit-user-select:none;user-select:none}'
+  +'#cmLocMap{flex:1;min-height:0;position:relative;background:#1a1a1a;isolation:isolate}'
+  +'#cmLocDd{position:absolute;left:0;right:0;top:calc(56px + env(safe-area-inset-top,0px));max-height:55%;overflow-y:auto;background:#212121;z-index:950;display:none;box-shadow:0 8px 24px rgba(0,0,0,.6);-webkit-overflow-scrolling:touch;overscroll-behavior:contain}#cmLocDd.show{display:block}'
+  +'#cmLocDd .lcr{display:flex;align-items:center;gap:14px;padding:12px 16px;cursor:pointer}#cmLocDd .lcr:active{background:#333}#cmLocDd .lcr .material-symbols-outlined{color:#aaa}#cmLocDd .lcrt{min-width:0;display:flex;flex-direction:column}'
+  +'#cmLocDd .lcrt b{font-size:16px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#cmLocDd .lcrt i{font-style:normal;font-size:13px;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#cmLocDd .lcm{padding:18px 16px;color:#aaa;font-size:15px;text-align:center}'
+  +'#cmLocInfo{position:absolute;left:12px;right:64px;bottom:calc(22px + env(safe-area-inset-bottom,0px));z-index:800;background:rgba(33,33,33,.96);border-radius:12px;padding:10px 14px;font-size:14px;line-height:1.35;pointer-events:none;display:none}'
+  +'.lcpin{background:none!important;border:0!important}';
+  document.head.appendChild(lcCss);
+  const locW=document.createElement('div'); locW.id='cmLocWin';
+  locW.innerHTML='<div class="lch"><span class="material-symbols-outlined lcb" id="cmLocBack" role="button" aria-label="Back">arrow_back</span><span class="lct">Add location</span><input id="cmLocIn" type="text" placeholder="Search location" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"><span class="material-symbols-outlined lci" id="cmLocClr" role="button" aria-label="Clear">close</span><span class="material-symbols-outlined lci" id="cmLocSrch" role="button" aria-label="Search">search</span><span class="lcd" id="cmLocDone" role="button">Done</span></div><div id="cmLocMap"></div><div id="cmLocDd"></div><div id="cmLocInfo"></div>';
+  document.body.appendChild(locW);
+  let lcMap=null, lcMk=null, lcSel=null, lcTm=null, lcRes=[], lcTok=0, lcRevTok=0, lcMode=false, lcGeo=false, lcFullH=0;
+  const lcEsc=t=>String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const lcQ=id=>document.getElementById(id);
+  // কিবোর্ড খুললে viewport ছোট হয় — উইন্ডো যেন অর্ধেক না হয়, তাই উচ্চতা কিবোর্ড ছাড়া অবস্থার মাপে স্থির রাখা হয়; কিবোর্ড উইন্ডোর নিচের অংশ ঢেকে দেয়, সঙ্কুচিত করে না
+  function lcFit(){ const iw=window.innerHeight, typing=document.activeElement&&document.activeElement.id==='cmLocIn'; if(!typing||!lcFullH) lcFullH=iw;
+    locW.style.bottom='auto'; locW.style.height=lcFullH+'px';
+    const vh=(window.visualViewport?window.visualViewport.height:iw); lcQ('cmLocDd').style.maxHeight=Math.max(120,vh-64-8)+'px'; }
+  window.addEventListener('resize',()=>{ if(locW.classList.contains('show')) lcFit(); });
+  if(window.visualViewport) window.visualViewport.addEventListener('resize',()=>{ if(locW.classList.contains('show')) lcFit(); });
+  function lcLoad(){ if(window.L&&window.L.map) return Promise.resolve(); if(window.__lfP) return window.__lfP;
+    window.__lfP=new Promise((res,rej)=>{ const l=document.createElement('link'); l.rel='stylesheet'; l.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(l);
+      const sc=document.createElement('script'); sc.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; sc.onload=()=>res(); sc.onerror=()=>{ window.__lfP=null; rej(new Error('leaflet')); }; document.head.appendChild(sc); });
+    return window.__lfP; }
+  const lcPin=()=>window.L.divIcon({className:'lcpin',html:'<svg viewBox="0 0 24 32" width="34" height="44"><path d="M12 0C5.4 0 0 5.3 0 11.8 0 20.6 12 32 12 32s12-11.4 12-20.2C24 5.3 18.6 0 12 0z" fill="#ea4335"/><circle cx="12" cy="12" r="4.6" fill="#fff"/></svg>',iconSize:[34,44],iconAnchor:[17,44]});
+  function lcName(f){ const p=(f&&f.properties)||{}; const street=p.street?(p.street+(p.housenumber?' '+p.housenumber:'')):''; const nm=p.name||street||p.city||p.town||p.village||p.county||p.state||p.country||''; const parts=[];
+    [street,p.district,p.locality,p.city||p.town||p.village,p.county,p.state,p.country].forEach(x=>{ if(x&&x!==nm&&parts.indexOf(x)<0) parts.push(x); }); return {name:nm,addr:parts.join(', ')}; }
+  function lcInfo(){ const el=lcQ('cmLocInfo'); el.style.display='block';
+    if(!lcSel){ el.textContent='Tap on the map or search to choose a location'; return; }
+    el.innerHTML=(lcSel.name?'<b style="font-weight:500;font-size:15px">'+lcEsc(lcSel.name)+'</b><br>':'')+'<span style="color:#aaa">'+lcEsc(lcSel.addr||(lcSel.lat.toFixed(5)+', '+lcSel.lng.toFixed(5)))+'</span>'; }
+  function lcPlace(lat,lng,name,addr,fly){ lcSel={lat:lat,lng:lng,name:name||'',addr:addr||''};
+    if(lcMap){ if(!lcMk){ lcMk=window.L.marker([lat,lng],{icon:lcPin(),draggable:true}).addTo(lcMap); lcMk.on('dragend',()=>{ const q=lcMk.getLatLng(); lcPlace(q.lat,q.lng,'','',false); lcRev(q.lat,q.lng); }); } else lcMk.setLatLng([lat,lng]);
+      if(fly) lcMap.setView([lat,lng],Math.max(lcMap.getZoom(),16)); }
+    lcInfo(); }
+  function lcRev(lat,lng){ const t=++lcRevTok;
+    fetch('https://photon.komoot.io/reverse?lon='+lng+'&lat='+lat).then(r=>r.json()).then(j=>{ if(t!==lcRevTok||!lcSel||lcSel.lat!==lat||lcSel.lng!==lng) return; const f=j&&j.features&&j.features[0]; if(!f) return; const n=lcName(f); lcSel.name=n.name; lcSel.addr=n.addr; lcInfo(); }).catch(()=>{}); }
+  function lcSearch(q){ const dd=lcQ('cmLocDd'); clearTimeout(lcTm);
+    if(!q){ lcTok++; dd.classList.remove('show'); dd.innerHTML=''; lcRes=[]; return; }
+    lcTm=setTimeout(()=>{ const t=++lcTok; dd.innerHTML='<div class="lcm">Searching\u2026</div>'; dd.classList.add('show');
+      let u='https://photon.komoot.io/api/?limit=7&q='+encodeURIComponent(q); if(lcMap){ const c=lcMap.getCenter(); u+='&lat='+c.lat.toFixed(4)+'&lon='+c.lng.toFixed(4); }
+      fetch(u).then(r=>{ if(!r.ok) throw 0; return r.json(); }).then(j=>{ if(t!==lcTok) return; lcRes=(j.features||[]).filter(f=>f&&f.geometry&&f.geometry.coordinates);
+        if(!lcRes.length){ dd.innerHTML='<div class="lcm">No results</div>'; return; }
+        dd.innerHTML=lcRes.map((f,i)=>{ const n=lcName(f); return '<div class="lcr" data-i="'+i+'"><span class="material-symbols-outlined">location_on</span><div class="lcrt"><b>'+lcEsc(n.name||n.addr)+'</b>'+(n.addr&&n.name?'<i>'+lcEsc(n.addr)+'</i>':'')+'</div></div>'; }).join('');
+      }).catch(()=>{ if(t!==lcTok) return; dd.innerHTML='<div class="lcm">Search unavailable. Check internet.</div>'; }); },300); }
+  function lcPick(i){ const f=lcRes[i]; if(!f) return; const c=f.geometry.coordinates, n=lcName(f), inp=lcQ('cmLocIn');
+    lcQ('cmLocDd').classList.remove('show'); inp.value=n.name||n.addr; inp.blur(); locW.classList.toggle('hv',!!inp.value); lcPlace(c[1],c[0],n.name,n.addr,true); }
+  function lcSM(on){ const inp=lcQ('cmLocIn'); lcMode=on; locW.classList.toggle('sm',on); inp.value=''; locW.classList.remove('hv');
+    if(on){ lcFit(); setTimeout(()=>inp.focus(),30); } else{ inp.blur(); lcQ('cmLocDd').classList.remove('show'); lcRes=[]; lcTok++; clearTimeout(lcTm); } }
+  function lcClose(){ locW.classList.remove('show'); lcSM(false); }
+  function lcDone(){ const sel=lcSel; lcClose(); if(!sel){ cmChg=false; return; }
+    setAtt({k:'loc',src:'loc:'+sel.lat.toFixed(6)+','+sel.lng.toFixed(6),lat:+sel.lat.toFixed(6),lng:+sel.lng.toFixed(6),name:sel.name||'',addr:sel.addr||''}); }
+  function lcInit(){ if(lcMap) return; const L=window.L;
+    lcMap=L.map('cmLocMap',{zoomControl:false,attributionControl:true,worldCopyJump:true,minZoom:2}).setView([20,10],2);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'\u00a9 OpenStreetMap'}).addTo(lcMap); lcMap.attributionControl.setPrefix(false);
+    L.control.zoom({position:'bottomright'}).addTo(lcMap);
+    lcMap.on('click',e=>{ lcQ('cmLocDd').classList.remove('show'); lcQ('cmLocIn').blur(); lcPlace(e.latlng.lat,e.latlng.lng,'','',false); lcRev(e.latlng.lat,e.latlng.lng); }); }
+  function openLoc(item){ lcFullH=0; lcFit(); locW.classList.add('show'); lcSM(false); lcSel=null; lcRevTok++; if(lcMk&&lcMap){ lcMap.removeLayer(lcMk); lcMk=null; } lcInfo();
+    lcLoad().then(()=>{ lcInit(); setTimeout(()=>{ if(!lcMap) return; lcMap.invalidateSize();
+        if(item&&item.lat!=null){ lcMap.setView([item.lat,item.lng],16); lcPlace(item.lat,item.lng,item.name,item.addr,false); }
+        else if(!lcGeo&&navigator.permissions&&navigator.geolocation){ lcGeo=true; navigator.permissions.query({name:'geolocation'}).then(pm=>{ if(pm.state==='granted') navigator.geolocation.getCurrentPosition(pos=>{ if(lcMap&&!lcSel&&locW.classList.contains('show')) lcMap.setView([pos.coords.latitude,pos.coords.longitude],14); },()=>{},{timeout:6000}); }).catch(()=>{}); }
+      },60); }).catch(()=>{ cmChg=false; lcClose(); toast('Could not load map. Check internet.'); }); }
+  lcQ('cmLocBack').onclick=()=>{ if(lcMode) lcSM(false); else{ cmChg=false; lcClose(); } };
+  lcQ('cmLocSrch').onclick=()=>lcSM(true);
+  lcQ('cmLocClr').onclick=()=>{ const inp=lcQ('cmLocIn'); inp.value=''; locW.classList.remove('hv'); lcSearch(''); inp.focus(); };
+  lcQ('cmLocDone').onclick=lcDone;
+  lcQ('cmLocIn').addEventListener('input',e=>{ const v=e.target.value; locW.classList.toggle('hv',!!v); lcSearch(v.trim()); });
+  lcQ('cmLocIn').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); if(lcRes.length) lcPick(0); else lcSearch(e.target.value.trim()); } });
+  lcQ('cmLocDd').addEventListener('click',e=>{ const r=e.target.closest('.lcr'); if(r) lcPick(+r.dataset.i); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&locW.classList.contains('show')){ e.stopPropagation(); if(lcMode) lcSM(false); else{ cmChg=false; lcClose(); } } },true);
   attB.querySelectorAll('button').forEach(b=>b.onclick=()=>{
     const k=b.dataset.k;
     if(k==='voice'){ gifFly.classList.remove('show'); cmFly.style.bottom='auto'; cmFly.style.top=(b.offsetTop-6)+'px'; cmFly.classList.toggle('show'); return; }   // Audio: ডান পাশে Choose audio / Record voice
@@ -5265,6 +5349,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     if(k==='table'){ attClose(); openTable(null); return; }
     if(k==='pdf'){ attClose(); fKind='pdf'; fIn.accept='application/pdf,.pdf'; fIn.click(); return; }   // PDF / Table: চাপলে কিছুই হবে না
     if(k==='form'){ attClose(); openForm(); return; }
+    if(k==='loc'){ attClose(); openLoc(null); return; }
     attClose();
     if(k==='poll') openPoll(null,false);
     else if(k==='quiz') openPoll(null,true);
@@ -5467,6 +5552,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     else if(k==='poll'){ openPoll(cmAtt); }
     else if(k==='table'){ openTable(cmAtt); }
     else if(k==='form'){ openForm(cmAtt); }
+    else if(k==='loc'){ openLoc(cmAtt); }
     else if(k==='pdf'){ fKind='pdf'; fIn.accept='application/pdf,.pdf'; fIn.click(); }
     else{ cmAudB.classList.add('show'); }
   }
@@ -7375,21 +7461,21 @@ function askDelete(title,cb,yesLabel,slideSel){
       if(!window.html2canvas){ toast('Could not load screenshot engine. Check internet.'); return; }
       let bg=getComputedStyle(cmBody).backgroundColor; if(!bxSolid(bg)) bg=getComputedStyle(cmS).backgroundColor; if(!bxSolid(bg)) bg='#0f0f0f';
       const cr=cmBody.getBoundingClientRect(), st=cmBody.scrollTop;
-      let sc=Math.min(3,Math.max(2,window.devicePixelRatio||2)); sc=Math.max(1,Math.min(sc,Math.sqrt(14e6/Math.max(1,cr.width*cr.height))));
+      const rw=Math.max(1,Math.round(bxR.w)), rh=Math.max(1,Math.round(bxR.h));   // শুধু সিলেক্ট করা অংশই ছবি হয় — পুরো chat body বড় করে নিয়ে ক্রপ করা হয় না, তাই রেজোলিউশন সীমা সিলেকশনকেই পায়
+      let sc=Math.min(3,Math.max(2,window.devicePixelRatio||2)); sc=Math.max(1,Math.min(sc,Math.sqrt(14e6/Math.max(1,rw*rh))));
       let cv; {   // live sheet-এর ভেতরে নয়: দৃশ্যমান অংশের কপি transform / scroll / animation-মুক্ত আলাদা জায়গায় এনে ছবি তোলা হয় (লেখা উপরে ওঠা / উল্টে যাওয়া এড়াতে)
         const stage=document.createElement('div'); stage.className=cmS.className; stage.setAttribute('aria-hidden','true');   // live sheet-এর সব class (bxmode / bxhhid / bxrep…) একই রাখা হয়, যাতে hidden row লুকানো সহ layout হুবহু মিলে সিলেক্ট করা বক্সের জায়গা ঠিক থাকে
-        stage.style.cssText='position:fixed;left:0;top:0;width:'+cr.width+'px;height:'+cr.height+'px;max-height:none;transform:none;transition:none;visibility:visible;display:block;border-radius:0;overflow:hidden;z-index:-1;pointer-events:none;background:'+bg+';';
+        stage.style.cssText='position:fixed;left:0;top:0;width:'+rw+'px;height:'+rh+'px;max-height:none;transform:none;transition:none;visibility:visible;display:block;border-radius:0;overflow:hidden;z-index:-1;pointer-events:none;background:'+bg+';';
         const sty=document.createElement('style'); sty.textContent='.__cs,.__cs *{transition:none!important;animation:none!important;transform:none!important}.__cs .cmt{word-break:normal!important;overflow-wrap:break-word!important}';
         const wrap=document.createElement('div'); wrap.className='__cs'; wrap.style.cssText='position:relative;width:100%;height:100%;overflow:hidden;';
-        const cl=cmBody.cloneNode(true); cl.removeAttribute('id'); cl.style.cssText+=';flex:none;overflow:visible;height:auto;max-height:none;position:relative;top:'+(-st)+'px;width:100%;transform:none;transition:none;';
+        const cl=cmBody.cloneNode(true); cl.removeAttribute('id'); cl.style.cssText+=';flex:none;overflow:visible;height:auto;max-height:none;position:absolute;left:'+(-bxR.x)+'px;top:'+(-(bxR.y+st))+'px;width:'+cr.width+'px;margin:0;transform:none;transition:none;';
         try{ if(window.__cmVidFix) await window.__cmVidFix(cmBody,cl); }catch(_){}
         wrap.appendChild(cl); stage.appendChild(sty); stage.appendChild(wrap); document.body.appendChild(stage);
         try{ await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
           cv=await window.html2canvas(stage,{backgroundColor:bg,scale:sc,logging:false,useCORS:true});
         } finally{ try{ stage.remove(); }catch(_){} } }
       if(!cv||!cv.width||!cv.height) throw new Error('empty');
-      const k=cv.width/cr.width, sx=Math.round(bxR.x*k), sy=Math.round(bxR.y*k), sw=Math.max(1,Math.min(cv.width-sx,Math.round(bxR.w*k))), sh=Math.max(1,Math.min(cv.height-sy,Math.round(bxR.h*k)));
-      const out=document.createElement('canvas'); out.width=sw; out.height=sh; const g=out.getContext('2d'); g.fillStyle=bg; g.fillRect(0,0,sw,sh); g.drawImage(cv,sx,sy,sw,sh,0,0,sw,sh);
+      const out=cv;
       const blob=await new Promise(res=>out.toBlob(res,'image/png')); if(!blob) throw new Error('blob');
       const d=new Date(), z=n=>String(n).padStart(2,'0'), name=(cmMode==='rep'?'replies':'comments')+'-region-'+d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+'-'+z(d.getHours())+z(d.getMinutes())+z(d.getSeconds())+'.png';
       const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.style.display='none'; document.body.appendChild(a); a.click(); setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); a.remove(); }catch(_){} },4000);
@@ -7400,7 +7486,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   bxCap.onclick=e=>{ e.stopPropagation(); bxGo(); };
   // ---- Bounding box: Capture-এর ডানে ⋯ (Search | Capture settings) + Capture settings window ----
   const BXK='cmBxSettings'; const bxS={act:false,att:false,hid:false};
-  try{ const o=JSON.parse(localStorage.getItem(BXK)||'{}'); bxS.act=!!o.act; bxS.att=!!o.att; bxS.hid=!!o.hid; }catch(_){}
+  try{ const o=JSON.parse(localStorage.getItem(BXK)||'{}'); bxS.act=!!o.act; bxS.att=false; bxS.hid=false; }catch(_){}   // Hide attachments / Hide hidden option বাদ — সবসময় বন্ধ
   const bxApply=()=>{ cmS.classList.toggle('bxhact',bxS.act); cmS.classList.toggle('bxhatt',bxS.att); cmS.classList.toggle('bxhhid',bxS.hid); }; bxApply();
   { const st=document.createElement('style'); st.textContent='#cmBxMore{display:none;cursor:pointer;flex-shrink:0}.cmsheet.bxmode #cmBxMore{display:inline-block}'
     +'#cmBxSetBack .dlg{max-width:360px;padding:10px 0}#cmBxSetBack .bsh{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px 22px}#cmBxSetBack .bsh h2{font-size:20px;font-weight:500;margin:0;padding:0}'
@@ -7414,9 +7500,9 @@ function askDelete(title,cb,yesLabel,slideSel){
   bxP.innerHTML='<button type="button" data-k="search"><span class="material-symbols-outlined">search</span><span class="dl">Search</span></button><button type="button" data-k="byuser" style="display:none"><span class="material-symbols-outlined cmtk">check</span><span class="dl">Search by username</span></button><button type="button" data-k="bytext" style="display:none"><span class="material-symbols-outlined cmtk">check</span><span class="dl" id="cmBxByT">Search by comment</span></button><div class="bxdiv" style="display:none;height:1px;background:var(--line,#3a3a3a);margin:6px 0"></div><button type="button" data-k="set"><span class="material-symbols-outlined">settings</span><span class="dl">Capture settings</span></button>';
   document.body.appendChild(bxP);
   const bxSetB=document.createElement('div'); bxSetB.className='dlg-back'; bxSetB.id='cmBxSetBack';
-  bxSetB.innerHTML='<div class="dlg"><div class="bsh"><h2>Capture settings</h2><span class="material-symbols-outlined" id="cmBxSetX" role="button" aria-label="Close">close</span></div><div class="bsr" data-k="act" role="switch"><span class="material-symbols-outlined bsi">visibility_off</span><span class="bst">Hide action texts and icons</span><span class="bsw"><i></i></span></div><div class="bsr" data-k="att" role="switch"><span class="material-symbols-outlined bsi">hide_image</span><span class="bst">Hide attachments</span><span class="bsw"><i></i></span></div><div class="bsr" data-k="hid" role="switch"><span class="material-symbols-outlined bsi">hide_source</span><span class="bst" id="cmBxHidT">Hide hidden comments</span><span class="bsw"><i></i></span></div></div>';
+  bxSetB.innerHTML='<div class="dlg"><div class="bsh"><h2>Capture settings</h2><span class="material-symbols-outlined" id="cmBxSetX" role="button" aria-label="Close">close</span></div><div class="bsr" data-k="act" role="switch"><span class="material-symbols-outlined bsi">visibility_off</span><span class="bst">Hide action texts and icons</span><span class="bsw"><i></i></span></div></div>';
   document.body.appendChild(bxSetB);
-  window.__cmBxS=bxS; window.__cmBxSetOpen=()=>{ $('cmBxHidT').textContent=cmMode==='rep'?'Hide hidden replies':'Hide hidden comments'; bxSetPaint(); bxSetB.classList.add('show'); };
+  window.__cmBxS=bxS; window.__cmBxSetOpen=()=>{ bxSetPaint(); bxSetB.classList.add('show'); };
   const bxSetPaint=()=>{ bxSetB.querySelectorAll('.bsr').forEach(r=>{ const on=!!bxS[r.dataset.k]; r.classList.toggle('on',on); r.setAttribute('aria-checked',on?'true':'false'); }); };
   bxSetB.addEventListener('click',e=>{ if(e.target===bxSetB||e.target.closest('#cmBxSetX')){ bxSetB.classList.remove('show'); return; }
     const r=e.target.closest('.bsr'); if(!r) return; const k=r.dataset.k; bxS[k]=!bxS[k];
@@ -7988,7 +8074,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     if(cmBlocked){ toast('Blocked from commenting'); return; }
     if(isReply){ const oc0=x.cmts.find(y=>y.id===cmOpen); if(oc0&&ancDel(oc0,o.id)) return; }
     const go=()=>{
-      cmReplyTo=null; cmEdit={o,isReply}; if(window.__tsEditBegin) window.__tsEditBegin(o.ts||''); drawCm(); cmAtt=o.att?{k:o.att.k,src:o.att.src,base:o.att.base,tn:o.att.tn,dur:o.att.dur,bid:o.att.bid,name:o.att.name,icon:o.att.icon,logo:o.att.logo,giphy:o.att.giphy,poll:o.att.poll,table:o.att.table,form:o.att.form,subs:o.att.subs,pages:o.att.pages}:null; cmAttOrig=null; drawPrev();
+      cmReplyTo=null; cmEdit={o,isReply}; if(window.__tsEditBegin) window.__tsEditBegin(o.ts||''); drawCm(); cmAtt=o.att?{k:o.att.k,src:o.att.src,base:o.att.base,tn:o.att.tn,dur:o.att.dur,bid:o.att.bid,name:o.att.name,icon:o.att.icon,logo:o.att.logo,giphy:o.att.giphy,poll:o.att.poll,table:o.att.table,form:o.att.form,subs:o.att.subs,pages:o.att.pages,lat:o.att.lat,lng:o.att.lng,addr:o.att.addr}:null; cmAttOrig=null; drawPrev();
       cmIn.value=o.txt; if(window.__cmTrEditBegin) window.__cmTrEditBegin(o); cmInput(); updRt(); cmIn.focus();
       try{ cmIn.setSelectionRange(cmIn.value.length,cmIn.value.length); }catch(_){}
       growIn(); cmIn.scrollTop=cmIn.scrollHeight;
