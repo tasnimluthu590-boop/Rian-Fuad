@@ -6374,7 +6374,10 @@ function askDelete(title,cb,yesLabel,slideSel){
       ['touchstart','touchmove','touchend'].forEach(t=>bar.addEventListener(t,e=>e.stopPropagation(),{passive:true}));
       bar.addEventListener('wheel',e=>{ if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){ bar.scrollLeft+=e.deltaY; e.preventDefault(); } },{passive:false});
       pop=document.getElementById('cmSpPop')||Object.assign(document.createElement('div'),{id:'cmSpPop'}); if(!pop.parentNode) document.body.appendChild(pop);
-      ta.addEventListener('input',()=>{ hidePop(); sched(); }); ta.addEventListener('scroll',()=>{ ov.scrollTop=ta.scrollTop; hidePop(); }); ta.addEventListener('keyup',barUpd); ta.addEventListener('focus',()=>{ sync(); barUpd(); }); ta.addEventListener('blur',()=>setTimeout(()=>{ if(document.activeElement!==ta) hideBar(); },200));
+      // খালি করলে (Clear text / পোস্ট / program থেকে value='') লাল দাগ সঙ্গে সঙ্গে মুছে যাবে; অন্য বদলে আগের মতো debounce
+      const clr0=()=>{ if(ov&&!ta.value){ ov.innerHTML='\u200b'; miss=[]; hidePop(); hideBar(); } };
+      if(!ta._spv){ ta._spv=1; try{ const d=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value'); Object.defineProperty(ta,'value',{configurable:true,get(){ return d.get.call(this); },set(v){ d.set.call(this,v); if(!d.get.call(this)) clr0(); else sched(); }}); }catch(e){} }
+      ta.addEventListener('input',()=>{ hidePop(); clr0(); sched(); }); ta.addEventListener('scroll',()=>{ ov.scrollTop=ta.scrollTop; hidePop(); }); ta.addEventListener('keyup',barUpd); ta.addEventListener('focus',()=>{ sync(); barUpd(); }); ta.addEventListener('blur',()=>setTimeout(()=>{ if(document.activeElement!==ta) hideBar(); },200));
       ta.addEventListener('click',()=>setTimeout(()=>{ barUpd(); popUp(); },0));
       document.addEventListener('selectionchange',()=>{ if(T&&document.activeElement===ta) barUpd(); });
       document.addEventListener('pointerdown',e=>{ if(pop&&!pop.contains(e.target)) hidePop(); },true);
@@ -6884,12 +6887,12 @@ function askDelete(title,cb,yesLabel,slideSel){
     return new Blob(parts,{type:'application/pdf'}); }
   async function smExportDo(list,done){ if(!list||!list.length){ toast('Nothing to export'); return; } if(smXBusy) return; smXBusy=true; toast('Preparing PDF…');
     try{ const blob=smPdfBlob(await (smKind==='poll'?smPollPages(list):smPdfPages(list))), c=smC();
-      const fn=(smKind==='poll'?String((c&&c.att&&c.att.poll&&c.att.poll.q)||'Poll').slice(0,60):((c&&c.att&&c.att.form&&c.att.form.name)||'Form')).replace(/[\\/:*?"<>|]+/g,'').trim()||'Form', name=fn+(smKind==='poll'?' - '+smNoun():(list.length===1?' - submission':' - submissions'))+'.pdf';
+      const fn=(smKind==='poll'?String((c&&c.att&&c.att.poll&&c.att.poll.q)||'Poll'):String((c&&c.att&&c.att.form&&c.att.form.name)||'Form')).replace(/[\u0000-\u001f\u007f\\/:*?"<>|]+/g,' ').replace(/\s+/g,' ').trim().slice(0,50).replace(/[.\s]+$/,'')||(smKind==='poll'?'Poll':'Form'), sfx=(smKind==='poll'?' - '+smNoun():(list.length===1?' - submission':' - submissions'))+'.pdf', name=fn+sfx;
       let ok=true;
-      if(window.__saveBlob) ok=await window.__saveBlob(blob,name);
+      if(window.__saveBlob){ try{ ok=await window.__saveBlob(blob,name); }catch(e1){ if(e1&&(e1.code==='rate_limited'||e1.code==='unavailable'||e1.code==='not_granted')) throw e1; ok=await window.__saveBlob(blob,(smKind==='poll'?'Poll':'Form')+sfx); } }
       else{ const u=URL.createObjectURL(blob), a=document.createElement('a'); a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),4000); }
       if(ok!==false){ toast('PDF exported'); if(done) done(); }
-    }catch(e){ toast('Export failed'); }
+    }catch(e){ try{ console.error('Export failed',e); }catch(_){} toast(e&&e.code==='rate_limited'?'Save prompt already open — wait and retry':'Export failed'+(e&&(e.code||e.message)?' ('+String(e.code||e.message).slice(0,40)+')':'')); }
     finally{ smXBusy=false; } }
 
   // Poll / Quiz: Export all -> list picker (All, 1, 2, 3 ...)
@@ -7533,7 +7536,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     if(pdObs){ pdObs.disconnect(); pdObs=null; } if(pdDoc){ try{ pdDoc.destroy(); }catch(e){} pdDoc=null; } pdGrid.innerHTML=''; if(bk) setTimeout(bk,0); };
   async function openPdfEdit(file,opt){
     opt=opt||{}; pdClose(); const tok=pdTok; pdEdit=!!opt.edit; pdSrc=file; pdName=opt.name||file.name||'document.pdf'; pdName0=pdName; pdOName=opt.oname||pdName;
-    pdDone.textContent=pdEdit?'Save':'Done'; pdDone.disabled=true; pdW.classList.add('show'); pdGrid.scrollTop=0; pdGrid.innerHTML='<div class="pdmsg">Loading…</div>';
+    { const _t=pdW.querySelector('.pdt'); if(_t) _t.textContent=pdEdit?'Edit PDF':'Add PDF'; } pdDone.textContent=pdEdit?'Save':'Done'; pdDone.disabled=true; pdW.classList.add('show'); pdGrid.scrollTop=0; pdGrid.innerHTML='<div class="pdmsg">Loading…</div>';
     try{ const lib=await pdfLoad(), buf=await file.arrayBuffer(), doc=await lib.getDocument({data:new Uint8Array(buf)}).promise;
       if(tok!==pdTok){ try{ doc.destroy(); }catch(e){} return; }
       pdDoc=doc; pdN=doc.numPages; pdGrid.innerHTML='';
