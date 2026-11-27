@@ -4680,7 +4680,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     URLRE.lastIndex=0; let m; while((m=URLRE.exec(t))){ const st=m.index+m[1].length, en=st+m[2].length; if(st>=r.length) break; if(en>r.length){ r=r.slice(0,st); break; } }   // লিংকের মাঝখানে কাটা যাবে না
     return r; };   // null = ১০০ বা কম অক্ষর
   const pinT=()=>'c'+cmPost, pinOk=x=>id=>x.cmts.some(c=>c.id===id);
-  let cmSeen=null, cmPost=null, cmMode='list', cmOpen=null, cmSort=0, cmRSort=0, cdPt=null, cdDr=null, cmReplyTo=null, cmEdit=null, cmSearch=false, cmQ='', cmSMode='text', cmSelMode=false; let cmMultiTo=null, cmMulti=false, cmShot=false; const cmSel=new Set();   // 'list' = কমেন্ট স্ক্রিন, 'rep' = রিপ্লাই স্ক্রিন
+  let cmGrpL='none', cmGrpR='none'; let cmSeen=null, cmPost=null, cmMode='list', cmOpen=null, cmSort=0, cmRSort=0, cdPt=null, cdDr=null, cmReplyTo=null, cmEdit=null, cmSearch=false, cmQ='', cmSMode='text', cmSelMode=false; let cmMultiTo=null, cmMulti=false, cmShot=false; const cmSel=new Set();   // 'list' = কমেন্ট স্ক্রিন, 'rep' = রিপ্লাই স্ক্রিন
   const curX=()=>posts.find(y=>y.id===cmPost);
   const likeN=c=>c.l+(c.my==='like'?1:0), disN=c=>c.dl+(c.my==='dislike'?1:0);
   const sortedC=x=>{
@@ -4790,7 +4790,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     const expd=main?!cmMainMin.has(c.id):cmExp.has(c.id);
     const body=long&&!expd?cmHl(linkEsc(cutT),'text')+'…<span class="rm">Read more</span>':cmHl(linkEsc(tTx),'text')+(long&&expd&&cmSelMode?' <span class="rm">Read less</span>':'');   // Select মোডে expand করা লেখায় Read less দেখায়
     const pin=!c.del&&t==='comment'&&PINS.has(pinT(),c.id)?'<span class="material-symbols-outlined ppin">push_pin</span>':'';
-    return '<div class="cmi'+(sub?' sub d'+(depth||0):'')+(hasRep?' hasrep':'')+(more?' more':'')+'"'+(t==='reply'?' data-rid="'+c.id+'"':'')+'>'+(tls||'')+'<div class="avatar cav2'+(sub?' sm':'')+'"'+(c.an?window.__anAv(c.an):'')+'></div><div class="cmc"><div class="cmh"><span class="cmun">'+cmHl(c.an?esc(c.an.n||'Anonymous'):ME,'user')+'</span> • <span class="ago" data-ts="'+(c.del||(c.hid&&c.hidAt)||c.posted)+'">'+timeAgo(c.del||(c.hid&&c.hidAt)||c.posted)+'</span>'+(c.ed&&!c.del&&!c.hid?' <span class="edd">(edited)</span>':'')+(c.ct&&!c.del?' <span class="cmct" style="color:'+(/^#[0-9a-f]{6}$/i.test(c.ct.c)?c.ct.c:'#3ea6ff')+'"><span class="material-symbols-outlined">sell</span>'+esc(c.ct.v)+'</span>':'')+pin+'</div>'+(c.del?'<div class="cmt"><span class="cmdel">'+(t==='reply'?'Reply deleted':'Comment deleted')+'</span></div>':c.hid?'<div class="cmt"><span class="cmhid">'+hidTxt(t)+'</span></div>':'<div class="cmt"'+(long?' data-tg="1"':'')+(window.__tsAttr?window.__tsAttr(c):'')+'>'+(c.to?'<span class="mention">'+esc(c.to)+'</span> ':'')+((c.to&&window.__tsBg&&window.__tsBg(c))?'<span class="cmtg" style="'+window.__tsBg(c)+'">'+body+'</span>':body)+'</div>'+attHTML(c)+actRow(c,t,open?true:(t==='reply'?'reply':false)))+'</div>'+adRing(c)+'<span class="material-symbols-outlined cmmore" data-t="'+t+'">more_horiz</span></div>';
+    return '<div class="cmi'+(sub?' sub d'+(depth||0):'')+(hasRep?' hasrep':'')+(more?' more':'')+'"'+(t==='reply'?' data-rid="'+c.id+'"':'')+'>'+(tls||'')+'<div class="avatar cav2'+(sub?' sm':'')+'"'+(c.an?window.__anAv(c.an):'')+'></div><div class="cmc"><div class="cmh"><span class="cmun">'+cmHl(c.an?esc(c.an.n||'Anonymous'):ME,'user')+'</span> • <span class="ago" data-ts="'+(c.del||(c.hid&&c.hidAt)||c.posted)+'">'+timeAgo(c.del||(c.hid&&c.hidAt)||c.posted)+'</span>'+(c.ed&&!c.del&&!c.hid?' <span class="edd">(edited)</span>':'')+(c.ct&&!c.del?' <span class="cmct" style="color:'+(/^#[0-9a-f]{6}$/i.test(c.ct.c)?c.ct.c:'#3ea6ff')+'"><span class="material-symbols-outlined">sell</span>'+esc(c.ct.v)+'</span>':'')+pin+'</div>'+(c.del?'<div class="cmt"><span class="cmdel">'+(t==='reply'?'Reply deleted':'Comment deleted')+'</span></div>':c.hid?'<div class="cmt"><span class="cmhid">'+hidTxt(t)+'</span></div>':'<div class="cmt"'+(long?' data-tg="1"':'')+(window.__tsAttr?window.__tsAttr(c):'')+'>'+(c.to?'<span class="mention">'+esc(c.to)+'</span> ':'')+((window.__tsBg&&window.__tsBg(c))?'<span class="cmtg" style="'+window.__tsBg(c)+'">'+body+'</span>':body)+'</div>'+attHTML(c)+actRow(c,t,open?true:(t==='reply'?'reply':false)))+'</div>'+adRing(c)+'<span class="material-symbols-outlined cmmore" data-t="'+t+'">more_horiz</span></div>';
   }
   // রিপ্লাই ট্রি: রিপ্লাইয়ের রিপ্লাই ওই রিপ্লাইয়ের ঠিক নিচে আলাদা সারিতে, ভেতরে সরিয়ে (indent) বসে
   function repRows(tree){
@@ -4887,6 +4887,17 @@ function askDelete(title,cb,yesLabel,slideSel){
     (TL==='en'?cmTrFetch(txt):window.__trFetch(txt,TL)).then(tr=>{ S.cache.set(ck,tr); S.on.add(k); }).catch(()=>{ if(typeof toast==='function') toast('Could not translate'); })
       .finally(()=>{ S.busy.delete(k); const nb=[...cmBody.querySelectorAll('.cmtr')].find(z=>z.dataset.k===k); if(nb) cmTrPaint(nb._cmt,nb); });
   },true);
+  // Group by (None / Date): Date = কমেন্ট / রিপ্লাই পাঠানোর দিন (posted) অনুযায়ী Today / Yesterday / 27 November heading; edit বা hide করলেও send date বদলায় না
+  function cmGroups(list){
+    const dk=t=>{ const d=new Date(t); d.setHours(0,0,0,0); const k=d.getTime(); return isNaN(k)?new Date().setHours(0,0,0,0):k; }, B=new Map();
+    list.forEach(c=>{ const k=dk(c.posted); if(!B.has(k)) B.set(k,[]); B.get(k).push(c); });
+    const asc=getS()===4, keys=[...B.keys()].sort((p,q)=>asc?p-q:q-p), td=dk(Date.now()), yy=new Date(td), tm=new Date(td); yy.setDate(yy.getDate()-1); tm.setDate(tm.getDate()+1);
+    const lb=k=>{ if(k===td) return 'Today'; if(k===yy.getTime()) return 'Yesterday'; if(k===tm.getTime()) return 'Tomorrow'; const d=new Date(k), o={day:'numeric',month:'long'}; if(d.getFullYear()!==new Date().getFullYear()) o.year='numeric'; return d.toLocaleDateString('en-GB',o); };
+    return keys.map(k=>({h:'<div class="cmgh">'+lb(k)+'</div>',items:B.get(k)}));
+  }
+  function cmGrpHTML(cs,mk){ const pn=cs.filter(c=>PINS.has(pinT(),c.id)), rest=cs.filter(c=>!PINS.has(pinT(),c.id));   // pin করা comment আগের মতো সবার উপরে
+    return pn.map(mk).join('')+cmGroups(rest).map(g=>g.h+g.items.map(mk).join('')).join(''); }
+  function cmGrpRep(list){ return cmGroups(list).map(g=>g.h+repRows(g.items)).join(''); }
   function drawCm(){
     const x=curX(); if(!x) return;
     if(window.__mentSync&&window.__mentSync()){ try{ saveC(); }catch(_){} }
@@ -4904,9 +4915,9 @@ function askDelete(title,cb,yesLabel,slideSel){
     let html;
     if(flat){ const m=[]; (function w(l){ l.forEach(r=>{ if(hit(r.del?'':r.txt,r)) m.push(r); w(r.reps); }); })(oc.reps);
       html='<div class="thr" data-cid="'+oc.id+'">'+(m.length?m.map(q=>itemHTML(q,'reply',true,false,false,false,false,0,'')).join(''):'<div class="cmempty"><div>No results</div></div>')+'</div>'; }
-    else if(rep) html='<div class="thr" data-cid="'+oc.id+'">'+itemHTML(oc,'comment',false,false,!!oc.reps.length,false,true)+repRows(sortedR(oc.reps))+'</div>';
+    else if(rep) html='<div class="thr" data-cid="'+oc.id+'">'+itemHTML(oc,'comment',false,false,!!oc.reps.length,false,true)+(cmGrpR==='date'?cmGrpRep(sortedR(oc.reps)):repRows(sortedR(oc.reps)))+'</div>';
     else if(!x.cmts.length) html='<div class="cmempty"><div>No comments yet</div><div>Say something to start the conversation</div></div>';
-    else{ x.cmts.forEach(c=>{ if(c.del&&PINS.has(pinT(),c.id)) PINS.toggle(pinT(),c.id); }); let cs=PINS.first(pinT(),sortedC(x)); if(cmQ) cs=cs.filter(c=>hit(c.del?'':c.txt,c)); html=cs.length?cs.map(c=>'<div class="thr" data-cid="'+c.id+'"'+(PINS.has(pinT(),c.id)?' data-pin="1"':'')+'>'+itemHTML(c,'comment',false,true,!!c.reps.length)+(c.reps.length&&!c.hid?'<div class="rpl" data-open="1"><span>'+rTot(c.reps)+(rTot(c.reps)===1?' reply':' replies')+'</span><span class="material-symbols-outlined">chevron_right</span></div>':'')+'</div>').join(''):'<div class="cmempty"><div>No results</div></div>'; }
+    else{ x.cmts.forEach(c=>{ if(c.del&&PINS.has(pinT(),c.id)) PINS.toggle(pinT(),c.id); }); let cs=PINS.first(pinT(),sortedC(x)); if(cmQ) cs=cs.filter(c=>hit(c.del?'':c.txt,c)); const mkT=c=>'<div class="thr" data-cid="'+c.id+'"'+(PINS.has(pinT(),c.id)?' data-pin="1"':'')+'>'+itemHTML(c,'comment',false,true,!!c.reps.length)+(c.reps.length&&!c.hid?'<div class="rpl" data-open="1"><span>'+rTot(c.reps)+(rTot(c.reps)===1?' reply':' replies')+'</span><span class="material-symbols-outlined">chevron_right</span></div>':'')+'</div>'; html=cs.length?(cmGrpL==='date'?cmGrpHTML(cs,mkT):cs.map(mkT).join('')):'<div class="cmempty"><div>No results</div></div>'; }
     cmBody.innerHTML=((!rep&&window.__glBar)?window.__glBar(x.id):'')+html; cmBody.classList.toggle('flat',flat);
     cmTrScan();
     if(oc) cmBody.querySelectorAll('.cmi[data-rid]').forEach(el=>el.classList.toggle('rdis',ancDel(oc,el.dataset.rid)||ancRp(oc,el.dataset.rid)));
@@ -5010,13 +5021,13 @@ function askDelete(title,cb,yesLabel,slideSel){
     const KS=['b','i','s','u','g'], TS={b:0,i:0,s:0,u:0,g:0}, row=attB.querySelector('#cmTsRow');
     const cssOf=t=>{ t=t||''; const d=[]; if(t.indexOf('u')>=0) d.push('underline'); if(t.indexOf('s')>=0) d.push('line-through'); return {w:t.indexOf('b')>=0?'700':'',i:t.indexOf('i')>=0?'italic':'',d:d.join(' '),g:t.indexOf('g')>=0?'rgba(255,214,10,.32)':''}; };
     window.__tsStr=()=>KS.filter(k=>TS[k]).join('');
-    window.__tsAttr=c=>{ const t=c&&c.ts; if(!t) return ''; const o=cssOf(t); return ' style="'+(o.w?'font-weight:700;':'')+(o.i?'font-style:italic;':'')+(o.d?'text-decoration:'+o.d+';':'')+(o.g&&!c.to?'background:'+o.g+';border-radius:6px;padding:2px 8px;width:fit-content;max-width:100%;box-sizing:border-box;':'')+'"'; };
+    window.__tsAttr=c=>{ const t=c&&c.ts; if(!t) return ''; const o=cssOf(t); return ' style="'+(o.w?'font-weight:700;':'')+(o.i?'font-style:italic;':'')+(o.d?'text-decoration:'+o.d+';':'')+'"'; };
     // Reply to reply (c.to): yellow text highlighter শুধু লেখার অংশে; নীল username-এ লাগে না
-    window.__tsBg=c=>{ const t=c&&c.ts; if(!t||!c.to) return ''; const o=cssOf(t); return o.g?'background:'+o.g+';border-radius:6px;padding:2px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;':''; };
+    window.__tsBg=c=>{ const t=c&&c.ts; if(!t) return ''; const o=cssOf(t); return o.g?'background:'+o.g+';border-radius:6px;padding:2px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;':''; };
     const paint=()=>{ row.querySelectorAll('[data-ts]').forEach(b=>{ const on=!!TS[b.dataset.ts]; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); });
       const o=cssOf(window.__tsStr()); const ti=document.getElementById('cmIn'); if(ti){ ti.style.fontWeight=o.w; ti.style.fontStyle=o.i; ti.style.textDecoration=o.d; ti.style.backgroundColor=''; ti.classList.toggle('tsg',!!o.g); if(window.__tsOvSync) window.__tsOvSync(); } };
     // Text background: textarea নিজে শুধু লেখার অংশে background দিতে পারে না, তাই পেছনে একই লেখার mirror (স্বচ্ছ লেখা + highlight span); placeholder-এ ::placeholder background
-    { const st2=document.createElement('style'); st2.textContent='#cmIn.tsg::placeholder{background:rgba(255,214,10,.32);border-radius:6px;-webkit-box-decoration-break:clone;box-decoration-break:clone}#cmTsOv{position:absolute;z-index:0;margin:0;color:transparent;pointer-events:none;overflow:hidden;box-sizing:border-box;white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;border:0}#cmTsOv span{background:rgba(255,214,10,.32);border-radius:6px;-webkit-box-decoration-break:clone;box-decoration-break:clone}.cminput #cmIn{position:relative;z-index:1}';
+    { const st2=document.createElement('style'); st2.textContent='#cmIn.tsg::placeholder{background:rgba(255,214,10,.32);border-radius:6px;-webkit-box-decoration-break:clone;box-decoration-break:clone}#cmTsOv{-webkit-text-size-adjust:100%;text-size-adjust:100%;position:absolute;z-index:0;margin:0;color:transparent;pointer-events:none;overflow:hidden;box-sizing:border-box;white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;border:0}#cmTsOv span{background:rgba(255,214,10,.32);border-radius:6px;-webkit-box-decoration-break:clone;box-decoration-break:clone}.cminput #cmIn{position:relative;z-index:1}';
       document.head.appendChild(st2);
       let ovEl=null, sig='';
       const esc2=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -5024,16 +5035,17 @@ function askDelete(title,cb,yesLabel,slideSel){
         const on=KS.indexOf('g')>=0&&!!TS.g;
         if(!on){ if(ovEl) ovEl.style.display='none'; sig=''; return; }
         if(!ovEl||ovEl.parentNode!==ti.parentNode){ ovEl=document.createElement('div'); ovEl.id='cmTsOv'; ovEl.setAttribute('aria-hidden','true'); ti.parentNode.insertBefore(ovEl,ti); }
-        const cs=getComputedStyle(ti), n=ti.value+'|'+ti.offsetLeft+'|'+ti.offsetTop+'|'+ti.offsetWidth+'|'+ti.offsetHeight+'|'+ti.scrollTop+'|'+cs.fontWeight+'|'+cs.fontStyle+'|'+cs.fontSize;
+        const cs=getComputedStyle(ti), n=ti.value+'|'+ti.offsetLeft+'|'+ti.offsetTop+'|'+ti.offsetWidth+'|'+ti.offsetHeight+'|'+ti.scrollTop+'|'+cs.fontWeight+'|'+cs.fontStyle+'|'+cs.fontSize+'|'+cs.fontFamily+'|'+cs.lineHeight+'|'+cs.padding+'|'+cs.letterSpacing+'|'+ti.clientWidth+'|'+ti.getBoundingClientRect().width+'|'+ti.selectionEnd;
         ovEl.style.display='block'; if(n===sig) return; sig=n;
-        ovEl.style.left=ti.offsetLeft+'px'; ovEl.style.top=ti.offsetTop+'px'; ovEl.style.width=ti.offsetWidth+'px'; ovEl.style.height=ti.offsetHeight+'px';
-        ovEl.style.fontSize=cs.fontSize; ovEl.style.lineHeight=cs.lineHeight; ovEl.style.fontWeight=cs.fontWeight; ovEl.style.fontStyle=cs.fontStyle; ovEl.style.letterSpacing=cs.letterSpacing; ovEl.style.padding=cs.padding; ovEl.style.textDecoration=cs.textDecoration;
+        ovEl.style.left=ti.offsetLeft+'px'; ovEl.style.top=ti.offsetTop+'px'; { const br=ti.getBoundingClientRect(); ovEl.style.width=br.width+'px'; ovEl.style.height=br.height+'px'; }
+        ovEl.style.fontFamily=cs.fontFamily; ovEl.style.wordSpacing=cs.wordSpacing; ovEl.style.tabSize=cs.tabSize; ovEl.style.fontKerning=cs.fontKerning; ovEl.style.fontFeatureSettings=cs.fontFeatureSettings; ovEl.style.fontVariantLigatures=cs.fontVariantLigatures; ovEl.style.textRendering=cs.textRendering; ovEl.style.wordBreak=cs.wordBreak; ovEl.style.lineBreak=cs.lineBreak; ovEl.style.fontStretch=cs.fontStretch; ovEl.style.fontSize=cs.fontSize; ovEl.style.lineHeight=cs.lineHeight; ovEl.style.fontWeight=cs.fontWeight; ovEl.style.fontStyle=cs.fontStyle; ovEl.style.letterSpacing=cs.letterSpacing; ovEl.style.padding=cs.padding; ovEl.style.textDecoration=cs.textDecoration;
         ovEl.innerHTML=ti.value?'<span>'+esc2(ti.value)+'</span>\u200b':''; ovEl.scrollTop=ti.scrollTop; };
       window.__tsOvSync=ovSync;
-      document.addEventListener('input',e=>{ if(e.target&&e.target.id==='cmIn') ovSync(); },true);
+      document.addEventListener('input',e=>{ if(e.target&&e.target.id==='cmIn'){ ovSync(); requestAnimationFrame(ovSync); setTimeout(ovSync,0); } },true);
       document.addEventListener('scroll',e=>{ if(e.target&&e.target.id==='cmIn') ovSync(); },true);
+      ['compositionstart','compositionupdate','compositionend','keyup','beforeinput','focusin','touchmove','selectionchange'].forEach(n=>document.addEventListener(n,e=>{ if(n==='selectionchange'||(e.target&&e.target.id==='cmIn')){ try{ ovSync(); requestAnimationFrame(ovSync); }catch(_){} } },true));
       window.addEventListener('resize',ovSync);
-      setInterval(()=>{ if(TS.g||(ovEl&&ovEl.style.display!=='none')) ovSync(); },120); }
+      const lp=()=>{ try{ if(TS.g||(ovEl&&ovEl.style.display!=='none')) ovSync(); }catch(_){} requestAnimationFrame(lp); }; requestAnimationFrame(lp); }
     window.__tsSet=t=>{ t=t||''; KS.forEach(k=>{ TS[k]=t.indexOf(k)>=0?1:0; }); paint(); };
     let sv=null;   // Edit শুরুর আগের Text style; Send-এর পর selection আনসিলেক্ট হয় না, শুধু Edit শেষে আগেরটা ফেরে
     window.__tsEditBegin=t=>{ if(sv===null) sv=window.__tsStr(); window.__tsSet(t); };
@@ -5482,7 +5494,8 @@ function askDelete(title,cb,yesLabel,slideSel){
   stkGrid.addEventListener('contextmenu',e=>e.preventDefault());
   stkGrid.addEventListener('scroll',()=>{ clearTimeout(stkLpT); stkToneEl.classList.remove('show'); stkRmEl.classList.remove('show'); });
   let stkCat=-1, stkTab='e', stkTk=0, stkTm=null;
-  const stkEmoji=()=>{ stkToneEl.classList.remove('show'); stkRmEl.classList.remove('show'); stkB.querySelector('#cmStkClr').classList.toggle('show',stkCat===-2&&stkRec.length>0); const tb=stkB.querySelector('#cmStkTabs'), gOn=!window.__qkPick; if(!tb.children.length||tb.dataset.g!==(gOn?'1':'0')){ tb.dataset.g=gOn?'1':'0'; tb.innerHTML=[['All',-1],['Recent',-2]].concat(gOn?[['GIPHY',-3]]:[]).concat(STK_EMO.map((c,i)=>[c[0],i])).map(x=>'<a data-c="'+x[1]+'">'+x[0]+'</a>').join(''); }   // GIPHY tab শুধু attachment-এর sticker window-এ; Quick reaction-এর sticker window-এ নেই [...tb.children].forEach(a=>a.classList.toggle('on',+a.dataset.c===stkCat)); const on=tb.querySelector('.on'); if(on) tb.scrollLeft=Math.max(0,on.offsetLeft-(tb.clientWidth-on.offsetWidth)/2); { const qi=stkB.querySelector('#cmStkQ'); qi.classList.toggle('on',stkCat===-3); if(stkCat===-3){ stkGiphy(qi.value.trim()); return; } stkTk++; }
+  const stkEmoji=()=>{ stkToneEl.classList.remove('show'); stkRmEl.classList.remove('show'); stkB.querySelector('#cmStkClr').classList.toggle('show',stkCat===-2&&stkRec.length>0); const tb=stkB.querySelector('#cmStkTabs'), gOn=!window.__qkPick; if(!tb.children.length||tb.dataset.g!==(gOn?'1':'0')){ tb.dataset.g=gOn?'1':'0'; tb.innerHTML=[['All',-1],['Recent',-2]].concat(gOn?[['GIPHY',-3]]:[]).concat(STK_EMO.map((c,i)=>[c[0],i])).map(x=>'<a data-c="'+x[1]+'">'+x[0]+'</a>').join(''); }   // GIPHY tab শুধু attachment-এর sticker window-এ; Quick reaction-এর sticker window-এ নেই
+    [...tb.children].forEach(a=>a.classList.toggle('on',+a.dataset.c===stkCat)); const on=tb.querySelector('.on'); if(on) tb.scrollLeft=Math.max(0,on.offsetLeft-(tb.clientWidth-on.offsetWidth)/2); { const qi=stkB.querySelector('#cmStkQ'); qi.classList.toggle('on',stkCat===-3); if(stkCat===-3){ stkGiphy(qi.value.trim()); return; } stkTk++; }
     if(stkCat===-2){ stkGrid.innerHTML=stkRec.length?'<div class="stke">'+stkRec.map(x=>'<span data-e="'+x[0]+'" data-t="'+x[1]+'" data-r="1">'+stkCell(x[0],x[1])+'</span>').join('')+'</div>':'<div class="gphm">No recent stickers</div>'; stkGrid.scrollTop=0; return; }
     const list=stkCat<0?STK_EMO:[STK_EMO[stkCat]]; stkGrid.innerHTML=(stkCat===-1&&stkPin.length?'<div class="stkph"><h3>Pinned</h3><span class="stkpc">Clear</span></div><div class="stke stkpin">'+stkPin.map(x=>'<span data-e="'+x[0]+'" data-t="'+x[1]+'" data-p="1">'+stkCell(x[0],x[1])+'</span>').join('')+'</div>':'')+list.map(c=>{ const y=c[0]==='Smileys'||c[0]==='Gestures'; return (stkCat<0?'<h3>'+c[0]+'</h3>':'')+'<div class="stke">'+c[1].split(' ').map(e=>'<span data-e="'+e+'"'+(y?' data-y="1"':'')+'>'+stkCell(e,y?(stkTn[strip(e)]||0):0)+'</span>').join('')+'</div>'; }).join(''); stkGrid.scrollTop=0; };
   async function stkGiphy(q){
@@ -6506,6 +6519,7 @@ function askDelete(title,cb,yesLabel,slideSel){
 #drPop .drfo{padding:11px 14px;font-size:17px;color:#ddd;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #drPop .drfo:active{background:#4a4a4a}
 #drPop .drfo.on{background:#1f3a52;color:#fff}
+#drPop .drfimp{display:flex;align-items:center;gap:10px;padding:11px 14px;font-size:17px;color:#8ab4f8;cursor:pointer;border-bottom:1px solid #4a4a4a;position:sticky;top:0;background:#383838;z-index:1}#drPop .drfimp:active{background:#4a4a4a}#drPop .drfimp .material-symbols-outlined{font-size:22px}
 #drPop .drtsb{display:flex;flex:none;gap:2px;margin-left:auto}
 #drPop .drtsb span{flex:none;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#aaa;font-size:22px;user-select:none;-webkit-user-select:none}
 #drPop .drtsb span.on{background:#3ea6ff;color:#0f0f0f}#drPop .drlsb span{font-size:16px;font-weight:600;line-height:1}#drPop .drlsb{flex:1 1 auto;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;touch-action:pan-x;-webkit-overflow-scrolling:touch}#drPop .drlsb::-webkit-scrollbar{display:none}#drPop .drlsb>span:first-child{margin-left:auto}
@@ -6556,7 +6570,7 @@ function askDelete(title,cb,yesLabel,slideSel){
 <div class="drhd"><button type="button" id="drBack" class="dri" aria-label="Back"><span class="material-symbols-outlined">arrow_back</span></button><h2>Drawing</h2><button type="button" id="drUndo" class="dri" aria-label="Undo" title="Undo" disabled><span class="material-symbols-outlined">undo</span></button><button type="button" id="drRedo" class="dri" aria-label="Redo" title="Redo" disabled><span class="material-symbols-outlined">redo</span></button><button type="button" id="drReset" disabled>Reset</button><button type="button" id="drDone" disabled>Done</button></div>
 <div id="drScroll"><div id="drWrap"><canvas id="drMain"></canvas><canvas id="drLive"></canvas></div></div>
 <div id="drBar">${tools.map(t=>`<button type="button" class="drt" data-t="${t[0]}" aria-label="${t[1]}" title="${t[1]}">${T[t[0]]}</button>`).join('')}</div>
-<div id="drPop"><div class="drfrow"><span class="material-symbols-outlined">font_download</span><span class="drfn">Font</span><div class="drfsel" id="drFSel" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false"><span class="drfv">Roboto</span><span class="material-symbols-outlined">arrow_drop_down</span></div></div><div class="drfdd" id="drFDd" role="listbox">${FONTS.map(f=>`<div class="drfo" role="option" data-f="${f}" style="font-family:'${f}',Roboto,Arial,'Noto Sans Bengali',sans-serif">${f}</div>`).join('')}</div>
+<div id="drPop"><div class="drfrow"><span class="material-symbols-outlined">font_download</span><span class="drfn">Font</span><div class="drfsel" id="drFSel" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false"><span class="drfv">Roboto</span><span class="material-symbols-outlined">arrow_drop_down</span></div></div><div class="drfdd" id="drFDd" role="listbox"><div class="drfimp" role="button" tabindex="0"><span class="material-symbols-outlined">upload_file</span>Import fonts</div>${FONTS.map(f=>`<div class="drfo" role="option" data-f="${f}" style="font-family:'${f}',Roboto,Arial,'Noto Sans Bengali',sans-serif">${f}</div>`).join('')}</div>
 <div class="drfrow drtsRow"><span class="material-symbols-outlined">text_format</span><span class="drfn">Font style</span><span class="drtsb"><span class="material-symbols-outlined" data-fs="b" role="button" aria-pressed="false" title="Bold">format_bold</span><span class="material-symbols-outlined" data-fs="i" role="button" aria-pressed="false" title="Italic">format_italic</span><span class="material-symbols-outlined" data-fs="s" role="button" aria-pressed="false" title="Strikethrough">format_strikethrough</span><span class="material-symbols-outlined" data-fs="u" role="button" aria-pressed="false" title="Underline">format_underlined</span></span></div>
 <div class="drfrow drtsRow"><span class="material-symbols-outlined">format_list_bulleted</span><span class="drfn">List style</span><span class="drtsb drlsb"><span data-ls="N" role="button" aria-pressed="false" title="Numbers: 1, 2, 3">1.</span><span data-ls="E" role="button" aria-pressed="false" title="Numbers with bracket: 1), 2), 3)">1)</span><span data-ls="A" role="button" aria-pressed="false" title="Lowercase letters: a, b, c">a.</span><span data-ls="F" role="button" aria-pressed="false" title="Lowercase letters with bracket: a), b), c)">a)</span><span data-ls="R" role="button" aria-pressed="false" title="Roman numerals: i, ii, iii">i.</span><span data-ls="G" role="button" aria-pressed="false" title="Roman numerals with bracket: i), ii), iii)">i)</span><span data-ls="D" role="button" aria-pressed="false" title="Solid circle bullet">&#8226;</span><span data-ls="H" role="button" aria-pressed="false" title="Hollow circle">&#9675;</span><span data-ls="Q" role="button" aria-pressed="false" title="Solid square">&#9642;</span><span data-ls="C" role="button" aria-pressed="false" title="Checkmark">&#10003;</span><span data-ls="W" role="button" aria-pressed="false" title="Arrow">&#10146;</span><span data-ls="X" role="button" aria-pressed="false" title="Arrow (long)">&#10148;</span><span data-ls="M" role="button" aria-pressed="false" title="Diamond">&#10070;</span><span data-ls="Y" role="button" aria-pressed="false" title="Solid diamond">&#9830;</span></span></div>
 <div class="drpens pp">${PENS.map(p=>`<button type="button" class="drpen" data-p="${p[0]}" aria-label="${p[1]}" title="${p[1]}">${P[p[0]]}</button>`).join('')}</div>
@@ -7156,6 +7170,25 @@ function askDelete(title,cb,yesLabel,slideSel){
         pop.querySelector('.drtsb').addEventListener('click',e=>{ const b=e.target.closest('[data-fs]'); if(!b) return; e.stopPropagation(); const k=b.dataset.fs; st.tts=st.tts.indexOf(k)>=0?st.tts.replace(k,''):st.tts+k; fApply(); });
         pop.querySelector('.drlsb').addEventListener('click',e=>{ const b=e.target.closest('[data-ls]'); if(!b) return; e.stopPropagation(); const k=b.dataset.ls, cur=lsOf(st.tts); st.tts=st.tts.replace(/[NARDHQCWMXYEFG]/g,'')+(cur===k?'':k); fApply(); });
         new MutationObserver(()=>{ if(!pop.classList.contains('show')) fToggle(false); }).observe(pop,{attributes:true,attributeFilter:['class']});
+
+        // ---- Import fonts: Device থেকে যেকোনো font file (ttf / otf / woff / woff2 / ttc …) import; list-এর শুরুতে Import fonts-এর ঠিক পরেই দেখায়, IndexedDB-তে থেকে যায় ----
+        { const fImpBtn=fDd.querySelector('.drfimp'), fImpFF=new Map();
+          const fImpIn=document.createElement('input'); fImpIn.type='file'; fImpIn.multiple=true; fImpIn.accept='*/*'; fImpIn.style.display='none'; fImpIn.addEventListener('click',e=>e.stopPropagation()); pop.appendChild(fImpIn);
+          const fMsg=m=>{ const el=document.getElementById('drMsg'); if(!el) return; el.textContent=m; el.classList.add('show'); clearTimeout(fMsg._t); fMsg._t=setTimeout(()=>el.classList.remove('show'),2600); };
+          const fDB=()=>new Promise((res,rej)=>{ try{ const r=indexedDB.open('drImpFonts',1); r.onupgradeneeded=()=>{ r.result.createObjectStore('f',{keyPath:'name'}); }; r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }catch(e){ rej(e); } });
+          const fDbPut=(name,data)=>fDB().then(db=>new Promise(res=>{ const t=db.transaction('f','readwrite'); t.objectStore('f').put({name:name,data:data,t:Date.now()}); t.oncomplete=()=>res(); t.onerror=()=>res(); })).catch(()=>{});
+          const fDbAll=()=>fDB().then(db=>new Promise(res=>{ const q=db.transaction('f').objectStore('f').getAll(); q.onsuccess=()=>res((q.result||[]).sort((a,b)=>(a.t||0)-(b.t||0))); q.onerror=()=>res([]); })).catch(()=>[]);
+          const fReg=async(name,buf)=>{ const ff=new FontFace(name,buf); await ff.load(); const old=fImpFF.get(name); if(old){ try{ document.fonts.delete(old); }catch(_){} } document.fonts.add(ff); fImpFF.set(name,ff); };
+          const fImpOpt=name=>{ [...fDd.querySelectorAll('.drfo[data-imp]')].forEach(o=>{ if(o.dataset.f===name) o.remove(); });
+            const d=document.createElement('div'); d.className='drfo'; d.setAttribute('role','option'); d.dataset.f=name; d.dataset.imp='1'; d.style.fontFamily=fFam(name); d.textContent=name; fImpBtn.after(d); };   // নতুন font Import fonts-এর ঠিক পরে
+          const fName=f=>{ let n=String(f.name||'').replace(/\.[^.]*$/,'').replace(/['"\\<>&]/g,'').replace(/\s+/g,' ').trim()||'Font'; if(FONTS.indexOf(n)>=0) n+=' (imported)'; return n; };
+          fImpBtn.addEventListener('click',e=>{ e.stopPropagation(); fImpIn.value=''; fImpIn.click(); });
+          fImpBtn.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); fImpIn.value=''; fImpIn.click(); } });
+          fImpIn.addEventListener('change',async()=>{ const fs=[...(fImpIn.files||[])]; let ok=0, bad=0;
+            for(const f of fs){ try{ const buf=await f.arrayBuffer(), nm=fName(f); await fReg(nm,buf.slice(0)); fImpOpt(nm); fDbPut(nm,buf); ok++; }catch(_){ bad++; } }
+            fPaint(); fToggle(true); fDd.scrollTop=0;
+            fMsg(bad?(ok?ok+' font imported, '+bad+' not supported':(fs.length>1?'These files are not supported font files':'This is not a supported font file')):(ok===1?'Font imported':ok+' fonts imported')); });
+          fDbAll().then(async list=>{ let any=false; for(const r of list){ try{ await fReg(r.name,r.data.slice(0)); fImpOpt(r.name); any=true; }catch(_){} } if(any){ fPaint(); try{ if(txEd) txStyle(); paintBar(); }catch(_){} } }); }
         win._fPaint=fPaint; fPaint(); }
       const txDesel=()=>{ if(selTx()) selClear(); }; win._txDesel=txDesel;
       const openText=(p,forceOld)=>{ txCommit(); let old=forceOld||null; if(!old){ old=txAt(p); if(old&&selTx()===old&&strokes.indexOf(old)>=0){ /* already selected -> edit */ } else if(old){ selClear(); txSelect(old); return; } else if(sel.bb){ selClear(); return; } }
@@ -9300,9 +9333,9 @@ function askDelete(title,cb,yesLabel,slideSel){
     else if(cmMode==='list'&&cmMultiTo){ t.textContent='Multiple replying'; bar.style.display='flex'; }
     else bar.style.display='none';
   }
-  function setMode(m){ cmMode=m; if(m==='rep'){ cmRSort=0; cmColl.clear(); try{ const xx=curX(), oc=xx&&xx.cmts.find(y=>y.id===cmOpen); if(oc) (oc.reps||[]).forEach(r=>{ if((r.reps||[]).length) cmColl.add(String(r.id)); }); }catch(_){} } cmReplyTo=null; cmResetModes(); resetIn(); cmMenu.classList.remove('show'); drawCm(); cmBody.scrollTop=0; }
+  function setMode(m){ cmMode=m; if(m==='rep'){ cmRSort=0; cmGrpR='none'; cmColl.clear(); try{ const xx=curX(), oc=xx&&xx.cmts.find(y=>y.id===cmOpen); if(oc) (oc.reps||[]).forEach(r=>{ if((r.reps||[]).length) cmColl.add(String(r.id)); }); }catch(_){} } cmReplyTo=null; cmResetModes(); resetIn(); cmMenu.classList.remove('show'); drawCm(); cmBody.scrollTop=0; }
   const lockPage=on=>{ document.documentElement.style.overflow=on?'hidden':''; document.body.style.overflow=on?'hidden':''; };
-  function openCm(id){ cmResetModes(); cmSeen=null; cmS.classList.remove('full'); cmPost=id; cmMode='list'; cmOpen=null; cmReplyTo=null; cmSort=0; cmMenu.querySelectorAll('div').forEach(z=>z.classList.toggle('on',+z.dataset.m===0)); resetIn(); cmMenu.classList.remove('show'); drawCm(); cmBody.scrollTop=0; cmOv.classList.add('show'); cmS.classList.add('show'); lockPage(true); try{ if(window.__glAuto) window.__glAuto(id); }catch(_){} }
+  function openCm(id){ cmResetModes(); cmSeen=null; cmS.classList.remove('full'); cmPost=id; cmMode='list'; cmOpen=null; cmReplyTo=null; cmSort=0; cmGrpL='none'; cmGrpR='none'; cmMenu.querySelectorAll('div').forEach(z=>z.classList.toggle('on',+z.dataset.m===0)); resetIn(); cmMenu.classList.remove('show'); drawCm(); cmBody.scrollTop=0; cmOv.classList.add('show'); cmS.classList.add('show'); lockPage(true); try{ if(window.__glAuto) window.__glAuto(id); }catch(_){} }
   // লেখা reply draft থাকলে back/close/বাইরে চাপ/swipe-down/Esc — সবখানে "Discard this reply?" আসবে
   const repDraft=()=>{ const v=cmIn.value.trim(); return cmEdit?(v!==cmEdit.o.txt||attChg()||!!window.__cmEditSetChg(cmEdit.o)||!!(window.__ctChg&&window.__ctChg(cmEdit.o))||(window.__tsStr?window.__tsStr():'')!==(cmEdit.o.ts||'')):(!!v||!!cmAtt); };   // Edit-এ Text style / Like / Dislike / Reply / Auto delete বদলালেও Discard dialog   // add comment / add reply / edit — যেকোনো অসমাপ্ত লেখা
   const draftMsg=()=>cmEdit?'Discard this edit?':(cmMultiTo?'Discard '+cmMultiTo.length+(cmMultiTo.length===1?' reply?':' replies?'):(cmMode==='rep'?'Discard this reply?':'Discard this comment?'));
@@ -9363,7 +9396,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   // Edit / Reply / Reply-to-reply চাপলে সাথে সাথে show; Edit / Reply / Reply-to-reply / Add comment / Add reply active (focus / লেখা / attachment) থাকলে hide হবে না; window বন্ধ হলে আগের অবস্থায় ফেরে
   { const ft=cmS.querySelector('.cmfoot'); if(ft){
     const fcss=document.createElement('style');
-    fcss.textContent='.cmfoot{transition:margin-bottom .25s ease,transform .25s ease}.cmfoot.fdrag{transition:none!important}.cmsheet.fhid .cmfoot{margin-bottom:calc(-1 * var(--cmfh,0px));pointer-events:none}'
+    fcss.textContent='.cmfoot{transition:margin-bottom .25s ease,transform .25s ease}.cmfoot.fdrag{transition:none!important}.cmfoot.fdrag textarea{-webkit-user-select:none;user-select:none;pointer-events:none}.cmsheet.fhid .cmfoot{margin-bottom:calc(-1 * var(--cmfh,0px));pointer-events:none}'
       +'.cmfoot{-webkit-touch-callout:none}.cmfoot :not(textarea){-webkit-user-select:none;user-select:none}'
       +'#cmEdge{display:none;position:absolute;left:0;right:0;bottom:0;height:calc(28px + env(safe-area-inset-bottom,0px));z-index:7;touch-action:none}.cmsheet.fhid #cmEdge{display:block}.cmsheet.sel #cmEdge{display:none}'
       +'#cmPrev .pvth{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}#cmPrev .pvth img,#cmPrev .pvth video{pointer-events:none;-webkit-user-drag:none}'
@@ -9380,15 +9413,16 @@ function askDelete(title,cb,yesLabel,slideSel){
     // hold (250ms) → swipe down
     let hs=null;
     const hClear=()=>{ if(hs){ clearTimeout(hs.t); hs=null; } };
-    const hDown=(x,y,t)=>{ hClear(); if(hid||!emptyAt(t)||!canHide()) return; hs={x:x,y:y,ly:y,lt:performance.now(),v:0,dy:0,armed:false,t:setTimeout(()=>{ if(hs){ hs.armed=true; if(navigator.vibrate){ try{ navigator.vibrate(10); }catch(_){} } } },250)}; };
+    const hDown=(x,y,t)=>{ hClear(); if(hid||!(emptyAt(t)||(t&&t.closest&&t.closest('.cmfoot')&&!t.closest('#cmAdd,#cmSend,#cmClrT,.pvth,#cmRtX,button,[id^="cmPv"]')))||!canHide()) return; const tb=t.closest('textarea,.cminput')?1:0; if(t.closest('textarea')&&cmIn.scrollHeight>cmIn.clientHeight+1) return; hs={x:x,y:y,ly:y,lt:performance.now(),v:0,dy:0,up:0,e:emptyAt(t),bx:!!tb,armed:false,t:setTimeout(()=>{ if(hs){ hs.armed=true; if(navigator.vibrate){ try{ navigator.vibrate(10); }catch(_){} } } },120)}; };
     const hMove=(x,y,e)=>{ if(!hs) return;
-      if(!hs.armed){ if(Math.abs(y-hs.y)>10||Math.abs(x-hs.x)>10) hClear(); return; }
+      if(!hs.armed){ if(Math.abs(y-hs.y)>16||Math.abs(x-hs.x)>16) hClear(); return; }
       if(e&&e.cancelable) e.preventDefault();
-      const n=performance.now(); hs.v=(y-hs.ly)/Math.max(1,n-hs.lt); hs.ly=y; hs.lt=n; hs.dy=Math.max(0,y-hs.y);
-      ft.classList.add('fdrag'); ft.style.transform='translateY('+hs.dy+'px)'; };
+      const n=performance.now(); hs.v=(y-hs.ly)/Math.max(1,n-hs.lt); hs.ly=y; hs.lt=n; hs.dy=Math.max(0,y-hs.y); hs.up=Math.max(0,hs.y-y);
+      ft.classList.add('fdrag'); ft.style.transform=(hs.up>hs.dy)?'translateY('+(-Math.min(hs.up,70)*.4)+'px)':'translateY('+hs.dy+'px)'; };
     const hUp=cancel=>{ if(!hs) return; const s=hs; clearTimeout(s.t); hs=null; if(!s.armed) return;
       ft.classList.remove('fdrag');
-      if(!cancel&&(s.dy>40||(s.v>.5&&s.dy>12))) fHide(); else ft.style.transform=''; };
+      if(!cancel&&s.up>s.dy&&(s.up>30||(s.v<-.3&&s.up>10))&&window.__cmEdOpen&&window.__cmEdOpen()){ ft.style.transform=''; return; }   // hold + up swipe = Comment / Reply bottom sheet
+      if(!cancel&&(s.e||s.bx)&&(s.dy>40||(s.v>.5&&s.dy>12))){ if(s.bx){ try{ cmIn.blur(); }catch(_){} } fHide(); } else ft.style.transform=''; };
     ft.addEventListener('touchstart',e=>{ if(e.touches.length!==1){ hClear(); return; } hDown(e.touches[0].clientX,e.touches[0].clientY,e.target); },{passive:true});
     ft.addEventListener('touchmove',e=>{ if(e.touches.length) hMove(e.touches[0].clientX,e.touches[0].clientY,e); },{passive:false});
     ft.addEventListener('touchend',()=>hUp(false)); ft.addEventListener('touchcancel',()=>hUp(true));
@@ -9426,6 +9460,135 @@ function askDelete(title,cb,yesLabel,slideSel){
     }
   } }
 
+  // ---- Comment box menu > hold + up swipe = Comment / Reply bottom sheet (Comments window-এর মতো); সব বক্স / attachment / label একই element, শুধু জায়গা বদলায় ----
+  { const ft=cmS.querySelector('.cmfoot'); if(ft){
+    const st=document.createElement('style');
+    st.textContent='.cmfoot.edmv .cmrow{visibility:hidden}#cmEdOv{position:fixed;inset:0;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .25s;z-index:27}#cmEdOv.show{opacity:1;pointer-events:auto}'
+      +'#cmEd{position:fixed;left:50%;bottom:0;width:100%;max-width:600px;height:86vh;height:86dvh;background:var(--bg);border-radius:16px 16px 0 0;transform:translate(-50%,100%);transition:transform .25s ease;z-index:28;display:flex;flex-direction:column;visibility:hidden;overscroll-behavior:contain}'
+      +'#cmEd.show{transform:translate(-50%,0);visibility:visible}#cmEd.drag{transition:none!important}#cmEd.full{border-radius:0;max-width:none}#cmEd.full .hd{margin-top:calc(12px + env(safe-area-inset-top,0px))}'
+      +'#cmEd .hd{width:40px;height:4px;border-radius:2px;background:#717171;margin:12px auto 14px;flex-shrink:0;touch-action:none}'
+      +'#cmEd .cmhead{gap:20px;touch-action:none}#cmEd .cmhead .ttl{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#cmEd .cmhead .material-symbols-outlined{cursor:pointer;flex:none}#cmEd .cmhead .material-symbols-outlined.dis{opacity:.3;pointer-events:none}'
+      +'#cmEd #cmRt{padding:12px 16px 4px;flex-shrink:0}#cmEd #cmPrev{padding:10px 16px 4px;flex-shrink:0}'
+      +'#cmEdBox{flex:1;min-height:0;display:flex;padding:12px 16px 8px}#cmEdEm{position:relative;display:flex;justify-content:flex-start;align-items:center;gap:10px;flex-shrink:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;touch-action:pan-x;scrollbar-width:none;padding:4px 16px calc(12px + env(safe-area-inset-bottom,0px))}#cmEdEm::-webkit-scrollbar{display:none}#cmEdEm button{flex:none;padding:6px 8px!important;-webkit-touch-callout:none;background:none;border:0;padding:6px 4px;font-size:30px;line-height:1;cursor:pointer;color:inherit;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}#cmEdEm button.attsq{transform:scale(.88)!important;filter:brightness(.82);transition:transform .22s cubic-bezier(.2,.9,.3,1.25),filter .22s}#cmEdEm button.edrag{transform:translateX(var(--dx,0px)) scale(.92)!important;transition:filter .2s!important;position:relative;z-index:3}'
+      +'#cmEdBox .cminput{flex:1;min-width:0;align-items:flex-start;border-radius:16px;padding:0 10px 0 16px}'
+      +'#cmEdBox .cminput textarea{height:100%!important;overflow-y:auto!important;font-size:18px}#cmEdBox .cminput #cmSend{display:none!important}#cmEdBox .cminput.txt #cmClrT{display:block;margin-top:10px}';
+    document.head.appendChild(st);
+    const ov=document.createElement('div'); ov.id='cmEdOv';
+    const ed=document.createElement('div'); ed.id='cmEd';
+    ed.innerHTML='<div class="hd"></div><div class="cmhead" id="cmEdHead"><span class="ttl" id="cmEdTtl">Comment</span><span class="material-symbols-outlined" id="cmEdAtt" title="Add files">attach_file</span><span class="material-symbols-outlined" id="cmEdSet" title="Settings">settings</span><span class="material-symbols-outlined" id="cmEdTr" title="Translate" style="display:none">translate</span><span class="material-symbols-outlined" id="cmEdSend" title="Send">send</span></div><div id="cmEdMid"></div><div id="cmEdBox"></div><div id="cmEdEm"></div>';
+    document.body.appendChild(ov); document.body.appendChild(ed);
+    const mid=ed.querySelector('#cmEdMid'), bx=ed.querySelector('#cmEdBox'), rt=$('cmRt');
+    let open=false, backT=null, poll=null, sent=0, full=false;
+    // নিচের emoji bar: HTML-এর নিজস্ব emoji set (Sticker window) থেকে; চাপলে cursor-এর জায়গায় লেখায় যোগ হয়
+    { const em=ed.querySelector('#cmEdEm'); const nz=x=>x.replace(/\uFE0F/g,''); const all=[]; try{ (window.__STK_EMO||[]).forEach(c=>c[1].split(' ').forEach(x=>all.push(x))); }catch(_){}
+      ['❤️','😂','🎉','😢','😮','😅','😊','😍','🙌','👏','🔥'].forEach(w=>{ const e=all.find(x=>nz(x)===nz(w))||w; const b=document.createElement('button'); b.type='button'; b.textContent=e; b.setAttribute('aria-label','Insert '+e);
+        b.addEventListener('pointerdown',ev=>ev.preventDefault());
+        b.addEventListener('click',()=>{ if(cmBlocked||cmIn.disabled||cmIn.readOnly) return; const s=cmIn.selectionStart==null?cmIn.value.length:cmIn.selectionStart, t=cmIn.selectionEnd==null?s:cmIn.selectionEnd; cmIn.setRangeText(e,s,t,'end'); cmIn.dispatchEvent(new Event('input',{bubbles:true})); });
+        em.appendChild(b); });
+      { let tm=null,sx=0,sy=0,el=null,lastH=0,dg=null,raf=0,pid=null;
+        const KEY='cmEdEmOrder';
+        const saveOrd=()=>{ try{ localStorage.setItem(KEY,JSON.stringify([...em.children].map(b=>nz(b.textContent)))); }catch(_){} };
+        try{ const sv=JSON.parse(localStorage.getItem(KEY)||'null'); if(Array.isArray(sv)){ const bs=[...em.children]; bs.sort((a,b)=>{ const ia=sv.indexOf(nz(a.textContent)), ib=sv.indexOf(nz(b.textContent)); return (ia<0?99:ia)-(ib<0?99:ib); }); bs.forEach(b=>em.appendChild(b)); } }catch(_){}
+        const off=()=>{ clearTimeout(tm); tm=null; if(el){ el.classList.remove('attsq','edrag'); el=null; } };
+        const flip=(n,fn)=>{ const a=n.offsetLeft; fn(); const d=a-n.offsetLeft; n.style.transition='none'; n.style.transform='translateX('+d+'px)'; void n.offsetWidth; n.style.transition='transform .18s ease'; n.style.transform=''; setTimeout(()=>{ n.style.transition=''; },200); };
+        // বাইরে যেতে পারে না: দেখা যাওয়া অংশ + পুরো bar-এর ভেতরেই clamp
+        const place=()=>{ if(!dg||!el) return; const w=el.offsetWidth, r=em.getBoundingClientRect(), px=dg.cx-r.left+em.scrollLeft;
+          const lo=Math.max(0,em.scrollLeft), hi=Math.min(em.scrollWidth-w,em.scrollLeft+em.clientWidth-w);
+          let L=Math.max(lo,Math.min(px-dg.gx,hi));
+          for(let g=0;g<4;g++){ const p=el.previousElementSibling, n=el.nextElementSibling, c=L+w/2;
+            if(p&&c<p.offsetLeft+p.offsetWidth/2) flip(p,()=>em.insertBefore(el,p));
+            else if(n&&c>n.offsetLeft+n.offsetWidth/2) flip(n,()=>em.insertBefore(n,el));
+            else break; }
+          el.style.setProperty('--dx',(L-el.offsetLeft)+'px'); };
+        const loop=()=>{ if(!dg) return; const r=em.getBoundingClientRect(); let d=0; if(dg.cx<r.left+36) d=-9; else if(dg.cx>r.right-36) d=9;
+          if(d){ const o=em.scrollLeft; em.scrollLeft+=d; if(em.scrollLeft!==o) place(); } raf=requestAnimationFrame(loop); };
+        const fire=(t,drag)=>{ if(el===t) return; off(); lastH=Date.now(); if(navigator.vibrate){ try{ navigator.vibrate(15); }catch(_){} } el=t; void t.offsetWidth; t.classList.add('attsq');
+          if(drag){ const r=em.getBoundingClientRect(); dg={cx:sx,gx:(sx-r.left+em.scrollLeft)-t.offsetLeft}; t.classList.add('edrag'); t.style.setProperty('--dx','0px'); try{ if(pid!=null) em.setPointerCapture(pid); }catch(_){} cancelAnimationFrame(raf); raf=requestAnimationFrame(loop); } };
+        const end=()=>{ clearTimeout(tm); tm=null; cancelAnimationFrame(raf);
+          if(dg&&el){ const t=el, d=parseFloat(t.style.getPropertyValue('--dx'))||0; dg=null; el=null; lastH=Date.now(); t.classList.remove('edrag','attsq'); t.style.removeProperty('--dx');
+            t.style.transition='none'; t.style.transform='translateX('+d+'px)'; void t.offsetWidth; t.style.transition='transform .2s ease'; t.style.transform=''; setTimeout(()=>{ t.style.transition=''; },220); saveOrd(); return; }
+          dg=null; off(); };
+        em.addEventListener('pointerdown',e=>{ const t=e.target.closest&&e.target.closest('button'); if(!t||(e.pointerType==='mouse'&&e.button!==0)) return; off(); sx=e.clientX; sy=e.clientY; pid=e.pointerId; tm=setTimeout(()=>{ tm=null; fire(t,true); },450); });
+        em.addEventListener('pointermove',e=>{ if(dg){ dg.cx=e.clientX; place(); e.preventDefault(); return; } if(tm&&(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10)){ clearTimeout(tm); tm=null; } });
+        ['pointerup','pointercancel'].forEach(n=>em.addEventListener(n,end));
+        em.addEventListener('pointerleave',()=>{ if(!dg) end(); });
+        em.addEventListener('touchmove',e=>{ if(dg&&e.cancelable) e.preventDefault(); },{passive:false});
+        em.addEventListener('scroll',()=>{ if(!dg){ clearTimeout(tm); tm=null; } });
+        em.addEventListener('contextmenu',e=>{ const t=e.target.closest&&e.target.closest('button'); if(!t) return; e.preventDefault(); });
+        em.addEventListener('click',e=>{ if(Date.now()-lastH<900&&e.target.closest&&e.target.closest('button')){ e.stopImmediatePropagation(); e.preventDefault(); } },true); } }
+    const toFoot=()=>{ ft.insertBefore(rt,ft.firstChild); ft.insertBefore(cmPrev,cmRow); cmRow.insertBefore(cmBox,cmRow.firstChild); try{ cmInput(); }catch(_){} };
+    const paint=()=>{
+      { const tt=ed.querySelector('#cmEdTtl'), w=cmEdit?(cmEdit.isReply?'Reply':'Comment'):((cmMultiTo||cmMode==='rep')?'Reply':'Comment'); if(tt.textContent!==w) tt.textContent=w; }
+      const tr=ed.querySelector('#cmEdTr'); tr.style.display=(cmSet&&cmSet.tr&&cmSet.tr!=='none')?'':'none';
+      ed.querySelector('#cmEdAtt').classList.toggle('dis',!!(cmAdd.classList.contains('lim')||cmAdd.classList.contains('mrd')||cmSetOnly()));
+      ed.querySelector('#cmEdSend').classList.toggle('dis',!cmBox.classList.contains('has'));
+      if(sent){ if(Date.now()-sent>4000) sent=0; else if(!cmIn.value.trim()&&!cmAtt&&!cmEdit){ sent=0; close(); } } };
+    const vhNow=()=>{ const v=window.visualViewport; return v?v.height:innerHeight; };
+    const fit=()=>{ if(!open) return; const v=window.visualViewport, vh=vhNow(); ed.style.bottom=(v?Math.max(0,innerHeight-v.height-v.offsetTop):0)+'px'; ed.style.height=(full?vh:Math.min(innerHeight*.86,vh))+'px'; };
+    function openEd(){
+      if(open||cmBlocked||!cmS.classList.contains('show')||cmS.classList.contains('sel')) return false;
+      clearTimeout(backT); backT=null; full=false; ed.classList.remove('full');
+      if(!ft.classList.contains('edmv')){ ft.style.minHeight=ft.offsetHeight+'px'; ft.classList.add('edmv'); }
+      mid.appendChild(rt); mid.appendChild(cmPrev); bx.appendChild(cmBox);
+      open=true; try{ cmInput(); }catch(_){}
+      ov.classList.add('show'); ed.style.transform=''; fit(); void ed.offsetWidth; ed.classList.add('show');
+      poll=setInterval(paint,250); paint();
+      setTimeout(()=>{ if(open) try{ cmIn.focus(); }catch(_){} },280);
+      return true; }
+    function close(){
+      if(!open) return; open=false; clearInterval(poll); poll=null; sent=0;
+      try{ cmIn.blur(); }catch(_){}
+      ov.classList.remove('show'); ed.classList.remove('drag'); ed.style.transform=''; ed.classList.remove('show');
+      backT=setTimeout(()=>{ backT=null; if(!open){ full=false; ed.classList.remove('full'); toFoot(); ft.classList.remove('edmv'); ft.style.minHeight=''; ed.style.bottom=''; ed.style.height=''; } },270); }
+    window.__cmEdOpen=openEd; window.__cmEdClose=close;
+    // Settings > Multiple reply চাপলে sheet বন্ধ হয়, যাতে comment select করা যায়
+    document.addEventListener('click',e=>{ if(open&&e.target.closest&&e.target.closest('#cmSetBack .cmsrow[data-k="mr"]')) close(); },true);
+    if(window.visualViewport){ visualViewport.addEventListener('resize',fit); visualViewport.addEventListener('scroll',fit); }
+    ov.addEventListener('click',close);
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&open&&!document.querySelector('.dlg-back.show,.popup.show')){ e.stopPropagation(); close(); } },true);
+    // header icons
+    const run=(fn)=>{ const o=[addSet,addTr,addQ]; try{ fn(); } finally{ addSet=o[0]; addTr=o[1]; addQ=o[2]; addPaint(); } };
+    ed.querySelector('#cmEdAtt').addEventListener('click',()=>{ if(cmSetOnly()) return; run(()=>{ addSet=false; addTr=false; addQ=false; addGo(); }); });
+    ed.querySelector('#cmEdSet').addEventListener('click',()=>{ run(()=>{ addSet=true; addTr=false; addQ=false; addGo(); }); });
+    // Translate: tap = অনুবাদ / original; hold (500ms) = ভাষার dropdown
+    { const tb=ed.querySelector('#cmEdTr'); let tm=null, sx=0, sy=0, just=false;
+      const stop=()=>{ clearTimeout(tm); tm=null; };
+      tb.addEventListener('pointerdown',e=>{ stop(); sx=e.clientX; sy=e.clientY; tm=setTimeout(()=>{ tm=null; just=true; if(window.__cmTrOpen) window.__cmTrOpen(tb); },500); });
+      tb.addEventListener('pointermove',e=>{ if(tm&&(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10)) stop(); });
+      ['pointerup','pointercancel','pointerleave'].forEach(n=>tb.addEventListener(n,()=>{ stop(); if(just) setTimeout(()=>{ just=false; },450); }));
+      tb.addEventListener('contextmenu',e=>e.preventDefault());
+      tb.addEventListener('click',e=>{ if(just){ e.stopImmediatePropagation(); e.preventDefault(); return; } if(window.__cmTrDo) window.__cmTrDo(); },true); }
+    ed.querySelector('#cmEdSend').addEventListener('click',()=>{ if(!cmBox.classList.contains('has')) return; sent=Date.now(); $('cmSend').click(); setTimeout(paint,80); });
+    // handle / title ধরে টানা (Comments window-এর মতো): উপরে টানলে স্ক্রিনের মাথা পর্যন্ত বড়; বড় অবস্থায় নিচে টানলে আগের মাপ; আগের মাপে নিচে টানলে বন্ধ
+    { let g=null; const baseH=()=>Math.min(innerHeight*.86,vhNow()), maxH=()=>vhNow();
+      const dn=y=>{ g={y:y,ly:y,lt:performance.now(),v:0,raw:0,h0:ed.offsetHeight,on:false}; };
+      const mv=(y,e)=>{ if(!g) return; if(e&&e.cancelable) e.preventDefault(); const raw=y-g.y;
+        if(!g.on){ if(Math.abs(raw)<6) return; g.on=true; ed.classList.add('drag'); }
+        const n=performance.now(); g.v=(y-g.ly)/Math.max(1,n-g.lt); g.ly=y; g.lt=n; g.raw=raw;
+        if(full){ ed.style.height=Math.max(baseH(),Math.min(maxH(),g.h0-raw))+'px'; ed.style.transform='translate(-50%,0)'; return; }
+        if(raw<0){ ed.style.height=Math.min(maxH(),g.h0-raw)+'px'; ed.style.transform='translate(-50%,0)'; return; }
+        ed.style.height=g.h0+'px'; ed.style.transform='translate(-50%,'+raw+'px)'; };
+      const up=c=>{ if(!g) return; const s=g; g=null; if(!s.on){ return; }
+        ed.classList.remove('drag'); ed.style.transform='';
+        let closing=false;
+        if(!c){
+          if(full){ if(s.raw>(maxH()-baseH())*.35||s.v>.5) full=false; }
+          else if(s.raw<0){ if(-s.raw>60||s.v<-.5) full=true; }
+          else if(s.raw>100||(s.v>.5&&s.raw>20)) closing=true;
+        }
+        if(closing){ ed.style.height=''; fit(); close(); return; }
+        ed.classList.toggle('full',full);
+        ed.style.transition='transform .25s ease,height .25s ease'; fit(); setTimeout(()=>{ if(!g) ed.style.transition=''; },300); };
+      [ed.querySelector('.hd'),ed.querySelector('#cmEdHead')].forEach(h=>{
+        h.addEventListener('touchstart',e=>{ if(e.touches.length===1&&!e.target.closest('.material-symbols-outlined')) dn(e.touches[0].clientY); },{passive:true});
+        h.addEventListener('touchmove',e=>{ if(e.touches.length) mv(e.touches[0].clientY,e); },{passive:false});
+        h.addEventListener('touchend',()=>up(false)); h.addEventListener('touchcancel',()=>up(true));
+        h.addEventListener('mousedown',e=>{ if(e.button===0&&!e.target.closest('.material-symbols-outlined')) dn(e.clientY); }); });
+      document.addEventListener('mousemove',e=>{ if(g) mv(e.clientY,e); }); document.addEventListener('mouseup',()=>up(false)); }
+    // Comments window বন্ধ হলে sheet-ও বন্ধ, সব element আগের জায়গায়
+    new MutationObserver(()=>{ if(!cmS.classList.contains('show')&&open){ close(); } }).observe(cmS,{attributes:true,attributeFilter:['class']});
+  } }
+
   // Latest / Most replied / Most liked / Most disliked মেনু (Playlist-এর Sort by-এর ডিজাইন)
   // ---- ⋯ মেনু: Sort by / Search / Select / Delete all ----
   const cmCss2=document.createElement('style');
@@ -9436,10 +9599,13 @@ function askDelete(title,cb,yesLabel,slideSel){
     +'.cmbody mark{background:#ffd54f;color:#000;border-radius:3px;padding:0 1px}.cminput #cmClrT{display:none;cursor:pointer;padding:6px;color:#aaa}.cmrow.foc .cminput.txt #cmClrT{display:block}';
   document.head.appendChild(cmCss2);
   const cmP=document.createElement('div'); cmP.className='popup cmpop';
-  cmP.innerHTML='<button data-k="sort"><span class="material-symbols-outlined">sort</span><span class="dl">Sort by</span><span class="material-symbols-outlined cmchev">chevron_right</span></button><button data-k="search"><span class="material-symbols-outlined">search</span><span class="dl">Search</span></button><button data-k="select"><span class="material-symbols-outlined">checklist</span><span class="dl">Select</span></button><button data-k="att"><span class="material-symbols-outlined">attach_file</span><span class="dl">See attachments</span></button><button data-k="hid"><span class="material-symbols-outlined">visibility_off</span><span class="dl" id="cmHidT">Hidden comments</span></button><button data-k="tgd"><span class="material-symbols-outlined">sell</span><span class="dl" id="cmTgdT">Tagged comments</span></button><button data-k="gl"><span class="material-symbols-outlined">rule</span><span class="dl">Guidelines</span></button><button data-k="blk"><span class="material-symbols-outlined">block</span><span class="dl">Comments and Replies blocker</span></button><button data-k="shot"><span class="material-symbols-outlined">screenshot</span><span class="dl" id="cmShotT">Capture comments</span><span class="material-symbols-outlined cmchev">chevron_right</span></button><button data-k="bg"><span class="material-symbols-outlined">wallpaper</span><span class="dl">Background</span><span class="material-symbols-outlined cmchev">chevron_right</span></button><button data-k="byuser" style="display:none"><span class="material-symbols-outlined cmtk">check</span><span class="dl">Search by username</span></button><button data-k="bytext" style="display:none"><span class="material-symbols-outlined cmtk">check</span><span class="dl" id="cmByT">Search by comment</span></button><div class="cmdiv" style="display:none;height:1px;background:var(--line,#3a3a3a);margin:6px 0"></div><button data-k="all" style="display:none"><span class="material-symbols-outlined">select_all</span><span class="dl">Select all</span></button><button data-k="none" style="display:none"><span class="material-symbols-outlined">deselect</span><span class="dl">Deselect all</span></button><button data-k="del"><span class="material-symbols-outlined">delete</span><span class="dl" id="cmDelT">Delete all comments</span></button><div class="cmdiv2" style="display:none;height:1px;background:var(--line,#3a3a3a);margin:6px 0"></div>';
+  cmP.innerHTML='<button data-k="sort"><span class="material-symbols-outlined">sort</span><span class="dl">Sort by</span><span class="material-symbols-outlined cmchev">chevron_right</span></button><button data-k="grp"><span class="material-symbols-outlined">view_agenda</span><span class="dl">Group by</span><span class="material-symbols-outlined cmchev">chevron_right</span></button><button data-k="search"><span class="material-symbols-outlined">search</span><span class="dl">Search</span></button><button data-k="select"><span class="material-symbols-outlined">checklist</span><span class="dl">Select</span></button><button data-k="att"><span class="material-symbols-outlined">attach_file</span><span class="dl">See attachments</span></button><button data-k="hid"><span class="material-symbols-outlined">visibility_off</span><span class="dl" id="cmHidT">Hidden comments</span></button><button data-k="tgd"><span class="material-symbols-outlined">sell</span><span class="dl" id="cmTgdT">Tagged comments</span></button><button data-k="gl"><span class="material-symbols-outlined">rule</span><span class="dl">Guidelines</span></button><button data-k="blk"><span class="material-symbols-outlined">block</span><span class="dl">Comments and Replies blocker</span></button><button data-k="shot"><span class="material-symbols-outlined">screenshot</span><span class="dl" id="cmShotT">Capture comments</span><span class="material-symbols-outlined cmchev">chevron_right</span></button><button data-k="bg"><span class="material-symbols-outlined">wallpaper</span><span class="dl">Background</span><span class="material-symbols-outlined cmchev">chevron_right</span></button><button data-k="byuser" style="display:none"><span class="material-symbols-outlined cmtk">check</span><span class="dl">Search by username</span></button><button data-k="bytext" style="display:none"><span class="material-symbols-outlined cmtk">check</span><span class="dl" id="cmByT">Search by comment</span></button><div class="cmdiv" style="display:none;height:1px;background:var(--line,#3a3a3a);margin:6px 0"></div><button data-k="all" style="display:none"><span class="material-symbols-outlined">select_all</span><span class="dl">Select all</span></button><button data-k="none" style="display:none"><span class="material-symbols-outlined">deselect</span><span class="dl">Deselect all</span></button><button data-k="del"><span class="material-symbols-outlined">delete</span><span class="dl" id="cmDelT">Delete all comments</span></button><div class="cmdiv2" style="display:none;height:1px;background:var(--line,#3a3a3a);margin:6px 0"></div>';
   document.body.appendChild(cmP);
   const cmSub=document.createElement('div'); cmSub.className='cmsub'; cmSub.innerHTML=[...cmMenu.children].map(d=>'<button type="button" data-m="'+d.dataset.m+'"><span class="material-symbols-outlined cmtk">check</span>'+d.textContent+'</button>').join(''); cmP.appendChild(cmSub);
-  { const st=document.createElement('style'); st.textContent='.cmpop{overflow-x:hidden}.cmpop button.blue .dl,.cmpop button.blue>.material-symbols-outlined{color:#3ea6ff}.cmsub{display:none}.cmpop.subshow>button,.cmpop.subshow>.cmdiv{display:none!important}.cmpop.subshow .cmsub{display:block;animation:cmSubIn .22s ease-out}.cmsub button .cmtk{visibility:hidden}.cmsub button.on .cmtk{visibility:visible}.cmsub button.on{font-weight:700}.cmsub button.dis{opacity:.4;pointer-events:none}@keyframes cmSubIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}'; document.head.appendChild(st); }
+  const cmGSub=document.createElement('div'); cmGSub.className='cmsub cmgsub'; cmGSub.innerHTML=[['none','None'],['date','Date']].map(z=>'<button type="button" data-g="'+z[0]+'"><span class="material-symbols-outlined cmtk">check</span>'+z[1]+'</button>').join(''); cmP.appendChild(cmGSub);
+  const cmGget=()=>cmMode==='rep'?cmGrpR:cmGrpL;
+  cmGSub.querySelectorAll('button').forEach(d=>d.onclick=e=>{ e.stopPropagation(); if(cmMode==='rep') cmGrpR=d.dataset.g; else cmGrpL=d.dataset.g; cmP.classList.remove('show','subshow','grpsub'); drawCm(); cmBody.scrollTop=0; });
+  { const st=document.createElement('style'); st.textContent='.cmpop{overflow-x:hidden}.cmpop button.blue .dl,.cmpop button.blue>.material-symbols-outlined{color:#3ea6ff}.cmsub{display:none}.cmpop.subshow>button,.cmpop.subshow>.cmdiv{display:none!important}.cmpop.subshow .cmsub{display:block;animation:cmSubIn .22s ease-out}.cmsub button .cmtk{visibility:hidden}.cmsub button.on .cmtk{visibility:visible}.cmsub button.on{font-weight:700}.cmsub button.dis{opacity:.4;pointer-events:none}.cmpop.subshow .cmsub.cmgsub{display:none}.cmpop.subshow.grpsub .cmsub{display:none}.cmpop.subshow.grpsub .cmsub.cmgsub{display:block;animation:cmSubIn .22s ease-out}.cmbody .cmgh{padding:18px 16px 6px;font-size:17px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}@keyframes cmSubIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}'; document.head.appendChild(st); }
   function cmPlace(){ const r=$('cmMore').getBoundingClientRect(), w=cmP.offsetWidth, h=cmP.offsetHeight; let left=Math.max(8,Math.min(r.right+8,innerWidth-8)-w), top=r.bottom+4; if(top+h>innerHeight-16) top=Math.max(8,r.top-h-4); cmP.style.left=left+'px'; cmP.style.top=top+'px'; }
   cmSub.querySelectorAll('button').forEach(d=>d.onclick=e=>{ e.stopPropagation(); if(d.classList.contains('dis')) return; setS(+d.dataset.m); cmMenu.querySelectorAll('div').forEach(z=>z.classList.toggle('on',+z.dataset.m===getS())); cmP.classList.remove('show'); drawCm(); cmBody.scrollTop=0; });
   const cmRows=()=>[...cmBody.querySelectorAll(cmMode==='rep'?(cmShot?'.cmi':'.cmi[data-rid]'):'.thr[data-cid]')], cmRid=e=>cmMode==='rep'?(e.dataset.rid||String(cmOpen)):e.dataset.cid;   // Capture mode-এ Replies page-এর main comment-ও select করা যায়
@@ -9526,8 +9692,8 @@ function askDelete(title,cb,yesLabel,slideSel){
     const oc=rep?x.cmts.find(y=>y.id===cmOpen):null, n=rep?(oc?rTot(oc.reps):0):x.cmts.length, idle=!cmSearch&&!cmSelMode;
     const set=(k,show,dis)=>{ const b=cmP.querySelector('[data-k="'+k+'"]'); b.style.display=show?'':'none'; b.disabled=!!dis; };
     const rows=cmRows(), nSel=rows.filter(r=>cmSel.has(cmRid(r))).length;
-    cmP.classList.remove('subshow','shotsub'); cmP.querySelector('[data-k="sort"]').classList.toggle('blue',getS()!==0);
-    set('sort',idle,n===0); set('search',!cmSearch,n===0); set('att',idle,n===0); set('hid',idle,false); set('tgd',idle,false); set('gl',idle&&!rep,false); set('blk',idle,false); set('shot',idle,n===0); set('select',idle,n===0); set('bg',idle,false);
+    cmP.classList.remove('subshow','shotsub','grpsub'); cmP.querySelector('[data-k="sort"]').classList.toggle('blue',getS()!==0); cmGSub.querySelectorAll('button').forEach(d=>d.classList.toggle('on',d.dataset.g===cmGget()));
+    set('sort',idle,n===0); set('grp',idle,n===0); set('search',!cmSearch,n===0); set('att',idle,n===0); set('hid',idle,false); set('tgd',idle,false); set('gl',idle&&!rep,false); set('blk',idle,false); set('shot',idle,n===0); set('select',idle,n===0); set('bg',idle,false);
     set('all',cmSelMode,!rows.length||nSel===rows.length); set('none',cmSelMode,nSel===0); set('del',idle,n===0); cmP.querySelector('.cmdiv2').style.display='none';
     set('byuser',cmSearch); set('bytext',cmSearch); $('cmByT').textContent=rep?'Search by reply':'Search by comment';
     cmP.querySelector('[data-k="byuser"] .cmtk').style.visibility=cmSMode==='user'?'visible':'hidden'; cmP.querySelector('[data-k="bytext"] .cmtk').style.visibility=cmSMode==='user'?'hidden':'visible';
@@ -10028,7 +10194,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   const bxClose=()=>{ if(!cmBx||window.__cmShotBusy) return; bxP.classList.remove('show'); if(bxDirty){ cmInp.blur(); askDelete('Discard this selection?',()=>bxExit(),'Discard'); } else bxExit(); };
   window.__bxClose=bxClose; window.__bxOn=()=>cmBx;
   const bxStart=()=>{ guardReply(()=>{
-    resetIn(); cmIn.blur(); cmInp.blur(); cmP.classList.remove('show','subshow','shotsub');
+    resetIn(); cmIn.blur(); cmInp.blur(); cmP.classList.remove('show','subshow','shotsub','grpsub');
     cmSelMode=false; cmShot=false; cmMulti=false; cmSel.clear();
     cmBx=true; bxDirty=false; bxR.w=0; cmS.classList.toggle('bxrep',cmMode==='rep'); cmS.classList.add('bxmode'); drawCm(); bxPaint();
     requestAnimationFrame(()=>requestAnimationFrame(bxLayout));
@@ -10116,15 +10282,16 @@ function askDelete(title,cb,yesLabel,slideSel){
   document.addEventListener('click',e=>{ if(!bxP.contains(e.target)&&e.target!==bxMore) bxP.classList.remove('show'); });
   // Bounding box: username / "N replies"-এ চাপলে swipe-delete ইত্যাদি শুরু হবে না; শুধু minimize / expand চলবে
   cmS.addEventListener('pointerdown',e=>{ if(cmBx&&e.target.closest&&e.target.closest('#cmBody .cmun,#cmBody .rpl')) e.stopPropagation(); },true);
-  cmSub2.querySelectorAll('button').forEach(d=>d.onclick=e=>{ e.stopPropagation(); cmP.classList.remove('show','subshow','shotsub');
+  cmSub2.querySelectorAll('button').forEach(d=>d.onclick=e=>{ e.stopPropagation(); cmP.classList.remove('show','subshow','shotsub','grpsub');
     if(d.dataset.m==='sel') guardReply(()=>{ resetIn(); cmMulti=false; cmShot=true; cmSelMode=true; cmSel.clear(); drawCm(); });
     else bxStart(); });
   cmP.querySelectorAll(':scope > button').forEach(b=>b.onclick=()=>{
     if(b.dataset.k==='bg'){ cmP.classList.remove('show'); const openBg=()=>{ if(window.__cmBgOpen) window.__cmBgOpen(); };
       if(cmSelMode&&cmSel.size){ cmInp.blur(); askDelete('Discard this selection?',()=>{ cmExitSel(); openBg(); },'Discard'); return; }
       guardReply(openBg); return; }
-    if(b.dataset.k==='shot'){ cmP.classList.add('subshow','shotsub'); cmPlace(); return; }
-    if(b.dataset.k==='sort'){ cmP.classList.remove('shotsub'); const mm=[...cmMenu.children]; cmSub.querySelectorAll('button').forEach((d,i)=>{ d.classList.toggle('on',mm[i].classList.contains('on')); d.classList.toggle('dis',mm[i].classList.contains('dis')); }); cmP.classList.add('subshow'); cmPlace(); return; }
+    if(b.dataset.k==='grp'){ cmP.classList.remove('shotsub'); cmP.classList.add('subshow','grpsub'); cmPlace(); return; }
+    if(b.dataset.k==='shot'){ cmP.classList.remove('grpsub'); cmP.classList.add('subshow','shotsub'); cmPlace(); return; }
+    if(b.dataset.k==='sort'){ cmP.classList.remove('shotsub','grpsub'); const mm=[...cmMenu.children]; cmSub.querySelectorAll('button').forEach((d,i)=>{ d.classList.toggle('on',mm[i].classList.contains('on')); d.classList.toggle('dis',mm[i].classList.contains('dis')); }); cmP.classList.add('subshow'); cmPlace(); return; }
     cmP.classList.remove('show'); const x=curX(); if(!x) return; const k=b.dataset.k, rep=cmMode==='rep';
     if(k==='capset'){ cmInp.blur(); if(window.__cmBxSetOpen) window.__cmBxSetOpen(); return; }   // Capture select mode: Capture settings (Bounding box-এর সেটিংসের সাথে একই window)
     if(k==='byuser'||k==='bytext'){ cmSMode=k==='byuser'?'user':'text'; cmInp.placeholder=cmPh(); drawCm(); return; }
@@ -10533,7 +10700,7 @@ function askDelete(title,cb,yesLabel,slideSel){
       toast('Auto delete on '+h+' : '+z(d.getMinutes())+' : '+z(d.getSeconds())+(d.getHours()<12?' AM':' PM')); });   // icon চাপলে কখন (ঘড়ির সময়) মুছবে তা toast-এ
     setInterval(()=>{ if(!cmS.classList.contains('show')) return; const now=Date.now();
       cmBody.querySelectorAll('.cmad').forEach(e=>{ const at=+e.dataset.at, tot=+e.dataset.tot, rem=Math.max(0,at-now), f=Math.min(1,rem/tot), pg=e.querySelector('.adpg'); if(pg) pg.setAttribute('stroke-dashoffset',(AD_C*(1-f)).toFixed(2)); e.classList.toggle('red',rem<=60000); }); },500); }
-  cmIn.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendCm(); } });
+  cmIn.setAttribute('enterkeyhint','enter');   // keyboard-এর Enter / Send = নিচের লাইনে নামা; পাঠাতে হলে বক্সের send আইকন
 
   // তিন ডট মেনু: Edit / Delete (কমেন্ট ও রিপ্লাই দুটোর জন্য)
   const cp=document.createElement('div'); cp.className='popup';
@@ -11578,7 +11745,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   atPg.innerHTML='<div class="abar"><span class="material-symbols-outlined" id="atBack" style="cursor:pointer">arrow_back</span><span class="ttl2" id="atTtl">Attachments</span><input class="avinp" id="atSIn" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" style="display:none"><span class="material-symbols-outlined" id="atClr" style="display:none;cursor:pointer;color:#aaa" aria-label="Clear text">cancel</span><span class="material-symbols-outlined ico-r" id="atSrch" role="button" aria-label="Search" style="cursor:pointer;display:none">search</span><span class="material-symbols-outlined ico-r" id="atLkL" role="button" aria-label="Layout" title="Layout" style="cursor:pointer;display:none">dashboard</span><span class="material-symbols-outlined ico-r" id="atMore" style="cursor:pointer">more_vert</span></div><div class="athd"><div class="wltabs" id="atT"><button class="on" data-t="p" type="button">Photos <span class="wlc"></span></button><button data-t="v" type="button">Videos <span class="wlc"></span></button><button data-t="g" type="button">GIF <span class="wlc"></span></button><button data-t="a" type="button">Audios <span class="wlc"></span></button><button data-t="f" type="button">PDF <span class="wlc"></span></button><button data-t="l" type="button">Links <span class="wlc"></span></button></div><div class="stabs" id="atTT"><button class="active" data-t="all" type="button">All</button><button data-t="c" type="button">Comments</button><button data-t="r" type="button">Replies</button></div></div><div id="atBody"></div>';
   document.body.appendChild(atPg);
   let atSOn=false, atQ='', atQM='n', atLK='def', atLM={}; try{ const v0=localStorage.getItem('atLkLay'); if(v0==='hflex'||v0==='card') atLK=v0; }catch(e){}   // Links ট্যাবের layout: def / hflex (Horizontal) / card (Vertical)
-  let atItems=[], atTab='p', atShown=[], atMine=false, atTT='all', atSort=0, atVC={p:3,v:3,g:3}, atScope=null, atSv=false;   // grid (2 / 3 column) প্রতিটা ট্যাবের আলাদা
+  let atGrp='none'; let atItems=[], atTab='p', atShown=[], atMine=false, atTT='all', atSort=0, atVC={p:3,v:3,g:3}, atScope=null, atSv=false;   // grid (2 / 3 column) প্রতিটা ট্যাবের আলাদা
   const atKey={photo:'p',video:'v',gif:'g',voice:'a',pdf:'f',link:'l'}, atEmpty={p:'No photos',v:'No videos',g:'No GIFs',a:'No audios',f:'No PDFs',l:'No links'};
   const atT=t=>{ t=Math.max(0,Math.round(t||0)); return Math.floor(t/60)+':'+String(t%60).padStart(2,'0'); };
   const atShut=()=>atPg.classList.remove('show');
@@ -11615,6 +11782,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     const atSq=(atSOn&&atTab==='l')?atQ.trim().toLowerCase():'';
     if(atSq) atShown=atShown.filter(it=>!atH(it)&&(atQM==='l'?(String(it.a.src||'')+' '+linkText(it.a.src)):String(atNmOf(it))).toLowerCase().indexOf(atSq)>=0);
     if(!atShown.length){ body.innerHTML='<div class="atem">'+(atSq?'No results':atEmpty[atTab])+'</div>'; return; }
+    const atRen=(body,from,to)=>{ const atShown=atAll.slice(from,to);
     if(atTab==='l'){
       const lst=document.createElement('div'); lst.className='atlk';
       atFetchMeta(); lst.innerHTML=atShown.map((it,k)=>atLkRow(it,k,atSq)).join(''); if(atLK!=='def') lst.classList.add(atLK==='card'?'atlkv':'atlkh');
@@ -11654,6 +11822,16 @@ function askDelete(title,cb,yesLabel,slideSel){
     body.appendChild(g);
     if(atTab==='f') g.querySelectorAll('.atl.pf').forEach(el=>atPfRender(el,atShown[+el.dataset.i]));
     if(atTab==='g') g.querySelectorAll('img').forEach(im=>{ im._orig=im.src; });   // GIF autoplay চালু
+    };
+    const atAll=atShown;
+    if(atGrp==='date'){
+      const dk=t=>{ const d=new Date(t); d.setHours(0,0,0,0); return d.getTime(); }, B=new Map();
+      atShown.forEach(it=>{ let k=dk(it.at); if(isNaN(k)) k=dk(Date.now()); if(!B.has(k)) B.set(k,[]); B.get(k).push(it); });
+      const keys=[...B.keys()].sort((p,q)=>atSort===4?p-q:q-p), td=dk(Date.now()), yy=new Date(td), tm=new Date(td); yy.setDate(yy.getDate()-1); tm.setDate(tm.getDate()+1);
+      const lb=k=>{ if(k===td) return 'Today'; if(k===yy.getTime()) return 'Yesterday'; if(k===tm.getTime()) return 'Tomorrow'; const d=new Date(k), o={day:'numeric',month:'long'}; if(d.getFullYear()!==new Date().getFullYear()) o.year='numeric'; return d.toLocaleDateString('en-GB',o); };
+      const ord=[]; keys.forEach(k=>B.get(k).forEach(it=>ord.push(it))); atShown=ord; atAll.length=0; ord.forEach(it=>atAll.push(it));
+      let off=0; keys.forEach(k=>{ const n=B.get(k).length, h=document.createElement('div'); h.className='atgh'; h.textContent=lb(k); body.appendChild(h); const sec=document.createElement('div'); body.appendChild(sec); atRen(sec,off,off+n); sec.querySelectorAll('[data-i]').forEach(e=>{ e.dataset.i=String(+e.dataset.i+off); }); off+=n; });
+    } else atRen(body,0,atShown.length);
   }
   // ---- All / Comments / Replies ট্যাব (My comments-এর মতো), 3 dot → Sort by (Comments-এর sort by-এর মতো), Videos-এ pinch out = 3 column grid / pinch in = 2 column ----
   { const st=document.createElement('style'); st.textContent='#atPage{touch-action:pan-y}#atPage .athd{position:sticky;top:56px;z-index:2;background:var(--bg)}#atPage .athd .wltabs{position:static}#atPage .stabs{position:static;padding-top:12px}'; document.head.appendChild(st); }
@@ -11668,12 +11846,12 @@ function askDelete(title,cb,yesLabel,slideSel){
       return lat(p,q); });
   }
   const atP=document.createElement('div'); atP.className='popup cmpop atpop';
-  atP.innerHTML='<button type="button" class="atsr" data-k="sn"><span class="material-symbols-outlined cmtk">check</span><span class="dl">Search by name</span></button><button type="button" class="atsr" data-k="sl"><span class="material-symbols-outlined cmtk">check</span><span class="dl">Search by link</span></button><div class="cmdiv atdv"></div><button data-k="sort"><span class="material-symbols-outlined">sort</span><span class="dl">Sort by</span><span class="material-symbols-outlined cmchev">chevron_right</span></button><button data-k="lay" class="atlayb"><span class="material-symbols-outlined">dashboard</span><span class="dl">Layout</span><span class="material-symbols-outlined cmchev">chevron_right</span></button>';
+  atP.innerHTML='<button type="button" class="atsr" data-k="sn"><span class="material-symbols-outlined cmtk">check</span><span class="dl">Search by name</span></button><button type="button" class="atsr" data-k="sl"><span class="material-symbols-outlined cmtk">check</span><span class="dl">Search by link</span></button><div class="cmdiv atdv"></div><button data-k="sort"><span class="material-symbols-outlined">sort</span><span class="dl">Sort by</span><span class="material-symbols-outlined cmchev">chevron_right</span></button><button data-k="grp"><span class="material-symbols-outlined">view_agenda</span><span class="dl">Group by</span><span class="material-symbols-outlined cmchev">chevron_right</span></button><button data-k="lay" class="atlayb"><span class="material-symbols-outlined">dashboard</span><span class="dl">Layout</span><span class="material-symbols-outlined cmchev">chevron_right</span></button>';
   document.body.appendChild(atP);
   const atSub=document.createElement('div'); atSub.className='cmsub';
   atSub.innerHTML=[['0','Latest'],['4','Oldest'],['1','Most replied'],['2','Most liked'],['3','Most disliked']].map(z=>'<button type="button" data-m="'+z[0]+'"><span class="material-symbols-outlined cmtk">check</span>'+z[1]+'</button>').join(''); atP.appendChild(atSub);
-  const atPShut=()=>atP.classList.remove('show','subshow','laysub');
-  { const st=document.createElement('style'); st.textContent='#atPage .abar #atSIn{margin-left:26px}.atpop .atsr,.atpop .atdv{display:none}.atpop.srch .atsr{display:flex}.atpop .atlayb{display:none}.atpop.srch .atlayb{display:flex}.atpop.subshow .cmsub.atlsub{display:none}.atpop.subshow.laysub .cmsub{display:none}.atpop.subshow.laysub .cmsub.atlsub{display:block}.atpop.srch .atdv{display:block;height:1px;background:#3a3a3a;margin:6px 0}.atpop .atsr .cmtk{visibility:hidden}.atpop .atsr.on .cmtk{visibility:visible}.atpop .atsr.on{font-weight:700}'; document.head.appendChild(st); }
+  const atPShut=()=>atP.classList.remove('show','subshow','laysub','grpsub');
+  { const st=document.createElement('style'); st.textContent='#atPage .abar #atSIn{margin-left:26px}.atpop .atsr,.atpop .atdv{display:none}.atpop.srch .atsr{display:flex}.atpop .atlayb{display:none}.atpop.srch .atlayb{display:flex}.atpop.subshow .cmsub.atlsub,.atpop.subshow .cmsub.atgsub{display:none}.atpop.subshow.grpsub .cmsub{display:none}.atpop.subshow.grpsub .cmsub.atgsub{display:block}#atPage .atgh{padding:18px 16px 6px;font-size:17px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.atpop.subshow.laysub .cmsub{display:none}.atpop.subshow.laysub .cmsub.atlsub{display:block}.atpop.srch .atdv{display:block;height:1px;background:#3a3a3a;margin:6px 0}.atpop .atsr .cmtk{visibility:hidden}.atpop .atsr.on .cmtk{visibility:visible}.atpop .atsr.on{font-weight:700}'; document.head.appendChild(st); }
   const atPh=()=>atQM==='l'?'Search by link':'Search by name';
   // ---- Links ট্যাব: Layout (Default / Horizontal Flex / Vertical Flex) ----
   { const st=document.createElement('style'); st.textContent='.atlkp button .cmtk{visibility:hidden}.atlkp button.on .cmtk{visibility:visible}.atlkp button.on{font-weight:700}'
@@ -11730,13 +11908,17 @@ function askDelete(title,cb,yesLabel,slideSel){
     atMnShut(); atLkShut(); const a=atItems;
     atSub.querySelectorAll('button').forEach(d=>{ const m=+d.dataset.m; d.classList.toggle('on',m===atSort); d.classList.toggle('dis',(m===1&&!a.some(i=>rTot((i.o&&i.o.reps)||[])>0))||(m===2&&!a.some(i=>likeN(i.o||{})>0))||(m===3&&!a.some(i=>disN(i.o||{})>0))); });
     atP.querySelector('[data-k="sort"]').classList.toggle('blue',atSort!==0); atP.classList.toggle('srch',atSOn); atP.querySelectorAll('.atsr').forEach(b=>b.classList.toggle('on',(b.dataset.k==='sl')===(atQM==='l')));
-    atP.classList.remove('subshow','laysub'); atLaySub.querySelectorAll('button').forEach(d=>d.classList.toggle('on',d.dataset.l===atLK)); atP.classList.add('show');
+    atP.classList.remove('subshow','laysub','grpsub'); atGSub.querySelectorAll('button').forEach(d=>d.classList.toggle('on',d.dataset.g===atGrp)); atLaySub.querySelectorAll('button').forEach(d=>d.classList.toggle('on',d.dataset.l===atLK)); atP.classList.add('show');
     const r=$('atMore').getBoundingClientRect(), w=atP.offsetWidth, h=atP.offsetHeight; let left=Math.max(8,Math.min(r.right+8,innerWidth-8)-w), top=r.bottom+4; if(top+h>innerHeight-16) top=Math.max(8,r.top-h-4); atP.style.left=left+'px'; atP.style.top=top+'px';
   };
-  atP.querySelector('[data-k="sort"]').onclick=e=>{ e.stopPropagation(); atP.classList.remove('laysub'); atP.classList.add('subshow'); };
+  atP.querySelector('[data-k="sort"]').onclick=e=>{ e.stopPropagation(); atP.classList.remove('laysub','grpsub'); atP.classList.add('subshow'); };
+  const atGSub=document.createElement('div'); atGSub.className='cmsub atgsub';
+  atGSub.innerHTML=[['none','None'],['date','Date']].map(z=>'<button type="button" data-g="'+z[0]+'"><span class="material-symbols-outlined cmtk">check</span>'+z[1]+'</button>').join(''); atP.appendChild(atGSub);
+  atP.querySelector('[data-k="grp"]').onclick=e=>{ e.stopPropagation(); atP.classList.remove('laysub'); atP.classList.add('subshow','grpsub'); };
+  atGSub.querySelectorAll('button').forEach(d=>d.onclick=e=>{ e.stopPropagation(); atGrp=d.dataset.g; atPShut(); atDraw(); atPg.scrollTop=0; });
   const atLaySub=document.createElement('div'); atLaySub.className='cmsub atlsub';
   atLaySub.innerHTML=[['def','Default'],['hflex','Horizontal Flex Layout'],['card','Vertical Flex Layout']].map(r=>'<button type="button" data-l="'+r[0]+'"><span class="material-symbols-outlined cmtk">check</span>'+r[1]+'</button>').join(''); atP.appendChild(atLaySub);
-  atP.querySelector('[data-k="lay"]').onclick=e=>{ e.stopPropagation(); atP.classList.add('subshow','laysub'); };   // Search মোড: 3 dot > Sort by-এর নিচে Layout
+  atP.querySelector('[data-k="lay"]').onclick=e=>{ e.stopPropagation(); atP.classList.remove('grpsub'); atP.classList.add('subshow','laysub'); };   // Search মোড: 3 dot > Sort by-এর নিচে Layout
   atLaySub.querySelectorAll('button').forEach(d=>d.onclick=e=>{ e.stopPropagation(); atLK=d.dataset.l; try{ localStorage.setItem('atLkLay',atLK); }catch(_){} atPShut(); const y=atPg.scrollTop; atDraw(); atPg.scrollTop=y; });
   atSub.querySelectorAll('button').forEach(d=>d.onclick=e=>{ e.stopPropagation(); if(d.classList.contains('dis')) return; atSort=+d.dataset.m; atPShut(); atDraw(); atPg.scrollTop=0; });
   document.addEventListener('click',e=>{ if(!atP.contains(e.target)&&e.target.id!=='atMore') atPShut(); });
@@ -11752,11 +11934,11 @@ function askDelete(title,cb,yesLabel,slideSel){
     atPg.addEventListener('touchcancel',()=>{ on=false; },{passive:true});
     atPg.addEventListener('wheel',e=>{ if(!e.ctrlKey||!atGT()) return; e.preventDefault(); apply(e.deltaY<0?1.3:.7); },{passive:false});   // trackpad pinch / Ctrl + scroll
   }
-  function atOpen0(){ atSv=false; atNoHide=false; atMine=false; atScope=null; atMn.style.zIndex=''; atP.style.zIndex=''; atPg.style.zIndex=''; $('atTtl').textContent='Attachments'; atTT='all'; atSort=0; atVC={p:3,v:3,g:3}; atPShut(); atItems=atCollect(); atTab='p'; atDraw(); atPg.classList.add('show'); }
+  function atOpen0(){ atGrp='none'; atSv=false; atNoHide=false; atMine=false; atScope=null; atMn.style.zIndex=''; atP.style.zIndex=''; atPg.style.zIndex=''; $('atTtl').textContent='Attachments'; atTT='all'; atSort=0; atVC={p:3,v:3,g:3}; atPShut(); atItems=atCollect(); atTab='p'; atDraw(); atPg.classList.add('show'); }
   // Profile > My attachments: একই window ও mechanism (Photos / Videos / GIF / Audios / Links, tap = viewer, double tap = ওই comment, hold = menu)
-  window.__maOpen=()=>{ atSv=false; atNoHide=true; atMine=true; atScope=null; atMn.style.zIndex=''; atP.style.zIndex=''; atPg.style.zIndex='20'; $('atTtl').textContent='My attachments'; atTT='all'; atSort=0; atVC={p:3,v:3,g:3}; atPShut(); atItems=atCollect(); atTab='p'; atDraw(); atPg.classList.add('show'); atPg.scrollTop=0; };
+  window.__maOpen=()=>{ atGrp='none'; atSv=false; atNoHide=true; atMine=true; atScope=null; atMn.style.zIndex=''; atP.style.zIndex=''; atPg.style.zIndex='20'; $('atTtl').textContent='My attachments'; atTT='all'; atSort=0; atVC={p:3,v:3,g:3}; atPShut(); atItems=atCollect(); atTab='p'; atDraw(); atPg.classList.add('show'); atPg.scrollTop=0; };
   // Comments in this channel / this post window-এর 3 dot → See attachments: ওই window-এর comment / reply-এর attachments
-  window.__maOpenScoped=(pid,sv)=>{ atSv=!!sv; atNoHide=false; atMine=true; atScope=(pid==null?null:pid); atMn.style.zIndex=sv?'':'95'; atP.style.zIndex=sv?'':'96'; atPg.style.zIndex=sv?'20':'85'; $('atTtl').textContent='Attachments'; atTT='all'; atSort=0; atVC={p:3,v:3,g:3}; atPShut(); atItems=atCollect(); atTab='p'; atDraw(); atPg.classList.add('show'); atPg.scrollTop=0; };
+  window.__maOpenScoped=(pid,sv)=>{ atGrp='none'; atSv=!!sv; atNoHide=false; atMine=true; atScope=(pid==null?null:pid); atMn.style.zIndex=sv?'':'95'; atP.style.zIndex=sv?'':'96'; atPg.style.zIndex=sv?'20':'85'; $('atTtl').textContent='Attachments'; atTT='all'; atSort=0; atVC={p:3,v:3,g:3}; atPShut(); atItems=atCollect(); atTab='p'; atDraw(); atPg.classList.add('show'); atPg.scrollTop=0; };
   document.addEventListener('click',e=>{ if(e.target.closest('#acMA')) window.__maOpen(); });
   function atView(it){
     const a=it.a;
@@ -12063,7 +12245,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     $('mcList').querySelectorAll('.cmatt.cmvid,.cmatt.cmgif').forEach(cmStop);
     $('mcList').querySelectorAll('audio').forEach(a=>{ try{ a.pause(); }catch(_){} }); }).observe(mcPg,{attributes:true,attributeFilter:['class']});
   // Group by: Date = History-র মতো Today / Yesterday / 27 November; Post = post অনুযায়ী (group-এর ভেতরে Sort by-এর ক্রম থাকে)
-  function mcGrpMap(a){ const hd=new Map(); if(mcGrp==='none'||!a.length||mcPg.dataset.hi==='2'||mcPg.dataset.hi==='5') return {list:a,hd};
+  function mcGrpMap(a){ const hd=new Map(); if(mcGrp==='none'||!a.length) return {list:a,hd};
     const sch=mcPg.dataset.hi==='3', B=new Map();
     const dk=t=>{ const d=new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
     const tOf=i=>{ const t=(sch&&i.p)?i.p.at:new Date(i.o.posted).getTime(); return isNaN(t)?Date.now():t; };
@@ -12122,8 +12304,9 @@ function askDelete(title,cb,yesLabel,slideSel){
   const mcSub=document.createElement('div'); mcSub.className='cmsub';
   mcSub.innerHTML=[['0','Latest'],['4','Oldest'],['1','Most replied'],['2','Most liked'],['3','Most disliked']].map(z=>'<button type="button" data-m="'+z[0]+'"><span class="material-symbols-outlined cmtk">check</span>'+z[1]+'</button>').join(''); mcP.appendChild(mcSub);
   // Group by: None / Date / Post / Video / Short (heading style = History-র time group)
+  const mcGName=()=>{ const a=document.querySelector('.tabs a.active'), t=a?a.textContent.trim():''; return (t==='Videos'||t==='Shorts'||t==='Posts')?t:'Posts'; };
   const mcGSub=document.createElement('div'); mcGSub.className='cmsub mcgsub';
-  mcGSub.innerHTML=[['none','None'],['date','Date'],['post','Post / Video / Short']].map(z=>'<button type="button" data-g="'+z[0]+'"><span class="material-symbols-outlined cmtk">check</span>'+z[1]+'</button>').join(''); mcP.appendChild(mcGSub);
+  mcGSub.innerHTML=[['none','None'],['date','Date'],['post',mcGName()]].map(z=>'<button type="button" data-g="'+z[0]+'"><span class="material-symbols-outlined cmtk">check</span>'+z[1]+'</button>').join(''); mcP.appendChild(mcGSub);
   { const st=document.createElement('style'); st.textContent='.mcpop.subshow .cmsub.mcgsub{display:none}.mcpop.subshow.grpsub .cmsub{display:none}.mcpop.subshow.grpsub .cmsub.mcgsub{display:block}#mcList .mcgh{padding:18px 16px 6px;font-size:17px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'; document.head.appendChild(st); }
   mcGSub.querySelectorAll('button').forEach(d=>d.onclick=e=>{ e.stopPropagation(); mcGrp=d.dataset.g; mcP.classList.remove('show','subshow','grpsub'); mcDraw(); mcPg.scrollTop=0; });
   const mcInp=$('mcInp');
@@ -12179,7 +12362,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     e.stopPropagation(); if(mcP.classList.contains('show')){ mcP.classList.remove('show','subshow'); return; }
     const all=mcFlat(), vis=mcVis().filter(mcSelOk), idle=!mcSearch&&!mcSelMode, n=all.length;
     const set=(k,show,dis)=>{ const b=mcP.querySelector('[data-k="'+k+'"]'); b.style.display=show?'':'none'; b.disabled=!!dis; };
-    set('sort',idle,n===0); set('group',idle&&['0','1','3','4'].includes(mcPg.dataset.hi),n===0); mcGSub.querySelectorAll('button').forEach(d=>d.classList.toggle('on',d.dataset.g===mcGrp)); set('select',idle,n===0); set('att',idle&&(mcPg.dataset.hi==='1'||mcPg.dataset.hi==='4'),n===0); set('rotg',idle&&mcPg.dataset.hi==='5'&&mcTgList().length>1); set('bytext',mcSearch&&!mcH25()); set('bycont',mcSearch&&mcPid==null);   // Hidden / Tagged window-এ 'Search by comment' option নেই (এটাই default)
+    set('sort',idle,n===0); set('group',idle&&['0','1','2','3','4','5'].includes(mcPg.dataset.hi),n===0); mcGSub.querySelectorAll('button').forEach(d=>d.classList.toggle('on',d.dataset.g===mcGrp)); set('select',idle,n===0); set('att',idle&&(mcPg.dataset.hi==='1'||mcPg.dataset.hi==='4'),n===0); set('rotg',idle&&mcPg.dataset.hi==='5'&&mcTgList().length>1); set('bytext',mcSearch&&!mcH25()); set('bycont',mcSearch&&mcPid==null);   // Hidden / Tagged window-এ 'Search by comment' option নেই (এটাই default)
     { const nSel=vis.filter(i=>mcSel.has(mcKey(i))).length; set('all',mcSelMode,!vis.length||nSel===vis.length); set('none',mcSelMode,nSel===0); }
     { const lv=mcAll0(); const hc=idle||(mcH25()&&(mcSearch||mcSelMode)); set('del',hc,!lv.some(i=>!i.r)); set('delr',hc,!lv.some(i=>i.r)); }   // Hidden / Tagged comments: search ও select চলার সময়ও 'all comments' ও 'all replies' দুটোই থাকে
     [['bytext','text'],['bycont','content']].forEach(z=>{ const b=mcP.querySelector('[data-k="'+z[0]+'"]'), on=mcSMode===z[1]; b.querySelector('.cmtk').style.visibility=on?'visible':'hidden'; b.style.fontWeight=on?'700':''; });
@@ -12200,7 +12383,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   mcP.querySelectorAll(':scope>button').forEach(b=>b.onclick=e=>{
     e.stopPropagation(); const k=b.dataset.k;
     if(k==='sort'){ mcP.classList.remove('grpsub'); mcP.classList.add('subshow'); return; }
-    if(k==='group'){ mcP.classList.add('subshow','grpsub'); return; }
+    if(k==='group'){ { const pb=mcGSub.querySelector('button[data-g="post"]'); if(pb){ { const h=mcPg.dataset.hi, nop=(h==='1'&&mcPid!=null)||h==='2'||h==='5'; pb.style.display=nop?'none':''; if(nop&&mcGrp==='post') mcGrp='none'; } const tk=pb.querySelector('.cmtk'); pb.textContent=''; if(tk) pb.appendChild(tk); pb.appendChild(document.createTextNode(mcGName())); } } mcP.classList.add('subshow','grpsub'); return; }
     mcP.classList.remove('show','subshow');
     if(k==='rotg'){ mcRoOpen(); return; }
     if(k==='select'){ mcSelMode=true; mcSel.clear(); mcDraw(); return; }
