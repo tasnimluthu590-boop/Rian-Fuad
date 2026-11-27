@@ -5636,38 +5636,152 @@ function askDelete(title,cb,yesLabel,slideSel){
   // ---- GIPHY picker: নিচের GIPHY_API_KEY-তে key বসালেই কাজ করবে ----
   const GIPHY_API_KEY='ASnzNmsapJHv9Wfa5DqYAaRMffZUIuY1';   // <-- এখানে GIPHY API key বসান
   const gphB=document.createElement('div'); gphB.className='dlg-back'; gphB.id='cmGphBack'; gphB.style.zIndex=99;
-  gphB.innerHTML='<div class="dlg gph"><div class="gphh"><h2>GIPHY</h2><span class="material-symbols-outlined" id="cmGphX">close</span></div><input class="ordinp" id="cmGphQ" type="text" placeholder="Search GIPHY" autocomplete="off" autocapitalize="off" spellcheck="false"><div id="cmGphTabs"></div><div id="cmGphG"></div></div>';
+  gphB.innerHTML='<div class="dlg gph"><div class="gphh"><h2>GIPHY</h2><span class="material-symbols-outlined" id="cmGphX">close</span></div><div class="gphsw"><input class="ordinp" id="cmGphQ" type="text" placeholder="Search GIPHY" autocomplete="off" autocapitalize="off" spellcheck="false"><span id="cmGphClr" role="button" aria-label="Clear"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div><div id="cmGphTabs"></div><div id="cmGphG"></div><div id="cmGphPw"><div id="cmGphPtr"><span class="material-symbols-outlined">refresh</span></div></div></div>';
   document.body.appendChild(gphB);
-  { const st=document.createElement('style'); st.textContent='#cmGphBack .gph{max-width:440px;width:100%;max-height:82vh;display:flex;flex-direction:column;padding:16px}#cmGphBack .gphh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}#cmGphBack .gphh h2{font-size:20px;font-weight:500;margin:0}#cmGphX{cursor:pointer;color:#aaa}#cmGphBack .gph{overflow:hidden}#cmGphG{flex:1 1 auto;min-height:120px;overflow-x:hidden;overflow-y:auto;margin-top:10px;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch}#cmGphG .gphw{columns:2;column-gap:6px}#cmGphG .gphw img{break-inside:avoid}#cmGphG img{width:100%;display:block;margin-bottom:6px;border-radius:8px;cursor:pointer;background:#272727}#cmGphG .gphm{column-span:all;color:#aaa;text-align:center;padding:30px 0;font-size:15px}#cmGphTabs{flex:none;position:relative;display:flex;gap:22px;overflow-x:auto;border-bottom:1px solid var(--line);margin-top:10px;touch-action:pan-x;overscroll-behavior:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}#cmGphTabs::-webkit-scrollbar{display:none}#cmGphTabs a{flex-shrink:0;padding:10px 0;color:var(--sub);font-size:15px;font-weight:500;cursor:pointer;white-space:nowrap}#cmGphTabs a.on{color:#fff;border-bottom:3px solid #fff}'; document.head.appendChild(st); }
+  { const st=document.createElement('style'); st.textContent='#cmGphBack .gph{max-width:440px;width:100%;max-height:82vh;display:flex;flex-direction:column;padding:16px}#cmGphBack .gphh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}#cmGphBack .gphh h2{font-size:20px;font-weight:500;margin:0}#cmGphX{cursor:pointer;color:#aaa}#cmGphBack .gph{overflow:hidden}#cmGphG{flex:1 1 auto;min-height:120px;overflow-x:hidden;overflow-y:auto;margin-top:10px;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch}#cmGphG .gphw{columns:2;column-gap:6px}#cmGphG .gphw img{break-inside:avoid}#cmGphG img{width:100%;display:block;margin-bottom:6px;border-radius:8px;cursor:pointer;background:#272727}#cmGphG .gphm{column-span:all;color:#aaa;text-align:center;padding:30px 0;font-size:15px}#cmGphTabs{flex:none;position:relative;display:flex;gap:22px;overflow-x:auto;border-bottom:1px solid var(--line);margin-top:10px;touch-action:pan-x;overscroll-behavior:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}#cmGphTabs::-webkit-scrollbar{display:none}#cmGphTabs a{flex-shrink:0;padding:10px 0;color:var(--sub);font-size:15px;font-weight:500;cursor:pointer;white-space:nowrap}#cmGphTabs a.on{color:#fff;border-bottom:3px solid #fff}#cmGphBack .gphsw{position:relative;flex:none}#cmGphBack .gphsw #cmGphQ{padding-right:42px;box-sizing:border-box}#cmGphClr{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;display:none;align-items:center;justify-content:center;color:#aaa;cursor:pointer;border-radius:50%}#cmGphClr.show{display:flex}#cmGphClr:active{background:#333}.gphsp{width:34px;height:34px;box-sizing:border-box;border:4px solid rgba(62,166,255,.25);border-top-color:#3ea6ff;border-radius:50%;animation:gphspin .8s linear infinite;margin:0 auto}.gphspm{display:flex;justify-content:center;padding:14px 0 6px}#cmGphG .gphm .gphsp{margin:0 auto}@keyframes gphspin{to{transform:rotate(360deg)}}#cmGphG img[data-r]{touch-action:pan-y;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}#cmGphRm{position:fixed;display:none;background:#333;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.6);z-index:130;padding:4px 0}#cmGphRm.show{display:block}#cmGphRm div{padding:13px 20px;font-size:16px;color:#fff;cursor:pointer;white-space:nowrap}#cmGphRm div:active{background:#444}#cmGphTabs a.gphed{display:inline-flex;align-items:center;gap:4px;color:#3ea6ff}#cmGphTabs a.gphed .material-symbols-outlined{font-size:18px}#cmGphBack .gph{position:relative}#cmGphPw{position:absolute;left:0;right:0;overflow:hidden;pointer-events:none;z-index:5;display:none}#cmGphPtr{position:absolute;top:0;left:50%;margin-left:-20px;width:40px;height:40px;border-radius:50%;background:#2b2b2b;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.6);transform:translateY(-60px);opacity:0}#cmGphPtr .material-symbols-outlined{font-size:24px;cursor:default}#cmGphPtr .spin{animation:ptrSpin .8s linear infinite}'; document.head.appendChild(st); }
   const gphG=gphB.querySelector('#cmGphG'), gphQ=gphB.querySelector('#cmGphQ'); let gphTk=0, gphTm=null;
   const gphShut=()=>{ gphB.classList.remove('show'); gphQ.blur(); gphTk++; clearTimeout(gphTm); };
   // ---- GIPHY tabs (Sticker window-এর মতো, search bar-এর নিচে): Trending (default) / Recents / ক্যাটাগরি ----
   const GPH_T=[['t','Trending'],['r','Recents'],['rc','Reactions',['reaction','yes','no','wow','clapping','facepalm']],['fn','Funny',['funny','meme','comedy']],['lv','Love & Romance',['love','hug','kiss','romantic']],['sd','Sad & Emotional',['sad','crying','heartbroken','lonely']],['gr','Greetings',['good morning','good night','thank you','congratulations']],['ce','Celebration',['birthday','eid mubarak','celebration','new year','puja']],['an','Angry',['angry','annoyed','attitude']],['ga','Gaming & Anime',['gaming','anime']],['sp','Sports',['sports','cricket','football']],['am','Animals',['cute cat','funny dog','cute animals']],['lc','Local',['bangla funny','bengali movie','bangla natok']]];
   let gphTab='t', gphRec=[]; try{ gphRec=JSON.parse(localStorage.getItem('gphRecent')||'[]'); }catch(_){ gphRec=[]; } gphRec=(Array.isArray(gphRec)?gphRec:[]).filter(x=>x&&typeof x.s==='string'&&typeof x.u==='string').slice(0,30);
   const gphRecAdd=it=>{ gphRec=gphRec.filter(x=>x.u!==it.u); gphRec.unshift(it); gphRec=gphRec.slice(0,30); try{ localStorage.setItem('gphRecent',JSON.stringify(gphRec)); }catch(_){} };
-  const gphTabs=gphB.querySelector('#cmGphTabs'); gphTabs.innerHTML=GPH_T.map(t=>'<a data-g="'+t[0]+'">'+t[1].replace('&','&amp;')+'</a>').join('');
+  const gphTabs=gphB.querySelector('#cmGphTabs');   // ট্যাব আঁকা হয় নিচের Edit categories অংশ থেকে (gphTabsDraw)
   const gphPaint=()=>{ [...gphTabs.children].forEach(a=>a.classList.toggle('on',a.dataset.g===gphTab)); const on=gphTabs.querySelector('.on'); if(on) gphTabs.scrollLeft=Math.max(0,on.offsetLeft-(gphTabs.clientWidth-on.offsetWidth)/2); };
   const gphIt=g=>({s:(g.images.fixed_height||g.images.original).url,u:(g.images.downsized_medium||g.images.downsized||g.images.original).url});
-  const gphShow=items=>{ gphG.innerHTML=''; gphG.scrollTop=0; const wrap=document.createElement('div'); wrap.className='gphw'; gphG.appendChild(wrap); items.forEach(it=>{ const im=document.createElement('img'); im.alt=''; im.loading='lazy'; im.src=it.s; im.onclick=()=>{ gphRecAdd(it); gphShut(); setAtt({k:'gif',src:it.u,giphy:1}); }; wrap.appendChild(im); }); };
-  const gphFetch=async(ep,q,n)=>{ const r=await fetch('https://api.giphy.com/v1/gifs/'+ep+'?api_key='+encodeURIComponent(GIPHY_API_KEY)+'&limit='+n+'&rating=g'+(q?'&q='+encodeURIComponent(q):'')); if(!r.ok) throw new Error('http'); const j=await r.json(); return (j.data||[]).filter(g=>g&&g.images&&(g.images.fixed_height||g.images.original)).map(gphIt); };
-  async function gphLoad(q){
-    const my=++gphTk; const T=GPH_T.find(t=>t[0]===gphTab)||GPH_T[0];
-    if(!q&&gphTab==='r'){ if(gphRec.length) gphShow(gphRec); else gphG.innerHTML='<div class="gphm">No recent GIFs</div>'; return; }
-    gphG.innerHTML='<div class="gphm">Loading…</div>';
-    try{
-      let items;
-      if(q) items=await gphFetch('search',q,24);
-      else if(T[2]){ const per=Math.max(4,Math.ceil(30/T[2].length)); const rs=await Promise.all(T[2].map(x=>gphFetch('search',x,per).catch(()=>[]))); items=[]; const seen=new Set(); for(let i=0;i<per;i++) rs.forEach(r=>{ if(r[i]&&!seen.has(r[i].u)){ seen.add(r[i].u); items.push(r[i]); } }); }
-      else items=await gphFetch('trending','',24);
-      if(my!==gphTk) return;
-      if(!items.length){ gphG.innerHTML='<div class="gphm">No GIFs found</div>'; return; }
-      gphShow(items);
-    }catch(e){ if(my===gphTk) gphG.innerHTML='<div class="gphm">Could not load GIPHY</div>'; }
+  const GPH_SC={rc:'reaction',fn:'funny',lv:'love',sd:'sad',gr:'greeting',ce:'celebration',an:'angry',ga:'gaming',sp:'sports',am:'animal',lc:'bangla'};   // সার্চ চলাকালে ট্যাব বদলালে সার্চ থাকে; ট্যাবের বিষয়ের মধ্যে খোঁজে
+  let gphBase=0, gphPg=0, gphBusy=false, gphEnd=false, gphWrap=null, gphSeen=new Set(), gphCq='', gphHeld=0, gphNoClk=0, gphRmEl2=null;
+  const gphRmEl=document.createElement('div'); gphRmEl.id='cmGphRm'; gphRmEl.innerHTML='<div>Remove from Recent</div>'; document.body.appendChild(gphRmEl);
+  const gphRmHide=()=>{ gphRmEl.classList.remove('show'); gphRmEl2=null; };
+  const gphSpin='<div class="gphm"><div class="gphsp"></div></div>';
+  const gphIsRec=()=>gphTab==='r';
+  const gphAdd=(items,rec)=>{ items.forEach(it=>{ const im=document.createElement('img'); im.alt=''; im.loading='lazy'; im.draggable=false; im.src=it.s; im._it=it; if(rec) im.dataset.r='1'; im.onclick=()=>{ if(gphHeld||Date.now()-gphNoClk<400) return; gphRecAdd(it); gphShut(); setAtt({k:'gif',src:it.u,giphy:1}); }; gphWrap.appendChild(im); }); };
+  const gphShow=(items,rec)=>{ gphG.innerHTML=''; gphG.scrollTop=0; gphWrap=document.createElement('div'); gphWrap.className='gphw'; gphG.appendChild(gphWrap); gphAdd(items,rec); };
+  const gphFetch=async(ep,q,n,off)=>{ const r=await fetch('https://api.giphy.com/v1/gifs/'+ep+'?api_key='+encodeURIComponent(GIPHY_API_KEY)+'&limit='+n+'&offset='+(off||0)+'&rating=g'+(q?'&q='+encodeURIComponent(q):'')); if(!r.ok) throw new Error('http'); const j=await r.json(); return (j.data||[]).filter(g=>g&&g.images&&(g.images.fixed_height||g.images.original)).map(gphIt); };
+  async function gphPage(q,pg){
+    const T=GPH_T.find(t=>t[0]===gphTab)||GPH_T[0]; pg+=gphBase;
+    if(q){ const sc=GPH_SC[gphTab]; return gphFetch('search',sc?q+' '+sc:q,24,pg*24); }
+    if(T[2]){ const per=Math.max(4,Math.ceil(30/T[2].length)); const rs=await Promise.all(T[2].map(x=>gphFetch('search',x,per,pg*per).catch(()=>[]))); const out=[]; for(let i=0;i<per;i++) rs.forEach(r=>{ if(r[i]) out.push(r[i]); }); return out; }
+    return gphFetch('trending','',24,pg*24);
   }
-  gphTabs.addEventListener('click',e=>{ const a=e.target.closest('[data-g]'); if(!a) return; gphTab=a.dataset.g; gphQ.value=''; gphQ.blur(); gphPaint(); clearTimeout(gphTm); gphLoad(''); });
-  function openGiphy(){ if(!GIPHY_API_KEY){ toast('GIPHY is not connected yet'); return; } gphQ.value=''; gphTab='t'; gphPaint(); gphB.classList.add('show'); gphLoad(''); }
+  const gphFresh=items=>items.filter(it=>{ if(gphSeen.has(it.u)) return false; gphSeen.add(it.u); return true; });
+  const gphRecShow=()=>{ gphEnd=true; if(gphRec.length) gphShow(gphRec,true); else{ gphWrap=null; gphG.innerHTML='<div class="gphm">No recent GIFs</div>'; } };
+  async function gphLoad(q,rf){
+    const my=++gphTk; gphPg=0; gphEnd=false; gphBusy=false; gphSeen=new Set(); gphCq=q; gphRmHide();
+    if(rf) gphG.querySelectorAll('.gphspm').forEach(x=>x.remove()); else{ gphWrap=null; gphBase=0; }   // pull-to-refresh: পুরনো gif থাকে, নতুন এলে বদলে যায়
+    if(gphIsRec()){ gphWrap=null; gphRecShow(); return; }
+    if(!rf) gphG.innerHTML=gphSpin;
+    try{
+      if(rf){ let nb; do{ nb=1+Math.floor(Math.random()*12); }while(nb===gphBase); gphBase=nb; }
+      let raw=await gphPage(q,0); if(my!==gphTk) return;
+      if(rf&&!raw.length){ gphBase=0; raw=await gphPage(q,0); if(my!==gphTk) return; }
+      const items=gphFresh(raw);
+      if(!items.length){ gphEnd=true; gphWrap=null; gphG.innerHTML='<div class="gphm">No GIFs found</div>'; return; }
+      gphShow(items,false); setTimeout(gphFill,300);
+    }catch(e){ if(my===gphTk&&!rf) gphG.innerHTML='<div class="gphm">Could not load GIPHY</div>'; }
+  }
+  async function gphMore(){
+    if(gphBusy||gphEnd||!gphWrap||gphIsRec()) return; gphBusy=true; const my=gphTk;
+    const sp=document.createElement('div'); sp.className='gphspm'; sp.innerHTML='<div class="gphsp"></div>'; gphG.appendChild(sp);
+    try{
+      let fresh=[], tries=0;
+      while(!fresh.length&&tries<3){ gphPg++; tries++; if(gphPg>150){ gphEnd=true; break; } const raw=await gphPage(gphCq,gphPg); if(my!==gphTk) return; if(!raw.length){ gphEnd=true; break; } fresh=gphFresh(raw); }
+      if(my!==gphTk) return;
+      if(fresh.length) gphAdd(fresh,false); else gphEnd=true;
+    }catch(e){ }
+    sp.remove(); if(my===gphTk) gphBusy=false;
+  }
+  const gphFill=()=>{ if(gphWrap&&!gphEnd&&!gphBusy&&gphG.scrollHeight<=gphG.clientHeight+200) gphMore().then(()=>setTimeout(gphFill,300)); };
+  gphG.addEventListener('scroll',()=>{ gphRmHide(); if(gphG.scrollTop+gphG.clientHeight>=gphG.scrollHeight-400) gphMore(); },{passive:true});
+  // ---- Recents: বাম দিকে swipe করলে বা hold করে "Remove from Recent" দিলে মুছে যায় (বাম দিকে স্লাইড হয়ে) ----
+  const gphDel=im=>{ const it=im._it; if(!it) return; gphRec=gphRec.filter(x=>x.u!==it.u); try{ localStorage.setItem('gphRecent',JSON.stringify(gphRec)); }catch(_){}
+    im.style.pointerEvents='none'; im.style.transition='transform .25s ease,opacity .25s ease'; im.style.transform='translateX(-120%)'; im.style.opacity='0';
+    setTimeout(()=>{ im.remove(); if(gphIsRec()&&gphWrap&&!gphWrap.querySelector('img')){ gphWrap=null; gphG.innerHTML='<div class="gphm">No recent GIFs</div>'; } },260); };
+  let gphD=null, gphLp=0;
+  gphG.addEventListener('pointerdown',e=>{ clearTimeout(gphLp); const im=e.target.closest&&e.target.closest('img[data-r]'); if(!im||!gphIsRec()) return; gphD={im,id:e.pointerId,x:e.clientX,y:e.clientY,dx:0,on:false};
+    gphLp=setTimeout(()=>{ if(!gphD||gphD.on) return; gphHeld=1; gphRmEl2=im; gphRmEl.classList.add('show'); const r=im.getBoundingClientRect(), w=gphRmEl.offsetWidth||190; gphRmEl.style.left=Math.min(Math.max(8,r.left+r.width/2-w/2),innerWidth-w-8)+'px'; let t=r.top-54; if(t<8) t=r.bottom+8; gphRmEl.style.top=t+'px'; },450); });
+  gphG.addEventListener('pointermove',e=>{ const D=gphD; if(!D||e.pointerId!==D.id) return; const dx=e.clientX-D.x, dy=e.clientY-D.y;
+    if(!D.on){ if(Math.abs(dx)>8||Math.abs(dy)>8) clearTimeout(gphLp); if(dx<-8&&Math.abs(dx)>Math.abs(dy)*1.3){ D.on=true; gphRmHide(); try{ D.im.setPointerCapture(e.pointerId); }catch(_){} D.im.style.transition='none'; } else return; }
+    D.dx=dx; const mv=Math.min(0,dx); D.im.style.transform='translateX('+mv+'px)'; D.im.style.opacity=String(Math.max(.25,1+mv/(D.im.offsetWidth*1.2))); });
+  const gphUp=e=>{ clearTimeout(gphLp); const D=gphD; gphD=null; if(gphHeld) setTimeout(()=>{ gphHeld=0; },350); if(!D||!D.on) return; gphNoClk=Date.now(); const w=D.im.offsetWidth||100; if(D.dx<-Math.min(90,w*.45)) gphDel(D.im); else{ D.im.style.transition='transform .2s ease,opacity .2s ease'; D.im.style.transform=''; D.im.style.opacity=''; } };
+  ['pointerup','pointercancel'].forEach(n=>gphG.addEventListener(n,gphUp));
+  gphG.addEventListener('contextmenu',e=>{ if(e.target.closest&&e.target.closest('img[data-r]')) e.preventDefault(); });
+  gphRmEl.addEventListener('click',()=>{ const im=gphRmEl2; gphRmHide(); if(im) gphDel(im); });
+  document.addEventListener('click',e=>{ if(!gphRmEl.classList.contains('show')||gphRmEl.contains(e.target)) return; gphRmHide(); e.stopPropagation(); e.preventDefault(); },true);
+  // × আইকন (search box-এর একেবারে শেষে)
+  const gphClr=gphB.querySelector('#cmGphClr'), gphClrPaint=()=>gphClr.classList.toggle('show',!!gphQ.value);
+  gphClr.addEventListener('click',()=>{ gphQ.value=''; gphClrPaint(); clearTimeout(gphTm); gphLoad(''); gphQ.focus(); });
+  gphQ.addEventListener('input',gphClrPaint);
+  gphTabs.addEventListener('click',e=>{ const a=e.target.closest('[data-g]'); if(!a) return; gphTab=a.dataset.g; gphPaint(); clearTimeout(gphTm); gphLoad(gphQ.value.trim()); });
+  // ---- Edit categories: ট্যাবের শেষে নীল Edit বাটন; Word effects window-এর মতো। ক্যাটাগরির নাম + ট্যাগ (comma দিয়ে) ----
+  { const KEY='gphCats';
+    const defs=()=>GPH_DEF.map(c=>({id:c.id,n:c.n,t:c.t.slice()}));
+    const GPH_DEF=GPH_T.slice(2).map(t=>({id:t[0],n:t[1],t:(t[2]||[]).slice()}));
+    let cats=defs();
+    try{ const o=JSON.parse(localStorage.getItem(KEY)||'null'); if(Array.isArray(o)) cats=o.filter(c=>c&&typeof c.id==='string'&&typeof c.n==='string'&&c.n.trim()&&Array.isArray(c.t)).map(c=>({id:c.id,n:c.n,t:c.t.filter(x=>typeof x==='string'&&x.trim())})).filter(c=>c.t.length); }catch(_){}
+    const q2=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const sync=()=>{ GPH_T.length=2; cats.forEach(c=>{ GPH_T.push([c.id,c.n,c.t]); if(!(c.id in GPH_SC)) GPH_SC[c.id]=c.t[0]; }); };
+    const draw=()=>{ gphTabs.innerHTML=GPH_T.map(t=>'<a data-g="'+q2(t[0])+'">'+q2(t[1])+'</a>').join('')+'<a class="gphed" data-ed="1" role="button"><span class="material-symbols-outlined">edit</span>Edit</a>'; gphPaint(); };
+    sync(); draw();
+    gphTabs.addEventListener('click',e=>{ if(e.target.closest('[data-ed]')) openEd(); });
+    const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(cats)); }catch(_){ toast('Could not save (storage full?)'); } };
+    const st=document.createElement('style'); st.textContent='#cmGcBack{padding:8px;touch-action:pan-y}#cmGcBack .dlg{max-width:480px;max-height:88vh;display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:8px 0 6px}#cmGcBack .dlg>*{flex-shrink:0}#cmGcBack .gch{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px 22px}#cmGcBack .gch h2{font-size:20px;font-weight:500;margin:0;padding:0}#cmGcX{cursor:pointer;padding:6px;border-radius:50%;color:#fff;font-size:24px}#cmGcX:active{background:#333}#cmGcBack .gcb{display:flex;align-items:center;margin:10px 16px 6px;background:#181818;border:1px solid #4a4a4a;border-radius:12px;padding:4px 4px 4px 12px}#cmGcBack .gcb:focus-within{border-color:#3ea6ff}#cmGcBack .gcb.dup,#cmGcBack .gcb.dup:focus-within{border-color:#ff4d4d}#cmGcBack .gcb input{flex:1;min-width:0;height:38px;box-sizing:border-box;background:transparent;border:0;outline:0;color:#fff;font-family:inherit;font-size:16px;padding:0 4px 0 0;user-select:text;-webkit-user-select:text}#cmGcBack .gcc{display:none;font-size:26px;padding:4px;cursor:pointer;color:#aaa;flex-shrink:0}#cmGcBack .gcc:active{color:#fff}#cmGcDup{display:none;margin:-2px 22px 6px;color:#ff4d4d;font-size:13px}#cmGcDup.show{display:block}#cmGcAdd{display:flex;align-items:center;justify-content:center;gap:6px;margin:6px 16px 12px;padding:10px;border-radius:20px;background:#3ea6ff;color:#0f0f0f;font-size:15px;font-weight:500;cursor:pointer;opacity:.35;pointer-events:none;user-select:none;-webkit-user-select:none}#cmGcAdd.on{opacity:1;pointer-events:auto}#cmGcAdd .material-symbols-outlined{font-size:20px}#cmGcCancel{display:none;align-items:center;justify-content:center;margin:0 16px 12px;padding:10px;border-radius:20px;background:#333;color:#fff;font-size:15px;font-weight:500;cursor:pointer;user-select:none;-webkit-user-select:none}#cmGcCancel:active{background:#444}#cmGcBack.edm #cmGcCancel{display:flex}#cmGcBack.edm #cmGcAdd{margin-bottom:6px}#cmGcBack .gcl{display:flex;flex-wrap:wrap;gap:8px;padding:4px 16px 8px}#cmGcBack .gcChip{display:inline-flex;align-items:center;gap:6px;background:#272727;border:1px solid #3f3f3f;border-radius:16px;padding:5px 6px 5px 12px;font-size:14px;max-width:100%;cursor:pointer}#cmGcBack .gcChip.ed{border-color:#3ea6ff;background:#1f2d3a}#cmGcBack .gcChip .t{min-width:0;overflow-wrap:anywhere;word-break:break-word}#cmGcBack .gcChip .t small{display:block;color:#aaa;font-size:12px;margin-top:1px}#cmGcBack .gcChip .material-symbols-outlined{font-size:18px;color:#aaa;cursor:pointer;border-radius:50%;padding:2px;flex-shrink:0}#cmGcBack .gcChip .material-symbols-outlined:hover{background:#c0392b;color:#fff}#cmGcBack .gce{width:100%;text-align:center;color:#aaa;font-size:14px;padding:6px 0}#cmGcReset{text-align:center;color:#3ea6ff;font-size:14px;padding:6px 0 10px;cursor:pointer;user-select:none;-webkit-user-select:none}'; document.head.appendChild(st);
+    const gc=document.createElement('div'); gc.className='dlg-back'; gc.id='cmGcBack'; gc.style.zIndex=100;
+    gc.innerHTML='<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="cmGcT"><div class="gch"><h2 id="cmGcT">Edit categories</h2><span class="material-symbols-outlined" id="cmGcX" role="button" aria-label="Close">close</span></div><div class="gcb" id="cmGcB1"><input id="cmGcN" type="text" maxlength="30" autocomplete="off" placeholder="Category name"><span class="material-symbols-outlined gcc" data-c="cmGcN" role="button" aria-label="Clear">cancel</span></div><div id="cmGcDup" role="alert">Already added</div><div class="gcb"><input id="cmGcTg" type="text" maxlength="120" autocomplete="off" placeholder="Tags (comma separated)"><span class="material-symbols-outlined gcc" data-c="cmGcTg" role="button" aria-label="Clear">cancel</span></div><div id="cmGcAdd" role="button"><span class="material-symbols-outlined" id="cmGcAddI">add</span><span id="cmGcAddT">Add</span></div><div id="cmGcCancel" role="button">Cancel</div><div class="gcl" id="cmGcList"></div><div id="cmGcReset" role="button">Reset to default</div></div>'; document.body.appendChild(gc);
+    const $=id=>gc.querySelector('#'+id), nIn=$('cmGcN'), tIn=$('cmGcTg'), add=$('cmGcAdd'), addT=$('cmGcAddT'), addI=$('cmGcAddI'), list=$('cmGcList'); let edI=-1, dirty=false;
+    const tags=v=>{ const seen=new Set(), out=[]; String(v).split(/[,،\n]+/).forEach(x=>{ x=x.trim(); const k=x.toLowerCase(); if(x&&!seen.has(k)){ seen.add(k); out.push(x); } }); return out.slice(0,8); };
+    const getT=()=>{ const t=tags(tIn.value); return t.length?t:(nIn.value.trim()?[nIn.value.trim()]:[]); };
+    const paint=()=>{ const n=nIn.value.trim(); let on=!!n; const dup=!!n&&cats.some((c,k)=>k!==edI&&c.n.toLowerCase()===n.toLowerCase()); if(edI>=0){ const o=cats[edI]; on=!!n&&!!o&&(n!==o.n||getT().join('\u0001')!==o.t.join('\u0001')); } if(dup) on=false;
+      $('cmGcB1').classList.toggle('dup',dup); $('cmGcDup').classList.toggle('show',dup); add.classList.toggle('on',on); add.setAttribute('aria-disabled',!on);
+      gc.querySelectorAll('.gcc').forEach(x=>x.style.display=$(x.dataset.c).value?'block':'none'); addT.textContent=edI>=0?'Edit':'Add'; addI.textContent=edI>=0?'edit':'add'; gc.classList.toggle('edm',edI>=0); };
+    const drawL=()=>{ list.innerHTML=cats.length?cats.map((c,i)=>'<div class="gcChip'+(i===edI?' ed':'')+'" data-i="'+i+'"><span class="t">'+q2(c.n)+'<small>'+q2(c.t.join(', '))+'</small></span><span class="material-symbols-outlined" role="button" aria-label="Remove">close</span></div>').join(''):'<div class="gce">No categories</div>'; };
+    const exitEdit=()=>{ edI=-1; nIn.value=''; tIn.value=''; paint(); drawL(); };
+    const changed=()=>{ dirty=true; save(); sync(); draw(); };
+    const nid=()=>'c'+Date.now().toString(36)+Math.floor(Math.random()*1e4);
+    function openEd(){ gphQ.blur(); edI=-1; nIn.value=''; tIn.value=''; drawL(); paint(); gc.classList.add('show'); }
+    const close=()=>{ gc.classList.remove('show'); nIn.blur(); tIn.blur(); if(!dirty) return; dirty=false; if(!GPH_T.some(t=>t[0]===gphTab)){ gphTab='t'; gphPaint(); } clearTimeout(gphTm); gphLoad(gphQ.value.trim()); };
+    nIn.addEventListener('input',paint); tIn.addEventListener('input',paint);
+    nIn.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); tIn.focus(); } }); tIn.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); add.onclick(); } });
+    gc.querySelectorAll('.gcc').forEach(x=>{ x.addEventListener('pointerdown',e=>e.preventDefault()); x.onclick=()=>{ const i=$(x.dataset.c); i.value=''; paint(); i.focus(); }; });
+    add.onclick=()=>{ const n=nIn.value.trim(), t=getT(); if(!n||!t.length||!add.classList.contains('on')) return;
+      if(edI>=0){ const o=cats[edI]; if(!o){ exitEdit(); return; } o.n=n; o.t=t; o.id=nid(); changed(); toast('Category updated'); exitEdit(); return; }
+      cats.push({id:nid(),n:n,t:t}); changed(); nIn.value=''; tIn.value=''; paint(); drawL(); };
+    $('cmGcX').onclick=close;
+    gc.addEventListener('click',e=>{ if(e.target===gc){ close(); return; } if(e.target.closest('#cmGcCancel')){ exitEdit(); return; }
+      if(e.target.closest('#cmGcReset')){ if(!confirm('Reset categories to default?')) return; cats=defs(); try{ localStorage.removeItem(KEY); }catch(_){} dirty=true; sync(); draw(); exitEdit(); return; }
+      const x=e.target.closest('.gcChip .material-symbols-outlined');
+      if(!x){ const ch=e.target.closest('.gcChip'); if(!ch) return; const i=+ch.dataset.i, o=cats[i]; if(!o) return; edI=i; nIn.value=o.n; tIn.value=o.t.join(', '); paint(); drawL(); return; }
+      const ri=+x.closest('.gcChip').dataset.i; cats.splice(ri,1); if(edI===ri){ edI=-1; nIn.value=''; tIn.value=''; } else if(edI>ri) edI--; changed(); paint(); drawL(); });
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&gc.classList.contains('show')){ close(); e.stopPropagation(); } },true);
+    window.__gphEd=openEd;
+  }
+  // ডানে-বামে swipe করে tab বদল (Sticker window-এর মতো)
+  let gphSx=0, gphSy=0, gphSt=0, gphSwT=0;
+  const gphGo=id=>{ if(id===gphTab) return; const ids=GPH_T.map(t=>t[0]), d=ids.indexOf(id)>ids.indexOf(gphTab)?1:-1; gphTab=id; gphPaint(); clearTimeout(gphTm); gphLoad(gphQ.value.trim()); gphNoClk=Date.now(); if(gphG.animate) gphG.animate([{transform:'translateX('+(d*28)+'px)',opacity:.2},{transform:'none',opacity:1}],{duration:180,easing:'ease-out'}); };
+  gphG.addEventListener('pointerdown',e=>{ gphSx=e.clientX; gphSy=e.clientY; gphSt=Date.now(); });
+  gphG.addEventListener('pointerup',e=>{ const dx=e.clientX-gphSx, dy=e.clientY-gphSy; if(gphD||Date.now()-gphNoClk<500||gphHeld||Date.now()-gphSt>700||Math.abs(dx)<55||Math.abs(dx)<Math.abs(dy)*1.5) return; const ids=GPH_T.map(t=>t[0]), i=ids.indexOf(gphTab)+(dx<0?1:-1); if(i<0||i>=ids.length) return; gphGo(ids[i]); });
+  function openGiphy(){ if(!GIPHY_API_KEY){ toast('GIPHY is not connected yet'); return; } gphQ.value=''; gphClrPaint(); gphTab='t'; gphPaint(); gphRmHide(); gphB.classList.add('show'); gphLoad(''); }
   gphQ.addEventListener('input',()=>{ clearTimeout(gphTm); gphTm=setTimeout(()=>gphLoad(gphQ.value.trim()),400); });
   gphB.addEventListener('click',e=>{ if(e.target===gphB||e.target.id==='cmGphX') gphShut(); });
+  // ---- Pull to refresh (playlists tab-এর মতো): শুধু বর্তমান ট্যাবে নতুন gif; Recents-এ কাজ করে না ----
+  (function(){
+    const pw=gphB.querySelector('#cmGphPw'), pc=gphB.querySelector('#cmGphPtr'), ico=pc.firstElementChild, TH=70, MAX=130;
+    let sy=0, sx=0, pull=0, pulling=false, busy=false, lock=0;
+    const place=(y,o,r)=>{ pc.style.transform='translateY('+y+'px)'; pc.style.opacity=o; if(r!=null) ico.style.transform='rotate('+r+'deg)'; };
+    const hide=()=>{ pc.style.transition='transform .25s ease, opacity .25s'; place(-60,0); };
+    const geo=()=>{ pw.style.top=gphG.offsetTop+'px'; pw.style.height=gphG.clientHeight+'px'; pw.style.display='block'; };
+    gphG.addEventListener('touchstart',e=>{ if(busy||gphIsRec()||gphG.scrollTop>0||e.touches.length!==1) return; sy=e.touches[0].clientY; sx=e.touches[0].clientX; lock=0; pulling=true; pull=0; pc.style.transition='none'; geo(); },{passive:true});
+    gphG.addEventListener('touchmove',e=>{ if(!pulling) return; const dy=e.touches[0].clientY-sy, dx=e.touches[0].clientX-sx;
+      if(!lock&&(Math.abs(dx)>6||Math.abs(dy)>6)) lock=Math.abs(dx)>Math.abs(dy)?1:2;
+      if(lock===1){ pulling=false; pull=0; hide(); return; }
+      if(dy<=0||gphG.scrollTop>0){ pull=0; place(-60,0); return; }
+      pull=Math.min(MAX,dy*0.5); if(e.cancelable) e.preventDefault(); place(pull-50,Math.min(1,pull/TH),pull*4); },{passive:false});
+    const end=()=>{ if(!pulling) return; pulling=false;
+      if(pull>=TH&&!gphIsRec()){ busy=true; pc.style.transition='transform .25s ease'; ico.style.transform=''; ico.classList.add('spin'); place(40,1); const t0=Date.now();
+        Promise.resolve(gphLoad(gphQ.value.trim(),true)).catch(()=>{}).then(()=>setTimeout(()=>{ ico.classList.remove('spin'); hide(); busy=false; },Math.max(0,700-(Date.now()-t0)))); }
+      else hide();
+      pull=0; };
+    gphG.addEventListener('touchend',end); gphG.addEventListener('touchcancel',end);
+  })();
   // Link: About channel-এর Add links window-এর একই mechanism ও interface; ঠিক link হলে comment-এর attachment হয়
   // linkpreview.net: লিংকের মূল ছবি (og:image) আনে; একই লিংকের জন্য একবারই কল হয়
   const LP_KEY='c93f3bd39ada65a806aaa0642c1f08b5', lpCache={};
@@ -12768,7 +12882,7 @@ function askDelete(title,cb,yesLabel,slideSel){
 <script>
 // Dialog (Info / Delete / Save to playlist) খোলা থাকলে পেছনের পেজ স্ক্রল হবে না
 (function(){
-  const inScroll=t=>t&&t.closest&&t.closest('#cmGphG,#cmGphTabs,#cmCtScroll,#infoT,#infoB,#plPickList,#cmStkGrid,#cmStkTabs,#cmTbScroll,#viewer,.aspm,#cwPs,#gdBack .gd,#cmAdBack .adp,#cmTmBack .adp,#cmAdList,#cmAttBack .dlg,#cmFormList,#cmFormPick .dlg,#cmFormView .dlg,#cmFormInfo .dlg,#cmFormDesc,#cmFormName,#cmQrList,#cmQrIn,#cmArBack .dlg,#cmWeBack .dlg,#cmWeGrid,#cmArC,#cmArR,#cmArList,#cmSetBack .dlg,#cmTrList,#cmTbList,#cmLsList,#cmSpList,#cbLimList,#cmGlBack .dlg,#cmPollBack .dlg,#cmGlView .dlg,#cmQrMenu .dlg,#cmQrForm .dlg,#cmEvBack .dlg,#cmQrSelList,#cmQrInfo .dlg,#cmQrCust .dlg,#cmQrTime .qtp,#cmQrBd .qtp,#cmQrDate #qdYears,#cmQrDate #qdMdy .mc');
+  const inScroll=t=>t&&t.closest&&t.closest('#cmGphG,#cmGphTabs,#cmSetBack .cmlsb,#cmSetBack .cmtsb,.drlsb,.drtsb,#cmCtScroll,#infoT,#infoB,#plPickList,#cmStkGrid,#cmStkTabs,#cmTbScroll,#viewer,.aspm,#cwPs,#gdBack .gd,#cmAdBack .adp,#cmTmBack .adp,#cmAdList,#cmAttBack .dlg,#cmFormList,#cmFormPick .dlg,#cmFormView .dlg,#cmFormInfo .dlg,#cmFormDesc,#cmFormName,#cmQrList,#cmQrIn,#cmArBack .dlg,#cmWeBack .dlg,#cmWeGrid,#cmArC,#cmArR,#cmArList,#cmSetBack .dlg,#cmTrList,#cmTbList,#cmLsList,#cmSpList,#cbLimList,#cmGlBack .dlg,#cmPollBack .dlg,#cmGlView .dlg,#cmQrMenu .dlg,#cmQrForm .dlg,#cmEvBack .dlg,#cmQrSelList,#cmQrInfo .dlg,#cmQrCust .dlg,#cmQrTime .qtp,#cmQrBd .qtp,#cmQrDate #qdYears,#cmQrDate #qdMdy .mc');
   const open=()=>document.querySelector('.dlg-back.show');
   document.addEventListener('wheel',e=>{ if(open()&&!inScroll(e.target)) e.preventDefault(); },{passive:false});
   document.addEventListener('touchmove',e=>{ const o=open(); if(!o||inScroll(e.target)||o.id==='infoBack') return; e.preventDefault(); },{passive:false});   // Info window-এ selection handle টানা আটকানো হবে না
