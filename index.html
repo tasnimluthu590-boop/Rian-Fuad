@@ -5002,7 +5002,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     ['pause','ended','emptied'].forEach(t=>document.addEventListener(t,e=>{ const a=e.target; if(a&&a.tagName==='AUDIO') kick(); },true));
   })();
   function growIn(){   // focus থাকলে ৫ লাইন পর্যন্ত বড়; বাইরে চাপলে এক লাইনে minimize (ভেতরে scroll চলবে)
-    cmBox.classList.toggle('txt',!!cmIn.value); cmIn.style.height='auto'; const cs=getComputedStyle(cmIn), lh=parseFloat(cs.lineHeight)||24, pad=(parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0), one=lh+pad, max=lh*5+pad, sh=cmIn.scrollHeight;
+    cmBox.classList.toggle('txt',!!(window.__lsBare?window.__lsBare(cmIn.value):cmIn.value)); cmIn.style.height='auto'; const cs=getComputedStyle(cmIn), lh=parseFloat(cs.lineHeight)||24, pad=(parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0), one=lh+pad, max=lh*5+pad, sh=cmIn.scrollHeight;
     if(document.activeElement===cmIn){ cmIn.style.height=Math.min(sh,max)+'px'; cmIn.style.overflowY=sh>max+1?'auto':'hidden'; }
     else{ cmIn.style.height=one+'px'; cmIn.style.overflowY=sh>one+1?'auto':'hidden'; }
   }
@@ -5020,11 +5020,21 @@ function askDelete(title,cb,yesLabel,slideSel){
     document.head.appendChild(st);
     const KS=['b','i','s','u','g'], TS={b:0,i:0,s:0,u:0,g:0}, row=attB.querySelector('#cmTsRow');
     const cssOf=t=>{ t=t||''; const d=[]; if(t.indexOf('u')>=0) d.push('underline'); if(t.indexOf('s')>=0) d.push('line-through'); return {w:t.indexOf('b')>=0?'700':'',i:t.indexOf('i')>=0?'italic':'',d:d.join(' '),g:t.indexOf('g')>=0?'rgba(255,214,10,.32)':''}; };
-    window.__tsStr=()=>KS.filter(k=>TS[k]).join('');
+    window.__tsStr=()=>KS.filter(k=>TS[k]).join('')+(typeof LS==='string'?LS:'');
     window.__tsAttr=c=>{ const t=c&&c.ts; if(!t) return ''; const o=cssOf(t); return ' style="'+(o.w?'font-weight:700;':'')+(o.i?'font-style:italic;':'')+(o.d?'text-decoration:'+o.d+';':'')+'"'; };
     // Reply to reply (c.to): yellow text highlighter শুধু লেখার অংশে; নীল username-এ লাগে না
     window.__tsBg=c=>{ const t=c&&c.ts; if(!t) return ''; const o=cssOf(t); return o.g?'background:'+o.g+';border-radius:6px;padding:2px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;':''; };
-    const paint=()=>{ row.querySelectorAll('[data-ts]').forEach(b=>{ const on=!!TS[b.dataset.ts]; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); });
+    // ---- List style (Drawing-এর List style-এর মতো): একটাই বেছে নেওয়া যায়; চালু থাকলে comment / reply-র প্রতিটি লাইনে 1. 2. 3. / a. b. c. / i. ii. / • ✓ ➢ ইত্যাদি চিহ্ন দেখায় ----
+    let LS=''; const LSRE=/[NARDHQCWMXYEFG]/;
+    const LSD=[['N','1.','Numbers: 1, 2, 3'],['E','1)','Numbers with bracket: 1), 2), 3)'],['A','a.','Lowercase letters: a, b, c'],['F','a)','Lowercase letters with bracket: a), b), c)'],['R','i.','Roman numerals: i, ii, iii'],['G','i)','Roman numerals with bracket: i), ii), iii)'],['D','\u2022','Solid circle bullet'],['H','\u25CB','Hollow circle'],['Q','\u25AA','Solid square'],['C','\u2713','Checkmark'],['W','\u27A2','Arrow'],['X','\u2794','Arrow (long)'],['M','\u2756','Diamond'],['Y','\u2666','Solid diamond']];
+    const lsRow=document.createElement('div'); lsRow.className='cmtsRow cmlsRow'; lsRow.id='cmLsRow';
+    lsRow.innerHTML='<span class="material-symbols-outlined">format_list_bulleted</span><span class="cmtsn">List style</span><span class="cmlsb">'+LSD.map(d=>'<span data-ls="'+d[0]+'" role="button" aria-pressed="false" title="'+d[2]+'">'+d[1]+'</span>').join('')+'</span>';
+    row.after(lsRow);
+    { const st3=document.createElement('style'); st3.textContent='#cmSetBack .cmlsRow{gap:14px}#cmSetBack .cmlsb{display:flex;flex:1 1 auto;min-width:0;gap:2px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;touch-action:pan-x;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}#cmSetBack .cmlsb::-webkit-scrollbar{display:none}#cmSetBack .cmlsb>span:first-child{margin-left:auto}#cmSetBack .cmlsb span{flex:none;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#aaa;font-size:16px;font-weight:600;line-height:1;user-select:none;-webkit-user-select:none}#cmSetBack .cmlsb span.on{background:#3ea6ff;color:#0f0f0f}'; document.head.appendChild(st3); }
+    const lsMark0=(k,n)=>{ const B={D:'\u2022',H:'\u25CB',Q:'\u25AA',C:'\u2713',W:'\u27A2',X:'\u2794',M:'\u2756',Y:'\u2666'}; if(B[k]) return B[k]; if(k==='N') return n+'.'; let r='',v=n; if(k==='A'){ while(v>0){ v--; r=String.fromCharCode(97+v%26)+r; v=Math.floor(v/26); } return r+'.'; } const RR=[[1000,'m'],[900,'cm'],[500,'d'],[400,'cd'],[100,'c'],[90,'xc'],[50,'l'],[40,'xl'],[10,'x'],[9,'ix'],[5,'v'],[4,'iv'],[1,'i']]; for(const q of RR) while(v>=q[0]){ r+=q[1]; v-=q[0]; } return r+'.'; };
+    const lsMark=(k,n)=>{ const p={E:'N',F:'A',G:'R'}[k]; return p?lsMark0(p,n).replace(/\.$/,')'):lsMark0(k,n); };
+    window.__lsApply=(c,txt)=>{ const m=LSRE.exec((c&&c.ts)||''); if(!m||typeof txt!=='string'||!txt) return txt; let n=0; return txt.split('\n').map(l=>{ if(!l.trim()) return l; n++; return lsMark(m[0],n)+' '+l; }).join('\n'); };
+    const paint=()=>{ lsRow.querySelectorAll('[data-ls]').forEach(b=>{ const on=b.dataset.ls===LS; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); }); row.querySelectorAll('[data-ts]').forEach(b=>{ const on=!!TS[b.dataset.ts]; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); });
       const o=cssOf(window.__tsStr()); const ti=document.getElementById('cmIn'); if(ti){ ti.style.fontWeight=o.w; ti.style.fontStyle=o.i; ti.style.textDecoration=o.d; ti.style.backgroundColor=''; ti.classList.toggle('tsg',!!o.g); if(window.__tsOvSync) window.__tsOvSync(); } };
     // Text background: textarea নিজে শুধু লেখার অংশে background দিতে পারে না, তাই পেছনে একই লেখার mirror (স্বচ্ছ লেখা + highlight span); placeholder-এ ::placeholder background
     { const st2=document.createElement('style'); st2.textContent='#cmIn.tsg::placeholder{background:rgba(255,214,10,.32);border-radius:6px;-webkit-box-decoration-break:clone;box-decoration-break:clone}#cmTsOv{-webkit-text-size-adjust:100%;text-size-adjust:100%;position:absolute;z-index:0;margin:0;color:transparent;pointer-events:none;overflow:hidden;box-sizing:border-box;white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;border:0}#cmTsOv span{background:rgba(255,214,10,.32);border-radius:6px;-webkit-box-decoration-break:clone;box-decoration-break:clone}.cminput #cmIn{position:relative;z-index:1}';
@@ -5046,11 +5056,54 @@ function askDelete(title,cb,yesLabel,slideSel){
       ['compositionstart','compositionupdate','compositionend','keyup','beforeinput','focusin','touchmove','selectionchange'].forEach(n=>document.addEventListener(n,e=>{ if(n==='selectionchange'||(e.target&&e.target.id==='cmIn')){ try{ ovSync(); requestAnimationFrame(ovSync); }catch(_){} } },true));
       window.addEventListener('resize',ovSync);
       const lp=()=>{ try{ if(TS.g||(ovEl&&ovEl.style.display!=='none')) ovSync(); }catch(_){} requestAnimationFrame(lp); }; requestAnimationFrame(lp); }
-    window.__tsSet=t=>{ t=t||''; KS.forEach(k=>{ TS[k]=t.indexOf(k)>=0?1:0; }); paint(); };
+    window.__tsSet=t=>{ t=t||''; KS.forEach(k=>{ TS[k]=t.indexOf(k)>=0?1:0; }); { const m=LSRE.exec(t); LS=m?m[0]:''; AK=LS; } paint(); };
     let sv=null;   // Edit শুরুর আগের Text style; Send-এর পর selection আনসিলেক্ট হয় না, শুধু Edit শেষে আগেরটা ফেরে
     window.__tsEditBegin=t=>{ if(sv===null) sv=window.__tsStr(); window.__tsSet(t); };
     window.__tsReset=()=>{ if(sv!==null){ const t=sv; sv=null; window.__tsSet(t); } };
     row.addEventListener('click',e=>{ const b=e.target.closest('[data-ts]'); if(!b) return; e.stopPropagation(); TS[b.dataset.ts]=TS[b.dataset.ts]?0:1; paint(); if(window.__tsChg) window.__tsChg(); });
+    lsRow.addEventListener('click',e=>{ const b=e.target.closest('[data-ls]'); if(!b) return; e.stopPropagation(); LS=(LS===b.dataset.ls)?'':b.dataset.ls; paint(); norm(); try{ if(window.__lsSeed) window.__lsSeed(); }catch(_){} if(window.__tsChg) window.__tsChg(); });
+    // ---- লেখার সময়ই চিহ্ন: List style চালু থাকলে comment box-এর প্রতিটি লাইনের আগে 1. / a. / • ইত্যাদি বসে; Enter চাপলে পরের লাইনে পরের চিহ্ন; খালি চিহ্নে Enter / Backspace চাপলে চিহ্ন সরে ----
+    let AK='';   // এই মুহূর্তে textbox-এর লেখায় যে ধরনের চিহ্ন বসে আছে
+    const getIn=()=>document.getElementById('cmIn');
+    const mk=(k,n)=>lsMark(k,n)+' ';
+    const stripL=(l,k,N)=>{ if(!k) return l; for(let j=1;j<=N;j++){ const m=mk(k,j); if(l.indexOf(m)===0) return l.slice(m.length); if(l===m.slice(0,-1)) return ''; } return l; };
+    const LNS=v=>{ const a=v.split('\n'), st=[]; let p=0; a.forEach(l=>{ st.push(p); p+=l.length+1; }); return {a:a,st:st}; };
+    const norm=()=>{ const ti=getIn(); if(!ti||ti.disabled||(!LS&&!AK)) { AK=LS; return; }
+      const v=ti.value, L0=LNS(v), N=L0.a.length+2;
+      const loc=p=>{ let i=0; while(i+1<L0.a.length&&p>L0.st[i+1]-1+0&&p>=L0.st[i+1]) i++; return {i:i,c:p-L0.st[i]}; };
+      const s0=loc(ti.selectionStart), e0=loc(ti.selectionEnd);
+      let n=0; const rm=[], ad=[];
+      const out=L0.a.map((l,i)=>{ const b=stripL(l,AK,N), had=b!==l; let nl;
+        if(!LS) nl=b; else if(b.trim()){ n++; nl=mk(LS,n)+b; } else if(had){ n++; nl=mk(LS,n); } else nl=b.trim()?b:l;
+        rm[i]=l.length-b.length; ad[i]=nl.length-b.length; return nl; });
+      AK=LS; const nv=out.join('\n'); if(nv===v) return;
+      const L1=LNS(nv), map=q=>{ const col=Math.max(0,q.c-rm[q.i])+ad[q.i]; return L1.st[q.i]+Math.min(col,out[q.i].length); };
+      ti.value=nv; try{ ti.setSelectionRange(map(s0),map(e0)); }catch(_){} };
+    window.__lsNorm=norm;
+    document.addEventListener('input',e=>{ if(e.target&&e.target.id==='cmIn'&&LS&&!e.isComposing) norm(); },true);
+    document.addEventListener('compositionend',e=>{ if(e.target&&e.target.id==='cmIn'&&(LS||AK)) setTimeout(norm,0); },true);
+    document.addEventListener('beforeinput',e=>{ const ti=e.target; if(!ti||ti.id!=='cmIn'||!LS||e.isComposing) return; const t=e.inputType, ss=ti.selectionStart, se=ti.selectionEnd, v=ti.value, L0=LNS(v), N=L0.a.length+3;
+      let i=0; while(i+1<L0.a.length&&ss>=L0.st[i+1]) i++; const line=L0.a[i], col=ss-L0.st[i], body=stripL(line,AK||LS,N), ml=line.length-body.length, only=ml>0&&!body.trim();
+      const fire=()=>ti.dispatchEvent(new Event('input',{bubbles:true}));
+      if((t==='insertLineBreak'||t==='insertParagraph')&&ss===se){
+        e.preventDefault();
+        if(only&&col>=ml){ const a=v.slice(0,L0.st[i])+v.slice(L0.st[i]+ml); ti.value=a; try{ ti.setSelectionRange(L0.st[i],L0.st[i]); }catch(_){} fire(); return; }   // খালি চিহ্নে Enter = list শেষ
+        ti.setRangeText('\n'+mk(LS,i+2),ss,se,'end'); fire(); return; }
+      if(t==='deleteContentBackward'&&ss===se&&ml>0&&col===ml){
+        e.preventDefault();
+        if(only){ ti.value=v.slice(0,L0.st[i])+v.slice(L0.st[i]+ml); try{ ti.setSelectionRange(L0.st[i],L0.st[i]); }catch(_){} fire(); return; }
+        if(i>0){ const a=L0.st[i]-1; ti.value=v.slice(0,a)+v.slice(L0.st[i]+ml); try{ ti.setSelectionRange(a,a); }catch(_){} fire(); }
+        return; } },true);
+    // ---- লেখার সময়ই চিহ্ন (fix): বক্সে চাপলেই প্রথম চিহ্ন আগে থেকে বসে; IME-তে লেখার সময় (isComposing) value বদলাতে হয় না ----
+    const bare=v=>{ const k=AK||LS; if(!k||!v) return v; const L=v.split('\n'), N=L.length+3; return L.filter(l=>{ const b=stripL(l,k,N); return !(b!==l&&!b.trim()); }).join('\n'); };
+    window.__lsBare=bare;
+    const fixCur=()=>{ const ti=getIn(); if(!ti) return; const n=ti.value.length; try{ ti.setSelectionRange(n,n); }catch(_){} };
+    const seed=()=>{ const ti=getIn(); if(!ti||ti.disabled||ti.readOnly||!LS||ti.value!=='') return false; ti.value=mk(LS,1); AK=LS; fixCur(); try{ growIn(); }catch(_){} try{ if(window.__cmInputRefresh) window.__cmInputRefresh(); }catch(_){} try{ if(window.__tsOvSync) window.__tsOvSync(); }catch(_){} return true; };
+    window.__lsSeed=()=>{ const ti=getIn(); if(ti&&document.activeElement===ti) seed(); };
+    document.addEventListener('focusin',e=>{ const ti=e.target; if(!ti||ti.id!=='cmIn'||!LS) return; if(seed()){ setTimeout(()=>{ if(!bare(ti.value).trim()) fixCur(); },0); setTimeout(()=>{ if(!bare(ti.value).trim()) fixCur(); },80); } },true);
+    document.addEventListener('focusout',e=>{ const ti=e.target; if(!ti||ti.id!=='cmIn'||!LS) return; if(ti.value&&!bare(ti.value).trim()){ ti.value=''; try{ growIn(); if(window.__cmInputRefresh) window.__cmInputRefresh(); }catch(_){} } },true);
+    // Send / Save-এর আগে খালি চিহ্নের লাইন (যেমন শেষে একা '3.') বাদ
+    window.__lsClean=()=>{ const ti=getIn(); if(!ti||!LS) return; const L0=LNS(ti.value), N=L0.a.length+2; const k=AK||LS; const keep=L0.a.filter(l=>{ const b=stripL(l,k,N); return !(b!==l&&!b.trim()); }); const nv=keep.join('\n'); if(nv!==ti.value){ ti.value=nv; norm(); } };
   }
   const cmFly=attB.querySelector('#cmAudFly'), gifFly=attB.querySelector('#cmGifFly'); const attClose=()=>{ attB.classList.remove('show'); cmFly.classList.remove('show'); gifFly.classList.remove('show'); const pf=document.getElementById('cmPolFly'); if(pf) pf.classList.remove('show'); };
   const audCss=document.createElement('style');
@@ -5275,11 +5328,11 @@ function askDelete(title,cb,yesLabel,slideSel){
     const tPs=[].slice.call(tmB.querySelectorAll('.adp')), tOk=tmB.querySelector('#cmTmOk'), TH=56;
     tPs.forEach(p=>{ const n=p.dataset.u==='h'?100:60; let h=''; for(let i=0;i<n;i++) h+='<div>'+z2(i)+'</div>'; p.innerHTML=h; });
     const tIdx=p=>Math.max(0,Math.min(p.children.length-1,Math.round(p.scrollTop/TH)));
-    let tmEd=false, tmInit=''; const tMark=()=>{ tPs.forEach(p=>{ const k=tIdx(p); [].forEach.call(p.children,(c,i)=>c.classList.toggle('on',i===k)); }); tOk.disabled=tPs.every(p=>tIdx(p)===0)||(tmEd&&tPs.map(tIdx).join()===tmInit); };   // Edit: কিছু না বদলালে Done disable; আগের অবস্থায় ফিরলে আবার disable
+    let tmEd=false, tmInit='', tmId='', tmSec=0; window.__tmSt=()=>({ed:tmEd,init:tmInit,fin:tmFin()}); const tmFin=()=>{ if(!tmEd||!tmId||typeof window.__tmState!=='function') return false; try{ const m=window.__tmState(tmId,tmSec,false).mode; return m==='stop'||m==='done'; }catch(_){ return false; } }; const tMark=()=>{ tPs.forEach(p=>{ const k=tIdx(p); [].forEach.call(p.children,(c,i)=>c.classList.toggle('on',i===k)); }); tOk.disabled=tPs.every(p=>tIdx(p)===0)||(tmEd&&!tmFin()&&tPs.map(tIdx).join()===tmInit); };   // Edit: কিছু না বদলালে Done disable (Timer stopped / Time's up হলে বদল ছাড়াই Done enable = আবার নতুন করে শুরু); আগের অবস্থায় ফিরলে আবার disable
     tPs.forEach(p=>{ let raf=0; p.addEventListener('scroll',()=>{ if(raf) return; raf=requestAnimationFrame(()=>{ raf=0; tMark(); }); },{passive:true});
       p.addEventListener('click',e=>{ const c=e.target.closest('.adp div'); if(!c) return; p.scrollTo({top:[].indexOf.call(p.children,c)*TH,behavior:'smooth'}); }); });
     window.__tmOpen=item=>{ const sec=(item&&item.tm&&item.tm.sec)||0, c={h:Math.floor(sec/3600),m:Math.floor(sec%3600/60),s:sec%60};
-      tmB.classList.add('show'); tmEd=!!(item&&item.tm); tPs.forEach(p=>{ p.style.scrollBehavior='auto'; p.scrollTop=(c[p.dataset.u]||0)*TH; }); tmInit=tPs.map(tIdx).join(); tMark(); };
+      tmB.classList.add('show'); tmEd=!!(item&&item.tm); tmId=(item&&item.tm&&item.tm.id)||''; tmSec=sec; tPs.forEach(p=>{ p.style.scrollBehavior='auto'; p.scrollTop=(c[p.dataset.u]||0)*TH; }); tmInit=tPs.map(tIdx).join(); tMark(); };
     tmB.addEventListener('click',e=>{ if(e.target===tmB) tmB.classList.remove('show'); });
     tmB.querySelector('#cmTmNo').onclick=()=>tmB.classList.remove('show');
     tOk.onclick=()=>{ const v={}; tPs.forEach(p=>{ v[p.dataset.u]=tIdx(p); }); const sec=v.h*3600+v.m*60+v.s; if(sec<=0) return; tmB.classList.remove('show');
@@ -5583,23 +5636,36 @@ function askDelete(title,cb,yesLabel,slideSel){
   // ---- GIPHY picker: নিচের GIPHY_API_KEY-তে key বসালেই কাজ করবে ----
   const GIPHY_API_KEY='ASnzNmsapJHv9Wfa5DqYAaRMffZUIuY1';   // <-- এখানে GIPHY API key বসান
   const gphB=document.createElement('div'); gphB.className='dlg-back'; gphB.id='cmGphBack'; gphB.style.zIndex=99;
-  gphB.innerHTML='<div class="dlg gph"><div class="gphh"><h2>GIPHY</h2><span class="material-symbols-outlined" id="cmGphX">close</span></div><input class="ordinp" id="cmGphQ" type="text" placeholder="Search GIPHY" autocomplete="off" autocapitalize="off" spellcheck="false"><div id="cmGphG"></div></div>';
+  gphB.innerHTML='<div class="dlg gph"><div class="gphh"><h2>GIPHY</h2><span class="material-symbols-outlined" id="cmGphX">close</span></div><input class="ordinp" id="cmGphQ" type="text" placeholder="Search GIPHY" autocomplete="off" autocapitalize="off" spellcheck="false"><div id="cmGphTabs"></div><div id="cmGphG"></div></div>';
   document.body.appendChild(gphB);
-  { const st=document.createElement('style'); st.textContent='#cmGphBack .gph{max-width:440px;width:100%;max-height:82vh;display:flex;flex-direction:column;padding:16px}#cmGphBack .gphh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}#cmGphBack .gphh h2{font-size:20px;font-weight:500;margin:0}#cmGphX{cursor:pointer;color:#aaa}#cmGphBack .gph{overflow:hidden}#cmGphG{flex:1 1 auto;min-height:120px;overflow-x:hidden;overflow-y:auto;margin-top:10px;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch}#cmGphG .gphw{columns:2;column-gap:6px}#cmGphG .gphw img{break-inside:avoid}#cmGphG img{width:100%;display:block;margin-bottom:6px;border-radius:8px;cursor:pointer;background:#272727}#cmGphG .gphm{column-span:all;color:#aaa;text-align:center;padding:30px 0;font-size:15px}'; document.head.appendChild(st); }
+  { const st=document.createElement('style'); st.textContent='#cmGphBack .gph{max-width:440px;width:100%;max-height:82vh;display:flex;flex-direction:column;padding:16px}#cmGphBack .gphh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}#cmGphBack .gphh h2{font-size:20px;font-weight:500;margin:0}#cmGphX{cursor:pointer;color:#aaa}#cmGphBack .gph{overflow:hidden}#cmGphG{flex:1 1 auto;min-height:120px;overflow-x:hidden;overflow-y:auto;margin-top:10px;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch}#cmGphG .gphw{columns:2;column-gap:6px}#cmGphG .gphw img{break-inside:avoid}#cmGphG img{width:100%;display:block;margin-bottom:6px;border-radius:8px;cursor:pointer;background:#272727}#cmGphG .gphm{column-span:all;color:#aaa;text-align:center;padding:30px 0;font-size:15px}#cmGphTabs{flex:none;position:relative;display:flex;gap:22px;overflow-x:auto;border-bottom:1px solid var(--line);margin-top:10px;touch-action:pan-x;overscroll-behavior:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}#cmGphTabs::-webkit-scrollbar{display:none}#cmGphTabs a{flex-shrink:0;padding:10px 0;color:var(--sub);font-size:15px;font-weight:500;cursor:pointer;white-space:nowrap}#cmGphTabs a.on{color:#fff;border-bottom:3px solid #fff}'; document.head.appendChild(st); }
   const gphG=gphB.querySelector('#cmGphG'), gphQ=gphB.querySelector('#cmGphQ'); let gphTk=0, gphTm=null;
   const gphShut=()=>{ gphB.classList.remove('show'); gphQ.blur(); gphTk++; clearTimeout(gphTm); };
+  // ---- GIPHY tabs (Sticker window-এর মতো, search bar-এর নিচে): Trending (default) / Recents / ক্যাটাগরি ----
+  const GPH_T=[['t','Trending'],['r','Recents'],['rc','Reactions',['reaction','yes','no','wow','clapping','facepalm']],['fn','Funny',['funny','meme','comedy']],['lv','Love & Romance',['love','hug','kiss','romantic']],['sd','Sad & Emotional',['sad','crying','heartbroken','lonely']],['gr','Greetings',['good morning','good night','thank you','congratulations']],['ce','Celebration',['birthday','eid mubarak','celebration','new year','puja']],['an','Angry',['angry','annoyed','attitude']],['ga','Gaming & Anime',['gaming','anime']],['sp','Sports',['sports','cricket','football']],['am','Animals',['cute cat','funny dog','cute animals']],['lc','Local',['bangla funny','bengali movie','bangla natok']]];
+  let gphTab='t', gphRec=[]; try{ gphRec=JSON.parse(localStorage.getItem('gphRecent')||'[]'); }catch(_){ gphRec=[]; } gphRec=(Array.isArray(gphRec)?gphRec:[]).filter(x=>x&&typeof x.s==='string'&&typeof x.u==='string').slice(0,30);
+  const gphRecAdd=it=>{ gphRec=gphRec.filter(x=>x.u!==it.u); gphRec.unshift(it); gphRec=gphRec.slice(0,30); try{ localStorage.setItem('gphRecent',JSON.stringify(gphRec)); }catch(_){} };
+  const gphTabs=gphB.querySelector('#cmGphTabs'); gphTabs.innerHTML=GPH_T.map(t=>'<a data-g="'+t[0]+'">'+t[1].replace('&','&amp;')+'</a>').join('');
+  const gphPaint=()=>{ [...gphTabs.children].forEach(a=>a.classList.toggle('on',a.dataset.g===gphTab)); const on=gphTabs.querySelector('.on'); if(on) gphTabs.scrollLeft=Math.max(0,on.offsetLeft-(gphTabs.clientWidth-on.offsetWidth)/2); };
+  const gphIt=g=>({s:(g.images.fixed_height||g.images.original).url,u:(g.images.downsized_medium||g.images.downsized||g.images.original).url});
+  const gphShow=items=>{ gphG.innerHTML=''; gphG.scrollTop=0; const wrap=document.createElement('div'); wrap.className='gphw'; gphG.appendChild(wrap); items.forEach(it=>{ const im=document.createElement('img'); im.alt=''; im.loading='lazy'; im.src=it.s; im.onclick=()=>{ gphRecAdd(it); gphShut(); setAtt({k:'gif',src:it.u,giphy:1}); }; wrap.appendChild(im); }); };
+  const gphFetch=async(ep,q,n)=>{ const r=await fetch('https://api.giphy.com/v1/gifs/'+ep+'?api_key='+encodeURIComponent(GIPHY_API_KEY)+'&limit='+n+'&rating=g'+(q?'&q='+encodeURIComponent(q):'')); if(!r.ok) throw new Error('http'); const j=await r.json(); return (j.data||[]).filter(g=>g&&g.images&&(g.images.fixed_height||g.images.original)).map(gphIt); };
   async function gphLoad(q){
-    const my=++gphTk; gphG.innerHTML='<div class="gphm">Loading…</div>';
+    const my=++gphTk; const T=GPH_T.find(t=>t[0]===gphTab)||GPH_T[0];
+    if(!q&&gphTab==='r'){ if(gphRec.length) gphShow(gphRec); else gphG.innerHTML='<div class="gphm">No recent GIFs</div>'; return; }
+    gphG.innerHTML='<div class="gphm">Loading…</div>';
     try{
-      const url='https://api.giphy.com/v1/gifs/'+(q?'search':'trending')+'?api_key='+encodeURIComponent(GIPHY_API_KEY)+'&limit=24&rating=g'+(q?'&q='+encodeURIComponent(q):'');
-      const r=await fetch(url); if(!r.ok) throw new Error('http'); const j=await r.json(); if(my!==gphTk) return;
-      const d=(j.data||[]).filter(g=>g&&g.images&&(g.images.fixed_height||g.images.original));
-      if(!d.length){ gphG.innerHTML='<div class="gphm">No GIFs found</div>'; return; }
-      gphG.innerHTML=''; gphG.scrollTop=0; const wrap=document.createElement('div'); wrap.className='gphw'; gphG.appendChild(wrap); d.forEach(g=>{ const im=document.createElement('img'); im.alt=''; im.loading='lazy'; im.src=(g.images.fixed_height||g.images.original).url;
-        im.onclick=()=>{ const o=g.images.downsized_medium||g.images.downsized||g.images.original; gphShut(); setAtt({k:'gif',src:o.url,giphy:1}); }; wrap.appendChild(im); });
+      let items;
+      if(q) items=await gphFetch('search',q,24);
+      else if(T[2]){ const per=Math.max(4,Math.ceil(30/T[2].length)); const rs=await Promise.all(T[2].map(x=>gphFetch('search',x,per).catch(()=>[]))); items=[]; const seen=new Set(); for(let i=0;i<per;i++) rs.forEach(r=>{ if(r[i]&&!seen.has(r[i].u)){ seen.add(r[i].u); items.push(r[i]); } }); }
+      else items=await gphFetch('trending','',24);
+      if(my!==gphTk) return;
+      if(!items.length){ gphG.innerHTML='<div class="gphm">No GIFs found</div>'; return; }
+      gphShow(items);
     }catch(e){ if(my===gphTk) gphG.innerHTML='<div class="gphm">Could not load GIPHY</div>'; }
   }
-  function openGiphy(){ if(!GIPHY_API_KEY){ toast('GIPHY is not connected yet'); return; } gphQ.value=''; gphB.classList.add('show'); gphLoad(''); }
+  gphTabs.addEventListener('click',e=>{ const a=e.target.closest('[data-g]'); if(!a) return; gphTab=a.dataset.g; gphQ.value=''; gphQ.blur(); gphPaint(); clearTimeout(gphTm); gphLoad(''); });
+  function openGiphy(){ if(!GIPHY_API_KEY){ toast('GIPHY is not connected yet'); return; } gphQ.value=''; gphTab='t'; gphPaint(); gphB.classList.add('show'); gphLoad(''); }
   gphQ.addEventListener('input',()=>{ clearTimeout(gphTm); gphTm=setTimeout(()=>gphLoad(gphQ.value.trim()),400); });
   gphB.addEventListener('click',e=>{ if(e.target===gphB||e.target.id==='cmGphX') gphShut(); });
   // Link: About channel-এর Add links window-এর একই mechanism ও interface; ঠিক link হলে comment-এর attachment হয়
@@ -5808,7 +5874,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   function qrPickTime(cur,cb,ttl,ed){ qtUpd=null; { const h2=qtB.querySelector('h2'); if(h2) h2.textContent=ttl||'Time'; } const m=/^(\d{1,2}):(\d{2})$/.exec(cur||'')||[0,'0','0'], v={h:(+m[1]+23)%24,m:+m[2]}; qtB.classList.add('show');
     qtB.querySelectorAll('.qtp').forEach(p=>{ p.style.scrollBehavior='auto'; p.scrollTop=v[p.dataset.u]*56; p.dispatchEvent(new Event('scroll')); setTimeout(()=>{ p.style.scrollBehavior=''; },60); });
     const get=u=>{ const p=qtB.querySelector('.qtp[data-u="'+u+'"]'); return Math.max(0,Math.min(u==='h'?23:59,Math.round(p.scrollTop/56))); };
-    { const qtO=document.getElementById('qtO'), init=get('h')+','+get('m'); qtUpd=()=>{ qtO.disabled=!!ed&&(get('h')+','+get('m'))===init; }; qtUpd(); }   // Edit: কিছু না বদলালে Done disable
+    { const qtO=document.getElementById('qtO'), init=get('h')+','+get('m'); window.__qtSt=()=>({ed:!!ed,init:init}); qtUpd=()=>{ qtO.disabled=!!ed&&(get('h')+','+get('m'))===init; }; qtUpd(); }   // Edit: কিছু না বদলালে Done disable
     document.getElementById('qtC').onclick=()=>qtB.classList.remove('show'); document.getElementById('qtO').onclick=()=>{ const t=p2((get('h')+1)%24)+':'+p2(get('m')); qtB.classList.remove('show'); cb(t); }; }
   // ---- Birth date picker: Auto delete / Time picker-এর মতো wheel; Month (৩ অক্ষর) → Day → Year ----
   const bdCss=document.createElement('style'); bdCss.textContent='#cmQrBd{z-index:140}#cmQrBd .dlg{max-width:340px;padding:22px 16px 12px}#cmQrBd h2{font-size:20px;font-weight:500;padding:0 8px 10px;margin:0}#cmQrBd .qtw{position:relative;display:flex;gap:6px;justify-content:center;margin:4px 0 8px}#cmQrBd .qtc{flex:1;min-width:0;text-align:center}#cmQrBd .qtl{color:#aaa;font-size:14px;padding:4px 0 8px}#cmQrBd .qtp{height:280px;overflow-y:auto;scroll-snap-type:y mandatory;padding:112px 0;scrollbar-width:none;touch-action:pan-y;overscroll-behavior:contain;-webkit-mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent)}#cmQrBd .qtp::-webkit-scrollbar{display:none}#cmQrBd .qtp div{height:56px;line-height:56px;font-size:30px;font-variant-numeric:tabular-nums;color:#777;scroll-snap-align:center;cursor:pointer;user-select:none;-webkit-user-select:none}#cmQrBd .qtp div.on{color:#fff;font-weight:500}#cmQrBd .qtband{position:absolute;left:4px;right:4px;top:calc(50% + 14px);height:56px;transform:translateY(-50%);border-radius:12px;background:rgba(255,255,255,.08);pointer-events:none}#cmQrBd .qda{display:flex;justify-content:flex-end;gap:10px;padding:8px 16px 14px}#cmQrBd .qda button{background:none;border:0;color:#fff;font-size:16px;padding:10px 14px;cursor:pointer;border-radius:20px}#cmQrBd .qda button:active{background:#333}#cmQrBd .tpk-c input{font-size:30px;height:84px}#cmQrBd .tpk-c:last-child{flex:1.5}#cmQrForm .qlw .qbdp{color:#aaa}';
@@ -5853,7 +5919,7 @@ function askDelete(title,cb,yesLabel,slideSel){
       bdB.classList.add('show'); fill(P.d,days(new Date(y,mo+1,0).getDate())); d=Math.max(1,Math.min(cnt(P.d),d));
       const set=(p,i)=>{ p.style.scrollBehavior='auto'; p.scrollTop=i*56; mark(p); setTimeout(()=>{ p.style.scrollBehavior=''; },60); };
       set(P.m,mo); set(P.d,d-1); set(P.y,y-BDY0);
-      { const bdO=document.getElementById('bdO'), snap=()=>{ const k=bdKb&&bdKb(); return k||((idx(P.d)+1)+'/'+(idx(P.m)+1)+'/'+(BDY0+idx(P.y))); }, init=snap(); bdUpd=()=>{ bdO.disabled=!!ed&&snap()===init; }; bdUpd(); }   // Edit: কিছু না বদলালে Done disable
+      { const bdO=document.getElementById('bdO'), snap=()=>{ const k=bdKb&&bdKb(); return k||((idx(P.d)+1)+'/'+(idx(P.m)+1)+'/'+(BDY0+idx(P.y))); }, init=snap(); const had=!!ed||!!m; bdUpd=()=>{ bdO.disabled=had&&snap()===init; }; bdUpd(); }   // আগে থেকে Birth date থাকলে (textbox/picker যেভাবেই বসুক) বা Edit-এ: কিছু না বদলালে Done disable
       document.getElementById('bdC').onclick=()=>bdB.classList.remove('show');
       document.getElementById('bdO').onclick=()=>{ fixDays(); const yy=BDY0+idx(P.y), mm=idx(P.m), dd=Math.min(idx(P.d)+1,new Date(yy,mm+1,0).getDate()); bdB.classList.remove('show'); cb(p2(dd)+'/'+p2(mm+1)+'/'+yy); }; };
   }
@@ -5882,10 +5948,10 @@ function askDelete(title,cb,yesLabel,slideSel){
   function calWire(root,c,sync,ed){ const $=id=>root.querySelector('#'+id), paint=()=>{ $('qrSD').textContent=c.sd; $('qrST').textContent=f12(c.st); $('qrED').textContent=c.ed; $('qrET').textContent=f12(c.et); ['qrST','qrET'].forEach(i=>$(i).classList.toggle('hide',c.ad)); $('qrAD').classList.toggle('on',c.ad); $('qrAD').setAttribute('aria-checked',c.ad); };
     const stamp=(d,t)=>new Date(d+'T'+(c.ad?'00:00':t)+':00').getTime();
     $('qrAD').onclick=()=>{ c.ad=!c.ad; paint(); sync(); };
-    $('qrSD').onclick=()=>qrPickDate(c.sd,v=>{ const dur=Math.max(0,stamp(c.ed,c.et)-stamp(c.sd,c.st)); c.sd=v; if(stamp(c.ed,c.et)<stamp(c.sd,c.st)){ const e=new Date(stamp(c.sd,c.st)+dur); c.ed=cFmtD(e); c.et=cFmtT(e); } paint(); sync(); },ed);
-    $('qrST').onclick=()=>qrPickTime(c.st,v=>{ const dur=Math.max(0,stamp(c.ed,c.et)-stamp(c.sd,c.st)); c.st=v; if(stamp(c.ed,c.et)<stamp(c.sd,c.st)){ const e=new Date(stamp(c.sd,c.st)+dur); c.ed=cFmtD(e); c.et=cFmtT(e); } paint(); sync(); },'Start time',ed);
-    $('qrED').onclick=()=>qrPickDate(c.ed,v=>{ c.ed=v; paint(); sync(); },ed);
-    $('qrET').onclick=()=>qrPickTime(c.et,v=>{ c.et=v; paint(); sync(); },'End time',ed);
+    $('qrSD').onclick=()=>qrPickDate(c.sd,v=>{ const dur=Math.max(0,stamp(c.ed,c.et)-stamp(c.sd,c.st)); c.sd=v; if(stamp(c.ed,c.et)<stamp(c.sd,c.st)){ const e=new Date(stamp(c.sd,c.st)+dur); c.ed=cFmtD(e); c.et=cFmtT(e); } paint(); sync(); },true);
+    $('qrST').onclick=()=>qrPickTime(c.st,v=>{ const dur=Math.max(0,stamp(c.ed,c.et)-stamp(c.sd,c.st)); c.st=v; if(stamp(c.ed,c.et)<stamp(c.sd,c.st)){ const e=new Date(stamp(c.sd,c.st)+dur); c.ed=cFmtD(e); c.et=cFmtT(e); } paint(); sync(); },'Start time',true);
+    $('qrED').onclick=()=>qrPickDate(c.ed,v=>{ c.ed=v; paint(); sync(); },true);
+    $('qrET').onclick=()=>qrPickTime(c.et,v=>{ c.et=v; paint(); sync(); },'End time',true);
     paint(); c.ok=()=>stamp(c.ed,c.et)>=stamp(c.sd,c.st); }
   const qrNm=k=>(QT.find(t=>t[0]===k)||[])[2]||'';
   const qrClose=()=>{ qrSelClose(); qrMenu.classList.remove('show'); qrForm.classList.remove('show'); try{ document.activeElement&&document.activeElement.blur(); }catch(e){} };
@@ -6102,10 +6168,10 @@ function askDelete(title,cb,yesLabel,slideSel){
       const paintVis=()=>{ q('#evVis .qsv').textContent=(VISO.find(o=>o[0]===visV)||VISO[0])[1]; };
       { const vb=q('#evVis'); vb.onclick=()=>{ if(vb.classList.contains('open')){ qrSelClose(); return; } qrSelClose(); qrSelList.innerHTML=VISO.map(o=>'<div data-v="'+o[0]+'"'+(o[0]===visV?' class="on"':'')+'>'+o[1]+'</div>').join(''); const r=vb.getBoundingClientRect(); qrSelList.style.maxHeight=''; qrSelList.style.overflowY=''; qrSelList.style.visibility='hidden'; qrSelList.classList.add('show'); qrSelList.style.minWidth=r.width+'px'; const h=qrSelList.offsetHeight, w=qrSelList.offsetWidth; qrSelList.style.left=Math.max(8,Math.min(r.left,innerWidth-w-8))+'px'; qrSelList.style.top=(innerHeight-r.bottom>=h+8?r.bottom+4:Math.max(8,r.top-h-4))+'px'; qrSelList.style.visibility=''; vb.classList.add('open');
           qrSelList.onclick=e=>{ const d=e.target.closest('div[data-v]'); if(!d) return; visV=d.dataset.v; paintVis(); qrSelClose(); sync(); }; }; }
-      q('#evSD').onclick=()=>qrPickDate(c.sd,v=>{ const dur=Math.max(0,stamp(c.ed,c.et)-stamp(c.sd,c.st)); c.sd=v; fixEnd(dur); paintT(); sync(); },!!E);
-      q('#evST').onclick=()=>qrPickTime(c.st,v=>{ const dur=Math.max(0,stamp(c.ed,c.et)-stamp(c.sd,c.st)); c.st=v; fixEnd(dur); paintT(); sync(); },'Start time',!!E);
-      q('#evED').onclick=()=>qrPickDate(c.ed,v=>{ c.ed=v; paintT(); sync(); },!!E);
-      q('#evET').onclick=()=>qrPickTime(c.et,v=>{ c.et=v; paintT(); sync(); },'End time',!!E);
+      q('#evSD').onclick=()=>qrPickDate(c.sd,v=>{ const dur=Math.max(0,stamp(c.ed,c.et)-stamp(c.sd,c.st)); c.sd=v; fixEnd(dur); paintT(); sync(); },true);
+      q('#evST').onclick=()=>qrPickTime(c.st,v=>{ const dur=Math.max(0,stamp(c.ed,c.et)-stamp(c.sd,c.st)); c.st=v; fixEnd(dur); paintT(); sync(); },'Start time',true);
+      q('#evED').onclick=()=>qrPickDate(c.ed,v=>{ c.ed=v; paintT(); sync(); },true);
+      q('#evET').onclick=()=>qrPickTime(c.et,v=>{ c.et=v; paintT(); sync(); },'End time',true);
       { const lp=q('#evLocPick'), le=els.find(e=>e.dataset.f==='l'); lp.onclick=()=>{ window.__qrLocW=false; window.__qrEvPick=sel=>{ const nm=(sel.name||'').trim(), ad=(sel.addr||'').trim(); le.value=(nm&&ad&&ad.indexOf(nm)<0)?nm+', '+ad:(ad||nm||(Number(sel.lat).toFixed(5)+', '+Number(sel.lng).toFixed(5))); le.dispatchEvent(new Event('input',{bubbles:true})); }; openLoc(null); const tt=document.getElementById('cmLocTtl'); if(tt) tt.textContent='Add location'; }; }
       q('#evCv').onclick=()=>{ try{ evFile.value=''; }catch(e){} evFile.click(); };
       q('#evX').onclick=e=>{ e.stopPropagation(); e.preventDefault(); cover=''; paintCv(); sync(); };
@@ -7619,7 +7685,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   const addFlip=()=>{ const qk=!cmEdit&&!cmAtt&&window.__qkGet&&window.__qkGet(); if(addQ){ addQ=false; addSet=false; } else if(addTr){ addTr=false; if(qk) addQ=true; else addSet=false; } else if(addSet&&cmSet.tr!=='none'){ addSet=false; addTr=true; } else if(addSet&&qk){ addSet=false; addQ=true; } else addSet=!addSet; addPaint(); };   // attachment -> Settings -> Translate (ভাষা থাকলে) -> Quick reaction sticker (সিলেক্ট থাকলে) -> attachment (double tap)   // ভাষা সিলেক্ট থাকলে: attachment -> Settings -> Translate -> attachment (double tap)
   const setB=document.createElement('div'); setB.className='dlg-back'; setB.id='cmSetBack';
   setB.innerHTML='<div class="dlg"><h2>Settings</h2>'+[['lk','thumb_up','Like'],['dl','thumb_down','Dislike'],['rp','chat','Reply'],['ty','keyboard','Typing indicator'],['hd','visibility_off','Hide'],['an','no_accounts','Anonymous Profile']].map(r=>'<div class="cmsrow" data-k="'+r[0]+'"><span class="material-symbols-outlined">'+r[1]+'</span><span class="cmsn">'+r[2]+'</span><span class="cmsw" role="switch" aria-checked="true"><i></i></span></div>').join('')+'<div class="cmsrow" data-k="ar"><span class="material-symbols-outlined">smart_toy</span><span class="cmsn">Auto reply</span></div><div class="cmsrow" data-k="qr"><span class="material-symbols-outlined">quickreply</span><span class="cmsn">Quick reply</span></div><div class="cmsrow" data-k="mr"><span class="material-symbols-outlined">reply_all</span><span class="cmsn">Multiple reply</span></div><div class="cmsrow cmsad" data-k="as"><span class="material-symbols-outlined">schedule_send</span><span class="cmsn">Auto send</span><span class="cmssel" id="cmAsBox"><span class="cmsv">None</span><span class="material-symbols-outlined">arrow_drop_down</span></span></div>'+'<div class="cmsrow cmsad" data-k="ad"><span class="material-symbols-outlined">auto_delete</span><span class="cmsn">Auto delete</span><span class="cmssel" id="cmAdBox"><span class="cmsv">None</span><span class="material-symbols-outlined">arrow_drop_down</span></span></div>'+'<div class="cmsrow cmsad" data-k="tr"><span class="material-symbols-outlined">translate</span><span class="cmsn">Translation</span><span class="cmssel" id="cmTrBox"><span class="cmsv">None</span><span class="material-symbols-outlined">arrow_drop_down</span></span></div><div class="cmsrow cmsad" data-k="sp"><span class="material-symbols-outlined">spellcheck</span><span class="cmsn">Spell check</span><span class="cmssel" id="cmSpBox"><span class="cmsv">None</span><span class="material-symbols-outlined">arrow_drop_down</span></span></div></div>';
-  { const tsr=document.getElementById('cmTsRow'), h2=setB.querySelector('h2'); if(tsr&&h2) h2.after(tsr); }   // Text style: Attachment-এ নয়, Settings-এর সবার উপরে
+  { const tsr=document.getElementById('cmTsRow'), lsr=document.getElementById('cmLsRow'), h2=setB.querySelector('h2'); if(tsr&&h2) h2.after(tsr); if(lsr&&tsr) tsr.after(lsr); }   // Text style: Attachment-এ নয়, Settings-এর সবার উপরে
   document.body.appendChild(setB);
   { const ar=setB.querySelector('.cmsrow[data-k="an"]'); if(ar){ const g=document.createElement('span'); g.className='material-symbols-outlined cmsgear'; g.id='cmAnGear'; g.setAttribute('role','button'); g.setAttribute('aria-label','Anonymous Profile settings'); g.textContent='settings'; ar.insertBefore(g,ar.querySelector('.cmsw')); } }
   // ---- Colour Tags: Settings > Anonymous Profile-এর পরে। Form window-এর মতো window; Add tag -> সরাসরি textbox; 3 dot: Colour / Edit / Remove ----
@@ -7934,7 +8000,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   const adPs=[].slice.call(adB.querySelectorAll('.adp')), adOk=adB.querySelector('#cmAdOk'), ADH=56;
   adPs.forEach(p=>{ const n=p.dataset.u==='h'?24:60; let h=''; for(let i=0;i<n;i++) h+='<div>'+(i<10?'0':'')+i+'</div>'; p.innerHTML=h; });
   const adIdx=p=>Math.max(0,Math.min(p.children.length-1,Math.round(p.scrollTop/ADH)));
-  let adInit=null; const adMark=()=>{ adPs.forEach(p=>{ const k=adIdx(p); [].forEach.call(p.children,(c,i)=>c.classList.toggle('on',i===k)); }); const sn=adPs.map(adIdx).join(); if(adInit===null) adInit=sn; adOk.disabled=adPs.every(p=>adIdx(p)===0)||(!!window.__adEd&&sn===adInit); };   // Edit (আগে থেকে Custom সেট): কিছু না বদলালে Set disable
+  let adInit=null; window.__adSt=()=>({ed:!!window.__adEd,init:adInit}); const adMark=()=>{ adPs.forEach(p=>{ const k=adIdx(p); [].forEach.call(p.children,(c,i)=>c.classList.toggle('on',i===k)); }); const sn=adPs.map(adIdx).join(); if(adInit===null) adInit=sn; adOk.disabled=adPs.every(p=>adIdx(p)===0)||(!!window.__adEd&&sn===adInit); };   // Edit (আগে থেকে Custom সেট): কিছু না বদলালে Set disable
   adPs.forEach(p=>{ let raf=0; p.addEventListener('scroll',()=>{ if(raf) return; raf=requestAnimationFrame(()=>{ raf=0; adMark(); }); },{passive:true});
     p.addEventListener('click',e=>{ const c=e.target.closest('.adp div'); if(!c) return; p.scrollTo({top:[].indexOf.call(p.children,c)*ADH,behavior:'smooth'}); }); });
   const adCustOpen=()=>{ window.__adEd=(adS().adv==='custom'); adInit=null; adB.classList.add('show'); const c=adS().adc||{h:0,m:0,s:0}; adPs.forEach(p=>{ p.style.scrollBehavior='auto'; p.scrollTop=(c[p.dataset.u]||0)*ADH; }); adMark(); };
@@ -9308,10 +9374,10 @@ function askDelete(title,cb,yesLabel,slideSel){
   const cmTypPaint=()=>{ const n=cmTypers.size, show=cmSet.ty&&n>0&&!cmEdit&&!cmSearch&&!cmSelMode; cmTypEl.classList.toggle('on',show); cmTypEl.querySelector('.n').textContent=n; };
   const cmTypStop=()=>{ clearTimeout(cmTypTm); cmTypTm=null; if(cmTypers.delete('me')||cmTypEl.classList.contains('on')) cmTypPaint(); };
   window.__cmTypStop=cmTypStop; window.__cmTypPaint=cmTypPaint;   // একাধিক typer থাকলে cmTypers-এ আলাদা key যোগ করে cmTypPaint() ডাকলেই সংখ্যা বাড়বে
-  cmIn.addEventListener('input',()=>{ if(!cmSet.ty||cmEdit||cmIn.disabled||!cmIn.value.trim()){ cmTypStop(); return; } cmTypers.add('me'); cmTypPaint(); clearTimeout(cmTypTm); cmTypTm=setTimeout(cmTypStop,CM_TYP_IDLE); });   // থেমে গেলে প্রায় সাথে সাথে (০.৪ সেকেন্ড) বন্ধ — প্রতিটি key-তে এই সময় আবার শুরু হয়
+  cmIn.addEventListener('input',()=>{ if(!cmSet.ty||cmEdit||cmIn.disabled||!(window.__lsBare?window.__lsBare(cmIn.value):cmIn.value).trim()){ cmTypStop(); return; } cmTypers.add('me'); cmTypPaint(); clearTimeout(cmTypTm); cmTypTm=setTimeout(cmTypStop,CM_TYP_IDLE); });   // থেমে গেলে প্রায় সাথে সাথে (০.৪ সেকেন্ড) বন্ধ — প্রতিটি key-তে এই সময় আবার শুরু হয়
   cmIn.addEventListener('blur',cmTypStop);
   new MutationObserver(()=>{ if(!cmS.classList.contains('show')) cmTypStop(); }).observe(cmS,{attributes:true,attributeFilter:['class']});
-  const resetIn=()=>{ if(window.__tsReset) window.__tsReset(); if(window.__ctReset) window.__ctReset(); if(window.__cmTrEditEnd) window.__cmTrEditEnd(); cmTypStop(); cmEdit=null; cmMultiTo=null; cmIn.value=''; cmBox.classList.remove('has'); clearAtt(); cmLockPaint(); growIn(); updRt(); };
+  const resetIn=()=>{ if(window.__tsReset) window.__tsReset(); if(window.__ctReset) window.__ctReset(); if(window.__cmTrEditEnd) window.__cmTrEditEnd(); cmTypStop(); cmEdit=null; cmMultiTo=null; cmIn.value=''; cmBox.classList.remove('has'); clearAtt(); cmLockPaint(); setTimeout(()=>{ try{ if(window.__lsSeed) window.__lsSeed(); }catch(_){} },0); growIn(); updRt(); };
   // Editing / Replying চলাকালীন: যে comment/reply edit বা reply করা হচ্ছে তার উপর কপি-animation অনবরত চলে
   function cmBusyPaint(){
     // Editing / Replying চলাকালীন: যেটা edit বা reply করা হচ্ছে তার উপর দিয়ে Shimmer / Sheen অনবরত চলে
@@ -9337,7 +9403,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   const lockPage=on=>{ document.documentElement.style.overflow=on?'hidden':''; document.body.style.overflow=on?'hidden':''; };
   function openCm(id){ cmResetModes(); cmSeen=null; cmS.classList.remove('full'); cmPost=id; cmMode='list'; cmOpen=null; cmReplyTo=null; cmSort=0; cmGrpL='none'; cmGrpR='none'; cmMenu.querySelectorAll('div').forEach(z=>z.classList.toggle('on',+z.dataset.m===0)); resetIn(); cmMenu.classList.remove('show'); drawCm(); cmBody.scrollTop=0; cmOv.classList.add('show'); cmS.classList.add('show'); lockPage(true); try{ if(window.__glAuto) window.__glAuto(id); }catch(_){} }
   // লেখা reply draft থাকলে back/close/বাইরে চাপ/swipe-down/Esc — সবখানে "Discard this reply?" আসবে
-  const repDraft=()=>{ const v=cmIn.value.trim(); return cmEdit?(v!==cmEdit.o.txt||attChg()||!!window.__cmEditSetChg(cmEdit.o)||!!(window.__ctChg&&window.__ctChg(cmEdit.o))||(window.__tsStr?window.__tsStr():'')!==(cmEdit.o.ts||'')):(!!v||!!cmAtt); };   // Edit-এ Text style / Like / Dislike / Reply / Auto delete বদলালেও Discard dialog   // add comment / add reply / edit — যেকোনো অসমাপ্ত লেখা
+  const repDraft=()=>{ const v=(window.__lsBare?window.__lsBare(cmIn.value):cmIn.value).trim(); return cmEdit?(v!==cmEdit.o.txt||attChg()||!!window.__cmEditSetChg(cmEdit.o)||!!(window.__ctChg&&window.__ctChg(cmEdit.o))||(window.__tsStr?window.__tsStr():'')!==(cmEdit.o.ts||'')):(!!v||!!cmAtt); };   // Edit-এ Text style / Like / Dislike / Reply / Auto delete বদলালেও Discard dialog   // add comment / add reply / edit — যেকোনো অসমাপ্ত লেখা
   const draftMsg=()=>cmEdit?'Discard this edit?':(cmMultiTo?'Discard '+cmMultiTo.length+(cmMultiTo.length===1?' reply?':' replies?'):(cmMode==='rep'?'Discard this reply?':'Discard this comment?'));
   function guardReply(go){ if(repDraft()){ cmIn.blur(); askDelete(draftMsg(),()=>{ cmReplyTo=null; resetIn(); go(); },'Discard'); } else go(); }
   // Photo / GIF / Video viewer ও Audio player-এর Share / Share link: লেখা অসমাপ্ত থাকলে আগে Discard dialog
@@ -10595,7 +10661,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   cmS.addEventListener('click',e=>{ if(!cmMenu.contains(e.target)&&e.target.id!=='cmMore') cmMenu.classList.remove('show'); });
 
   // রিপ্লাই লেখা (রিপ্লাই স্ক্রিনে ইনলাইন বক্স)
-  const cmInput=()=>{ const v=cmIn.value.trim(); cmBox.classList.toggle('has',(!!v||!!cmAtt)&&!(cmEdit&&v===cmEdit.o.txt&&!attChg()&&!window.__cmEditSetChg(cmEdit.o)&&!(window.__ctChg&&window.__ctChg(cmEdit.o))&&(window.__tsStr?window.__tsStr():'')===(cmEdit.o.ts||''))); growIn(); };
+  const cmInput=()=>{ const v=(window.__lsBare?window.__lsBare(cmIn.value):cmIn.value).trim(); cmBox.classList.toggle('has',(!!v||!!cmAtt)&&!(cmEdit&&v===cmEdit.o.txt&&!attChg()&&!window.__cmEditSetChg(cmEdit.o)&&!(window.__ctChg&&window.__ctChg(cmEdit.o))&&(window.__tsStr?window.__tsStr():'')===(cmEdit.o.ts||''))); growIn(); };
   window.__tsChg=cmInput;   // Edit-এ শুধু Text style বদলালেও Send বাটন দেখায়
   $('cmRtX').onclick=()=>{
     if(cmMultiTo){ if(repDraft()){ cmIn.blur(); askDelete('Discard '+cmMultiTo.length+(cmMultiTo.length===1?' reply?':' replies?'),()=>{ resetIn(); },'Discard'); } else resetIn(); return; }   // Multiple replying বন্ধ
@@ -10608,6 +10674,7 @@ function askDelete(title,cb,yesLabel,slideSel){
   const asQueue=(x,p)=>{ p.at=Date.now()+cmSet.as*1000; p.t0=Date.now(); p.dur=cmSet.as; p.asv=cmSet.asv; p.asc=cmSet.asv==='custom'?Object.assign({},cmSet.asc):null; p.id=p.o.id; { const lv=p.o.att&&p.o.att.k==='loc'&&p.o.att.live; if(lv){ lv.end=p.at+(+lv.sec||0)*1000; try{ const m=JSON.parse(localStorage.getItem('cmLiveSt')||'{}')||{}; m[lv.lid]=p.at; localStorage.setItem('cmLiveSt',JSON.stringify(m)); }catch(e){} } } (x.pend=x.pend||[]).push(p); saveC(); const d=new Date(p.at), z=n=>String(n).padStart(2,'0'), h=d.getHours()%12||12; toast((p.mode==='c'?'Comment':'Reply')+' will be sent at '+h+' : '+z(d.getMinutes())+' : '+z(d.getSeconds())+(d.getHours()<12?' AM':' PM')); };
   const spamMultiDup=()=>{ if(!(window.__cbSpamDup&&window.__cbSpamDup())) return false; const x=curX(); if(!x||!cmMultiTo) return false; let n=0; cmMultiTo.forEach(id=>{ const c=(x.cmts||[]).find(y=>String(y.id)===String(id)); if(c&&!c.del&&!c.hid&&!c.rpOff) n++; }); return n>1; };
   function sendCm(){
+    try{ if(window.__lsClean) window.__lsClean(); }catch(_){}
     const x=curX(), v=cmIn.value.trim(); if(!x||(!v&&!cmAtt)) return;
     if(cmEdit){   // Edit comment / Edit reply
       if((window.__cbHit&&v!==cmEdit.o.txt&&window.__cbHit(v))||(window.__cbSpam&&v!==cmEdit.o.txt&&window.__cbSpam(v,cmEdit.isReply?'r':'c',cmEdit.o,x))||(window.__cbAttHit&&attChg()&&window.__cbAttHit(cmAtt,true))){   // Comment blocker: Edit-এ blocked শব্দ / attachment দিয়ে Send করলে শুধু edit block হয়; আগের comment / reply মুছে যায় না
@@ -12701,7 +12768,7 @@ function askDelete(title,cb,yesLabel,slideSel){
 <script>
 // Dialog (Info / Delete / Save to playlist) খোলা থাকলে পেছনের পেজ স্ক্রল হবে না
 (function(){
-  const inScroll=t=>t&&t.closest&&t.closest('#cmGphG,#cmCtScroll,#infoT,#infoB,#plPickList,#cmStkGrid,#cmStkTabs,#cmTbScroll,#viewer,.aspm,#cwPs,#gdBack .gd,#cmAdBack .adp,#cmTmBack .adp,#cmAdList,#cmAttBack .dlg,#cmFormList,#cmFormPick .dlg,#cmFormView .dlg,#cmFormInfo .dlg,#cmFormDesc,#cmFormName,#cmQrList,#cmQrIn,#cmArBack .dlg,#cmWeBack .dlg,#cmWeGrid,#cmArC,#cmArR,#cmArList,#cmSetBack .dlg,#cmTrList,#cmTbList,#cmLsList,#cmSpList,#cbLimList,#cmGlBack .dlg,#cmPollBack .dlg,#cmGlView .dlg,#cmQrMenu .dlg,#cmQrForm .dlg,#cmEvBack .dlg,#cmQrSelList,#cmQrInfo .dlg,#cmQrCust .dlg,#cmQrTime .qtp,#cmQrBd .qtp,#cmQrDate #qdYears,#cmQrDate #qdMdy .mc');
+  const inScroll=t=>t&&t.closest&&t.closest('#cmGphG,#cmGphTabs,#cmCtScroll,#infoT,#infoB,#plPickList,#cmStkGrid,#cmStkTabs,#cmTbScroll,#viewer,.aspm,#cwPs,#gdBack .gd,#cmAdBack .adp,#cmTmBack .adp,#cmAdList,#cmAttBack .dlg,#cmFormList,#cmFormPick .dlg,#cmFormView .dlg,#cmFormInfo .dlg,#cmFormDesc,#cmFormName,#cmQrList,#cmQrIn,#cmArBack .dlg,#cmWeBack .dlg,#cmWeGrid,#cmArC,#cmArR,#cmArList,#cmSetBack .dlg,#cmTrList,#cmTbList,#cmLsList,#cmSpList,#cbLimList,#cmGlBack .dlg,#cmPollBack .dlg,#cmGlView .dlg,#cmQrMenu .dlg,#cmQrForm .dlg,#cmEvBack .dlg,#cmQrSelList,#cmQrInfo .dlg,#cmQrCust .dlg,#cmQrTime .qtp,#cmQrBd .qtp,#cmQrDate #qdYears,#cmQrDate #qdMdy .mc');
   const open=()=>document.querySelector('.dlg-back.show');
   document.addEventListener('wheel',e=>{ if(open()&&!inScroll(e.target)) e.preventDefault(); },{passive:false});
   document.addEventListener('touchmove',e=>{ const o=open(); if(!o||inScroll(e.target)||o.id==='infoBack') return; e.preventDefault(); },{passive:false});   // Info window-এ selection handle টানা আটকানো হবে না
@@ -15794,14 +15861,14 @@ window.onMediaAction=function({mode,kind,id,title,quality,src,pickAndSave}){
     var box=document.createElement('div'); box.className='tpk-w'; var pm=false;
     box.innerHTML=cols.map(function(c){ return '<div class="tpk-c"><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" data-u="'+c.u+'" aria-label="'+c.label+'"><div>'+c.label+'</div></div>'; }).join('')+(o.h12?'<div class="tpk-c tpk-apc"><button type="button" class="tpk-ap" aria-label="AM/PM">AM</button><div>AM / PM</div></div>':'');
     dlg.insertBefore(box,wrap.nextSibling);
-    var apb=box.querySelector('.tpk-ap'); if(apb) apb.addEventListener('click',function(){ pm=!pm; apb.textContent=pm?'PM':'AM'; });
+    var apb=box.querySelector('.tpk-ap'); if(apb) apb.addEventListener('click',function(){ pm=!pm; apb.textContent=pm?'PM':'AM'; syncOk(); });
     var ins=[].slice.call(box.querySelectorAll('input'));
     var pad=function(n){ return (n<10?'0':'')+n; };
     var idx=function(c){ return Math.max(0,Math.min(c.max,Math.round(c.el.scrollTop/H))); };
     var val=function(i){ var c=cols[i], v=parseInt(ins[i].value,10); if(o.h12&&i===0){ if(isNaN(v)||v<1) v=12; v=Math.min(12,v); return ((v%12)+(pm?12:0)+23)%24; } if(isNaN(v)) v=0; return Math.max(0,Math.min(c.tmax,v)); };
     var disp=function(i){ if(o.h12&&i===0){ var v=parseInt(ins[i].value,10); if(isNaN(v)||v<1) v=12; return String(Math.min(12,v)); } return pad(val(i)); };
     var allZero=function(){ return ins.every(function(_,i){ return val(i)===0; }); };
-    var syncOk=function(){ if(o.zeroDisables) okb.disabled=allZero(); };
+    var syncOk=function(){ if(o.zeroDisables||o.st){ var d=!!o.zeroDisables&&allZero(); if(!d&&o.st){ var st=null; try{ st=o.st(); }catch(e){} if(st&&st.ed&&!st.fin&&st.init!=null&&ins.map(function(_,i){ return val(i); }).join()===st.init) d=true; } okb.disabled=d; } };   // Edit: keyboard-এ টাইপ করা মান আগের মতোই থাকলে Set / Done disable, বদলালে enable, আগেরটায় ফিরলে আবার disable
     var on=function(){ return dlg.classList.contains('tpk-on'); };
     // write the typed numbers back to the wheels (wheels must be visible for scrollTop to stick)
     var commit=function(){ var v=ins.map(function(_,i){ return val(i); }); dlg.classList.remove('tpk-on'); ic.textContent='keyboard';
@@ -15822,9 +15889,9 @@ window.onMediaAction=function({mode,kind,id,title,quality,src,pickAndSave}){
     return true;
   }
   var cfgs=[
-    {id:'cmQrTime',wrap:'.qtw',col:'.qtp',ok:'#qtO',h12:true,cols:[{u:'h',max:23,tmax:12,label:'Hour'},{u:'m',max:59,label:'Minute'}]},
-    {id:'cmAdBack',wrap:'.adwrap',col:'.adp',ok:'#cmAdOk',zeroDisables:true,cols:[{u:'h',max:23,label:'Hours'},{u:'m',max:59,label:'Minutes'},{u:'s',max:59,label:'Seconds'}]},
-    {id:'cmTmBack',wrap:'.adwrap',col:'.adp',ok:'#cmTmOk',zeroDisables:true,cols:[{u:'h',max:99,label:'Hours'},{u:'m',max:59,label:'Minutes'},{u:'s',max:59,label:'Seconds'}]}
+    {id:'cmQrTime',wrap:'.qtw',col:'.qtp',ok:'#qtO',h12:true,st:function(){ return window.__qtSt&&window.__qtSt(); },cols:[{u:'h',max:23,tmax:12,label:'Hour'},{u:'m',max:59,label:'Minute'}]},
+    {id:'cmAdBack',wrap:'.adwrap',col:'.adp',ok:'#cmAdOk',zeroDisables:true,st:function(){ return window.__adSt&&window.__adSt(); },cols:[{u:'h',max:23,label:'Hours'},{u:'m',max:59,label:'Minutes'},{u:'s',max:59,label:'Seconds'}]},
+    {id:'cmTmBack',wrap:'.adwrap',col:'.adp',ok:'#cmTmOk',zeroDisables:true,st:function(){ return window.__tmSt&&window.__tmSt(); },cols:[{u:'h',max:99,label:'Hours'},{u:'m',max:59,label:'Minutes'},{u:'s',max:59,label:'Seconds'}]}
   ];
   function init(){ var left=0; cfgs.forEach(function(c){ if(!setup(c)){ var b=document.getElementById(c.id); if(!b||!b._tpk) left++; } }); return left===0; }
   if(!init()){ var mo=new MutationObserver(function(){ if(init()) mo.disconnect(); }); mo.observe(document.body,{childList:true,subtree:true}); window.addEventListener('load',function(){ init(); }); }
