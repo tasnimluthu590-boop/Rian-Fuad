@@ -5714,12 +5714,13 @@ function askDelete(title,cb,yesLabel,slideSel){
   const gphHeartSync=()=>gphG.querySelectorAll('.gphc').forEach(c=>{ const on=!!c._it&&gphIsFavU(c._it.u), h=c.querySelector('.gphf'); if(on&&!h) c.appendChild(gphHeart()); else if(!on&&h) h.remove(); });
   // gif গুলো ক্রম অনুযায়ী (উপর থেকে নিচে) সীমিত সংখ্যায় একসাথে লোড হয়; ব্যর্থ হলে একবার আবার চেষ্টা করে
   const gphQ2=[]; let gphAct=0;
-  const gphPump=()=>{ while(gphAct<6){ const i=gphQ2.findIndex(m=>m.isConnected); if(i<0) break; const m=gphQ2.splice(i,1)[0]; gphAct++; let done=false, to=0;
+  const gphPump=()=>{ while(gphAct<6){ let bi=-1, bk=Infinity; for(let q=0;q<gphQ2.length;q++){ const z=gphQ2[q]; if(!z.isConnected) continue; const k=z._k==null?1e12:z._k; if(bi<0||k<bk){ bi=q; bk=k; } } if(bi<0) break; const m=gphQ2.splice(bi,1)[0];   // দৃশ্যমান অবস্থান অনুযায়ী: উপরের সারি আগে, সারির মধ্যে বাম থেকে ডান
+       gphAct++; let done=false, to=0;
       const fin=()=>{ if(done) return; done=true; clearTimeout(to); gphAct--; gphPump(); };
       m.onload=fin; m.onerror=()=>{ if(!m._r){ m._r=1; setTimeout(()=>{ m.src=m._u+(m._u.indexOf('?')>=0?'&':'?')+'r=1'; },600); } else fin(); };
       to=setTimeout(fin,20000); m.src=m._u; } };
   const gphAdd=(items,mode)=>{ items.forEach(it=>{ const c=document.createElement('div'); c.className='gphc'; c._it=it; if(mode) c.dataset.m=mode; const im=document.createElement('img'); im.alt=''; im.draggable=false; im.style.aspectRatio=(it.w>0&&it.h>0)?(it.w+'/'+it.h):'1/1'; im._u=it.s; gphQ2.push(im); c.appendChild(im); if(gphIsFavU(it.u)) c.appendChild(gphHeart());
-    c.onclick=e=>{ if(gphHeld||Date.now()-gphNoClk<400) return; if(e.target.closest('.gphf')){ e.stopPropagation(); gphUnfav(c); return; } gphRecAdd(it); gphShut(); setAtt({k:'gif',src:it.u,giphy:1}); }; if(gphWrap.classList.contains('gphx')){ const cs=gphWrap.children, i=gphWrap._h[0]<=gphWrap._h[1]?0:1; cs[i].appendChild(c); gphWrap._h[i]+=((it.w>0&&it.h>0)?it.h/it.w:1)+.03; } else gphWrap.appendChild(c); }); gphPump(); };
+    c.onclick=e=>{ if(gphHeld||Date.now()-gphNoClk<400) return; if(e.target.closest('.gphf')){ e.stopPropagation(); gphUnfav(c); return; } gphRecAdd(it); gphShut(); setAtt({k:'gif',src:it.u,giphy:1}); }; if(gphWrap.classList.contains('gphx')){ const cs=gphWrap.children, i=gphWrap._h[0]<=gphWrap._h[1]?0:1; cs[i].appendChild(c); im._k=gphWrap._h[i]+i*1e-6; gphWrap._h[i]+=((it.w>0&&it.h>0)?it.h/it.w:1)+.03; } else gphWrap.appendChild(c); }); gphPump(); };
   const gphShow=(items,mode)=>{ gphG.innerHTML=''; gphG.scrollTop=0; gphWrap=document.createElement('div'); gphWrap.className='gphw'+(mode?'':' gphx'); if(!mode){ gphWrap._h=[0,0]; for(let k=0;k<2;k++){ const cl=document.createElement('div'); cl.className='gphcol'; gphWrap.appendChild(cl); } } gphG.appendChild(gphWrap); gphAdd(items,mode); };
   let gphMeta=null;
   const gphFetch=async(ep,q,n,off)=>{ gphMeta=null; let lastErr=null;
