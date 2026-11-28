@@ -4561,13 +4561,13 @@ function askDelete(title,cb,yesLabel,slideSel){
     const openMenu=(d,x,y)=>{ cur=d; closeSubs(); { const off=csOffNow(); ['copy','share'].forEach(k=>{ const b=M.querySelector('[data-k="'+k+'"]'); b.disabled=off; b.classList.toggle('cpdis',off); }); } M.querySelector('.ehchev').style.display=(d._tr!=null)?'':'none';
       const w=M.offsetWidth, h=M.offsetHeight; let left=Math.max(8,Math.min(x-w/2,innerWidth-w-8)), top=y+8; if(top+h>innerHeight-16) top=Math.max(8,y-h-8);
       M.style.left=left+'px'; M.style.top=top+'px'; M.classList.add('show'); };
-    const openTr=b=>{ if(TS.classList.contains('show')){ TS.classList.remove('show'); return; } CS.classList.remove('show'); const d=cur; if(!d) return;
+    const openTr=b=>{ if(!trBound&&window.__ddSrBind){ trBound=true; window.__ddSrBind(TS,q=>TS._rd?TS._rd(q):''); } if(TS.classList.contains('show')){ TS.classList.remove('show'); return; } CS.classList.remove('show'); const d=cur; if(!d) return;
       const hasO=d._tr!=null, curL=hasO?(d._trL||''):'', rd=q=>(hasO?'<div class="orig" data-v="orig">Show original</div>':'')+window.__ddFilter(window.__TR_OPTS||[],q,curL); TS._rd=rd;
       TS.innerHTML=window.__ddSrRow.replace(/<\/div>$/,'<span class="material-symbols-outlined trset" role="button" aria-label="Translation settings">settings</span></div>')+'<div class="ddop">'+rd('')+'</div>';
       TS.style.visibility='hidden'; TS.style.height=''; TS.classList.add('show'); TS.style.maxHeight=(innerHeight-16)+'px'; TS.style.height=Math.min(TS.scrollHeight,innerHeight-16)+'px'; place(TS,b); };
     const openCp=b=>{ if(CS.classList.contains('show')){ CS.classList.remove('show'); return; } TS.classList.remove('show');
       CS.innerHTML='<div data-v="o">Copy original text</div><div data-v="t">Copy translated text</div>'; CS.style.visibility='hidden'; CS.classList.add('show'); place(CS,b); };
-    window.__ddSrBind(TS,q=>TS._rd?TS._rd(q):'');
+    let trBound=false;   // __ddSrBind পরে define হয়, তাই প্রথমবার খোলার সময় bind
     TS.addEventListener('click',e=>{ const g=e.target.closest&&e.target.closest('.trset'); if(!g) return; e.stopPropagation(); e.preventDefault(); closeAll();
       const ct=document.getElementById('cmTrSub'); if(ct){ const x=document.createElement('span'); x.className='trset'; ct.appendChild(x); x.click(); x.remove(); } },true);   // Comments window-এর Translation settings-ই খোলে
     TS.addEventListener('click',async e=>{ const dv=e.target.closest('div[data-v]'); if(!dv) return; const d=cur; closeAll(); if(!d||!d._v) return;
