@@ -4537,12 +4537,13 @@ function askDelete(title,cb,yesLabel,slideSel){
 
 
   // ---- Edit history: version-এ hold করলে Copy / Share / Translate to (Comments window-এর 3 dot menu-র মতো), Copy animation, Translate button ----
-  function ehTrPaint(d){ const v=d._v, t=d.querySelector('.eht'), b=d.querySelector('.cmtr');
-    if(t&&v){ t.textContent=d._tr!=null?d._tr:v.txt; if(window.__tsEl) window.__tsEl(t,v.ts); }
+  function ehTrPaint(d){ const v=d._v, t=d.querySelector('.eht'); let b=d.querySelector('.cmtr');
+    if(b&&d._frc&&d._tr==null&&!d._busy){ b.remove(); d._frc=0; b=null; }   // মেনু থেকে জোর করে অনুবাদ করা (Translate button আসলে দেখানোর কথা নয়): Show original-এ বোতামও সরে যায়
+    if(t&&v){ t.style.fontWeight=''; t.style.fontStyle=''; t.style.textDecoration=''; t.textContent=d._tr!=null?d._tr:v.txt; if(d._tr==null&&window.__tsEl) window.__tsEl(t,v.ts); }   // অনুবাদ করা লেখায় text style থাকে না
     if(b) b.textContent=d._busy?'Translating\u2026':(d._tr!=null?'See original':'Translate to '+window.__trBtn.name(window.__trBtn.lang()||'en')); }
   function ehTrBtn(d,force){ const v=d._v, B=window.__trBtn; if(!v||!B||!v.txt||!String(v.txt).trim()||d.querySelector('.cmtr')) return;
     const TL=B.lang(); if(!force&&!(TL&&B.needs(v.txt,TL)&&!(B.noEn()&&!cmTrNonEn(v.txt)))) return;
-    const t=d.querySelector('.eht'); if(!t) return; const b=document.createElement('button'); b.type='button'; b.className='cmtr'; t.insertAdjacentElement('afterend',b); ehTrPaint(d); }
+    const t=d.querySelector('.eht'); if(!t) return; d._frc=!(TL&&B.needs(v.txt,TL)&&!(B.noEn()&&!cmTrNonEn(v.txt))); const b=document.createElement('button'); b.type='button'; b.className='cmtr'; t.insertAdjacentElement('afterend',b); ehTrPaint(d); }
   window.__ehTrRefresh=()=>{ const Ls=document.getElementById('ehList'); if(!Ls) return; Ls.querySelectorAll('.ehi').forEach(d=>{ const v=d._v; if(!v||v.del) return; const b=d.querySelector('.cmtr'); if(b) b.remove(); const was=d._tr!=null; d._tr=null; d._trL=''; d._busy=false; if(was){ const t=d.querySelector('.eht'); if(t){ t.textContent=v.txt; if(window.__tsEl) window.__tsEl(t,v.ts); } } ehTrBtn(d); }); };   // Translation settings বদলালে Edit history-র Translate button সাথে সাথে নতুন সেটিং অনুযায়ী
   { const css=document.createElement('style');
     css.textContent='#ehMenu{z-index:130}#ehTrSub,#ehCpSub{position:fixed;z-index:135;display:none;background:#383838;border-radius:12px;padding:6px 0;box-shadow:0 6px 24px rgba(0,0,0,.55);max-width:calc(100vw - 16px)}#ehTrSub{overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}#ehTrSub.show,#ehCpSub.show{display:block}#ehTrSub div,#ehCpSub div{padding:12px 16px;font-size:15px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#ehTrSub div:active,#ehCpSub div:active{background:#4a4a4a}#ehTrSub div.orig{color:#3ea6ff;border-bottom:1px solid #4a4a4a}#ehTrSub div.on{color:#3ea6ff}#ehTrSub .ddsr .trset{margin-left:auto;cursor:pointer;color:#aaa;padding:4px;margin-right:-6px}#ehTrSub .ddsr.on .trset{display:none}';
@@ -4573,8 +4574,9 @@ function askDelete(title,cb,yesLabel,slideSel){
       const ct=document.getElementById('cmTrSub'); if(ct){ const x=document.createElement('span'); x.className='trset'; ct.appendChild(x); x.click(); x.remove(); } },true);   // Comments window-এর Translation settings-ই খোলে
     TS.addEventListener('click',async e=>{ const dv=e.target.closest('div[data-v]'); if(!dv) return; const d=cur; closeAll(); if(!d||!d._v) return;
       if(dv.dataset.v==='orig'){ d._tr=null; d._trL=''; ehTrPaint(d); return; }
-      toast('Translating\u2026'); try{ const t=await window.__trFetch(String(d._v.txt||''),dv.dataset.v); d._tr=t; d._trL=dv.dataset.v; ehTrBtn(d,true); ehTrPaint(d); }catch(_){ toast('Translation unavailable'); } });
-    CS.addEventListener('click',e=>{ const dv=e.target.closest('div[data-v]'); if(!dv) return; const d=cur; closeAll(); if(!d||!d._v) return; cmCopy(dv.dataset.v==='t'&&d._tr!=null?d._tr:d._v.txt,'Copied',d); });
+      toast('Translating\u2026'); try{ const t=await window.__trList(String(d._v.txt||''),d._v.ts,q=>window.__trFetch(q,dv.dataset.v)); d._tr=t; d._trL=dv.dataset.v; ehTrBtn(d,true); ehTrPaint(d); }catch(_){ toast('Translation unavailable'); } });
+    CS.addEventListener('click',e=>{ const dv=e.target.closest('div[data-v]'); if(!dv) return; const d=cur; closeAll(); if(!d||!d._v) return; if(dv.dataset.v==='o'&&d._tr!=null){ d._tr=null; d._trL=''; ehTrPaint(d); }   // Copy original text: অনুবাদ মূল লেখায় ফেরে, glow মূল লেখার উপর
+      cmCopy(dv.dataset.v==='t'&&d._tr!=null?d._tr:d._v.txt,'Copied',d); });
     M.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||!cur) return; const d=cur, v=d._v, k=b.dataset.k;
       if(k==='trn'){ openTr(b); return; }
       if(k==='copy'){ if(d._tr!=null){ openCp(b); return; } closeAll(); cmCopy(v.txt,'Copied',d); return; }
@@ -4592,7 +4594,7 @@ function askDelete(title,cb,yesLabel,slideSel){
       const S=cmTrSt(), TL=window.__trBtn.lang()||'en', ck=window.__trBtn.key(d._v.txt);
       if(S.cache.has(ck)){ d._tr=S.cache.get(ck); d._trL=TL; ehTrPaint(d); return; }
       d._busy=true; ehTrPaint(d);
-      (TL==='en'?cmTrFetch(d._v.txt):window.__trFetch(d._v.txt,TL)).then(tr=>{ S.cache.set(ck,tr); d._tr=tr; d._trL=TL; }).catch(()=>{ toast('Could not translate'); }).finally(()=>{ d._busy=false; ehTrPaint(d); }); },true);
+      window.__trList(d._v.txt,d._v.ts,q=>TL==='en'?cmTrFetch(q):window.__trFetch(q,TL)).then(tr=>{ S.cache.set(ck,tr); d._tr=tr; d._trL=TL; }).catch(()=>{ toast('Could not translate'); }).finally(()=>{ d._busy=false; ehTrPaint(d); }); },true);
     document.addEventListener('pointerdown',e=>{ if(!M.classList.contains('show')) return; if(e.target.closest('#ehMenu,#ehTrSub,#ehCpSub')) return; closeAll(); },true);
     eh.addEventListener('scroll',()=>{ if(lpT){ clearTimeout(lpT); lpT=null; } pressOff(); closeAll(); },{passive:true});
     new MutationObserver(()=>{ if(!eh.classList.contains('show')) closeAll(); }).observe(eh,{attributes:true,attributeFilter:['class']});
@@ -4848,12 +4850,12 @@ function askDelete(title,cb,yesLabel,slideSel){
   { const st=document.createElement('style'); st.textContent='.cmatt.cmlink.lkhf{align-items:center;gap:0;padding:0;width:300px;height:82px;max-width:100%;overflow:hidden;border:1px solid #3a3a3a;border-radius:16px;box-sizing:border-box}.lkhf .lkhi{position:relative;overflow:hidden;flex:0 0 80px;width:80px;height:80px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#3b3b3b,#1e1e1e)}.lkhf .lkhi svg{width:32px;height:32px}.lkhf .lkhi img.lkpi{position:absolute;inset:0;display:block;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;border-radius:0!important;object-fit:cover;background:#272727}.lkhf .lkht{min-width:0;flex:1;display:flex;flex-direction:column;justify-content:flex-start;gap:3px;padding:7px 12px 6px;overflow:hidden;align-self:stretch}.lkhf .lkht i{font-style:normal;font-size:12px;color:#3ea6ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lkhf .lkht b{font-size:15px;line-height:1.25;font-weight:500;color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}.cmatt.cmlink.lkcard{flex-direction:column;align-items:stretch;gap:0;padding:0;width:280px;max-width:100%}.lkcard .lkbn{position:relative;overflow:hidden;height:150px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#3b3b3b,#1e1e1e)}.lkcard .lkbn img,.lkcard .lkbn svg{width:64px!important;height:64px!important;border-radius:14px}.lkcard .lkbn img.lkpi{position:absolute;inset:0;display:block;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;border-radius:0!important;object-fit:cover;background:#272727}.lkcard .lkt{padding:10px 14px 12px;gap:3px}.lkcard .lkt b{font-size:15px;line-height:1.3;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}#cmLkLay{position:fixed;display:none;background:#333;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.6);z-index:130;padding:4px 0}#cmLkLay div{display:flex;align-items:center;gap:10px;padding:13px 18px;font-size:16px;color:#fff;cursor:pointer;white-space:nowrap}#cmLkLay div:active{background:#444}#cmLkLay .material-symbols-outlined{width:24px;font-size:22px}'; document.head.appendChild(st); }
   { const st=document.createElement('style'); st.textContent='.cmatt.cmlink{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}.cmatt.cmlink{display:flex;align-items:center;gap:12px;padding:10px 12px;background:#272727;border-radius:12px;text-decoration:none;color:#fff;max-width:280px;overflow:hidden}.cmlink .lkic{flex-shrink:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center}.cmlink .lkic svg,.cmlink .lkic img{width:32px;height:32px}.cmlink .lkt{min-width:0;display:flex;flex-direction:column;gap:2px}.cmlink .lkt b{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cmlink .lkt i{font-style:normal;font-size:12px;color:#3ea6ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'; document.head.appendChild(st); }
   function itemHTML(c,t,sub,open,hasRep,more,main,depth,tls){
-    const tTx=(window.__trMap&&window.__trMap[c.id]!=null&&!c.del&&!c.hid)?window.__trMap[c.id]:c.txt;   // Translate to: সাময়িক অনুবাদ, সেভ হয় না
+    const isTr=!!(window.__trMap&&window.__trMap[c.id]!=null&&!c.del&&!c.hid), tTx=isTr?window.__trMap[c.id]:c.txt;   // Translate to: সাময়িক অনুবাদ, সেভ হয় না
     const cutT=cutTxt(tTx), long=cutT!==null;
     const expd=main?!cmMainMin.has(c.id):cmExp.has(c.id);
     const body=long&&!expd?cmHl(linkEsc(cutT),'text')+'…<span class="rm">Read more</span>':cmHl(linkEsc(tTx),'text')+(long&&expd&&cmSelMode?' <span class="rm">Read less</span>':'');   // Select মোডে expand করা লেখায় Read less দেখায়
     const pin=!c.del&&t==='comment'&&PINS.has(pinT(),c.id)?'<span class="material-symbols-outlined ppin">push_pin</span>':'';
-    return '<div class="cmi'+(sub?' sub d'+(depth||0):'')+(hasRep?' hasrep':'')+(more?' more':'')+'"'+(t==='reply'?' data-rid="'+c.id+'"':'')+'>'+(tls||'')+'<div class="avatar cav2'+(sub?' sm':'')+'"'+(c.an?window.__anAv(c.an):'')+'></div><div class="cmc"><div class="cmh"><span class="cmun">'+cmHl(c.an?esc(c.an.n||'Anonymous'):ME,'user')+'</span> • <span class="ago" data-ts="'+(c.del||(c.hid&&c.hidAt)||c.posted)+'">'+timeAgo(c.del||(c.hid&&c.hidAt)||c.posted)+'</span>'+(c.ed&&!c.del&&!c.hid?' <span class="edd">(edited)</span>':'')+(c.ct&&!c.del?' <span class="cmct" style="color:'+(/^#[0-9a-f]{6}$/i.test(c.ct.c)?c.ct.c:'#3ea6ff')+'"><span class="material-symbols-outlined">sell</span>'+esc(c.ct.v)+'</span>':'')+pin+'</div>'+(c.del?'<div class="cmt"><span class="cmdel">'+(t==='reply'?'Reply deleted':'Comment deleted')+'</span></div>':c.hid?'<div class="cmt"><span class="cmhid">'+hidTxt(t)+'</span></div>':'<div class="cmt"'+(long?' data-tg="1"':'')+(window.__tsAttr?window.__tsAttr(c):'')+'>'+(c.to?'<span class="mention">'+esc(c.to)+'</span> ':'')+((window.__tsBg&&window.__tsBg(c))?'<span class="cmtg" style="'+window.__tsBg(c)+'">'+body+'</span>':body)+'</div>'+attHTML(c)+actRow(c,t,open?true:(t==='reply'?'reply':false)))+'</div>'+adRing(c)+'<span class="material-symbols-outlined cmmore" data-t="'+t+'">more_horiz</span></div>';
+    return '<div class="cmi'+(sub?' sub d'+(depth||0):'')+(hasRep?' hasrep':'')+(more?' more':'')+'"'+(t==='reply'?' data-rid="'+c.id+'"':'')+'>'+(tls||'')+'<div class="avatar cav2'+(sub?' sm':'')+'"'+(c.an?window.__anAv(c.an):'')+'></div><div class="cmc"><div class="cmh"><span class="cmun">'+cmHl(c.an?esc(c.an.n||'Anonymous'):ME,'user')+'</span> • <span class="ago" data-ts="'+(c.del||(c.hid&&c.hidAt)||c.posted)+'">'+timeAgo(c.del||(c.hid&&c.hidAt)||c.posted)+'</span>'+(c.ed&&!c.del&&!c.hid?' <span class="edd">(edited)</span>':'')+(c.ct&&!c.del?' <span class="cmct" style="color:'+(/^#[0-9a-f]{6}$/i.test(c.ct.c)?c.ct.c:'#3ea6ff')+'"><span class="material-symbols-outlined">sell</span>'+esc(c.ct.v)+'</span>':'')+pin+'</div>'+(c.del?'<div class="cmt"><span class="cmdel">'+(t==='reply'?'Reply deleted':'Comment deleted')+'</span></div>':c.hid?'<div class="cmt"><span class="cmhid">'+hidTxt(t)+'</span></div>':'<div class="cmt"'+(long?' data-tg="1"':'')+(window.__tsAttr&&!isTr?window.__tsAttr(c):'')+'>'+(c.to?'<span class="mention">'+esc(c.to)+'</span> ':'')+((!isTr&&window.__tsBg&&window.__tsBg(c))?'<span class="cmtg" style="'+window.__tsBg(c)+'">'+body+'</span>':body)+'</div>'+attHTML(c)+actRow(c,t,open?true:(t==='reply'?'reply':false)))+'</div>'+adRing(c)+'<span class="material-symbols-outlined cmmore" data-t="'+t+'">more_horiz</span></div>';
   }
   // রিপ্লাই ট্রি: রিপ্লাইয়ের রিপ্লাই ওই রিপ্লাইয়ের ঠিক নিচে আলাদা সারিতে, ভেতরে সরিয়ে (indent) বসে
   function repRows(tree){
@@ -4904,6 +4906,13 @@ function askDelete(title,cb,yesLabel,slideSel){
       let w=''; for(const tok of p.split(/(\s+)/)){ if(len(w+tok)<=B){ w+=tok; continue; } if(w){ out.push(w); w=''; } if(len(tok)<=B) w=tok; else w=hard(tok); } cur=w; };
     parts.forEach(put); if(cur) out.push(cur); return out.filter(q=>q.trim());
   }
+  // List style apply করা লেখা: চিহ্ন (1. / a) / • ইত্যাদি) আলাদা করে শুধু লাইনের মূল লেখা অনুবাদ হয়, তারপর চিহ্ন আবার বসে — নইলে চিহ্নসহ পুরো লেখা API-তে গিয়ে অনুবাদ ব্যর্থ হয়
+  window.__trList=async(txt,ts,fn)=>{ const km=/[NARDHQCWMXYEFG]/.exec(ts||''); txt=String(txt==null?'':txt); if(!km) return fn(txt);
+    const k=km[0], B='\u2022\u25CB\u25AA\u2713\u27A2\u2794\u2756\u2666', RX={N:/^\d+\.\s/,E:/^\d+\)\s/,A:/^[a-z]+\.\s/,F:/^[a-z]+\)\s/,R:/^[ivxlcdm]+\.\s/,G:/^[ivxlcdm]+\)\s/}, re=B.indexOf(k==='D'?'\u2022':'x')>=0||'DHQCWXMY'.indexOf(k)>=0?new RegExp('^['+B+']\\s'):RX[k];
+    const lines=txt.split('\n'), parts=lines.map(l=>{ const m=re&&re.exec(l); return m?{p:m[0],b:l.slice(m[0].length)}:{p:'',b:l}; });
+    if(!parts.some(x=>x.p)) return fn(txt);
+    const out=await Promise.all(parts.map(x=>x.b.trim()?fn(x.b):Promise.resolve(x.b)));
+    return out.map((t,i)=>parts[i].p+String(t).trim()).join('\n').trim(); };
   async function cmTrFetch(t){
     const lp=/[\u0980-\u09FF]/.test(t)?'bn|en':'Autodetect|en', dec=document.createElement('textarea');
     const res=await Promise.all(cmTrChunks(t).map(async p=>{
@@ -4918,13 +4927,13 @@ function askDelete(title,cb,yesLabel,slideSel){
     const x=curX(), ci=cmt.closest('.cmi'), th=cmt.closest('.thr[data-cid]'); if(!x||!ci||!th) return null;
     const rid=ci.dataset.rid; let o=null;
     if(rid){ const oc=x.cmts.find(y=>String(y.id)===String(cmOpen)), f=oc&&findR(oc.reps,rid); o=f&&f.r; } else o=x.cmts.find(y=>String(y.id)===String(th.dataset.cid));
-    return o&&!o.del&&!o.hid?{key:(rid?'r':'c')+o.id,id:String(o.id),txt:String(o.txt||'')}:null;
+    return o&&!o.del&&!o.hid?{key:(rid?'r':'c')+o.id,id:String(o.id),txt:String(o.txt||''),ts:o.ts||''}:null;
   }
   function cmTrPaint(el,b){
     const S=cmTrSt(), k=b.dataset.k, tr=S.cache.get(window.__trBtn.key(b._txt)), on=S.on.has(k)&&tr!=null;
     if(window.__trMap&&window.__trMap[b.dataset.id]!=null){ b.textContent='See original'; return; }   // 3 dot > Translate to: অনুবাদ হয়ে থাকলে See original
-    if(on){ const men=el.querySelector('.mention'); const hg=el.querySelector('.cmtg'); el.innerHTML=(men?men.outerHTML+' ':'')+(hg?'<span class="cmtg" style="'+hg.getAttribute('style')+'">'+linkEsc(tr)+'</span>':linkEsc(tr)); el.removeAttribute('data-tg'); }
-    else{ el.innerHTML=el._orig; if(el._tg) el.setAttribute('data-tg','1'); }
+    if(on){ const men=el.querySelector('.mention'); el.innerHTML=(men?men.outerHTML+' ':'')+linkEsc(tr); el.removeAttribute('data-tg'); el.style.fontWeight=''; el.style.fontStyle=''; el.style.textDecoration=''; }   // অনুবাদ করা লেখায় text style থাকে না
+    else{ el.innerHTML=el._orig; if(el._ost!=null) el.setAttribute('style',el._ost); else el.removeAttribute('style'); if(el._tg) el.setAttribute('data-tg','1'); }
     b.textContent=S.busy.has(k)?'Translating\u2026':(on?'See original':'Translate to '+window.__trBtn.name(window.__trBtn.lang()||'en'));
   }
   function cmTrScan(){
@@ -4932,8 +4941,8 @@ function askDelete(title,cb,yesLabel,slideSel){
     cmBody.querySelectorAll('.cmt').forEach(el=>{
       if(el.querySelector('.cmdel,.cmhid')) return;
       const it=cmTrItem(el); if(!it||!it.txt.trim()||!((TL&&window.__trBtn.needs(it.txt,TL)&&!(window.__trBtn.noEn()&&!cmTrNonEn(it.txt)))||(window.__trMap&&window.__trMap[it.id]!=null))) return;
-      el._orig=el.innerHTML; el._tg=el.hasAttribute('data-tg');
-      const b=document.createElement('button'); b.type='button'; b.className='cmtr'; b.dataset.k=it.key; b.dataset.id=it.id; b._txt=it.txt; b._cmt=el;
+      el._orig=el.innerHTML; el._ost=el.getAttribute('style'); el._tg=el.hasAttribute('data-tg');
+      const b=document.createElement('button'); b.type='button'; b.className='cmtr'; b.dataset.k=it.key; b.dataset.id=it.id; b._txt=it.txt; b._ts=it.ts; b._cmt=el;
       el.insertAdjacentElement('afterend',b); cmTrPaint(el,b);
     });
   }
@@ -4947,7 +4956,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     const ck=window.__trBtn.key(txt), TL=window.__trBtn.lang()||'en';
     if(S.cache.has(ck)){ S.on.add(k); cmTrPaint(b._cmt,b); return; }
     S.busy.add(k); cmTrPaint(b._cmt,b);
-    (TL==='en'?cmTrFetch(txt):window.__trFetch(txt,TL)).then(tr=>{ S.cache.set(ck,tr); S.on.add(k); }).catch(()=>{ if(typeof toast==='function') toast('Could not translate'); })
+    window.__trList(txt,b._ts,q=>TL==='en'?cmTrFetch(q):window.__trFetch(q,TL)).then(tr=>{ S.cache.set(ck,tr); S.on.add(k); }).catch(()=>{ if(typeof toast==='function') toast('Could not translate'); })
       .finally(()=>{ S.busy.delete(k); const nb=[...cmBody.querySelectorAll('.cmtr')].find(z=>z.dataset.k===k); if(nb) cmTrPaint(nb._cmt,nb); });
   },true);
   // Group by (None / Date): Date = কমেন্ট / রিপ্লাই পাঠানোর দিন (posted) অনুযায়ী Today / Yesterday / 27 November heading; edit বা hide করলেও send date বদলায় না
@@ -11273,7 +11282,7 @@ function askDelete(title,cb,yesLabel,slideSel){
     sub.addEventListener('click',async e=>{ const d=e.target.closest('div[data-v]'); if(!d) return; const pr=cpO; close(); closeCP(); const o=pr&&objOf(pr); if(!o) return; const M=window.__trMap=window.__trMap||{};
       const LG=window.__trLang=window.__trLang||{}, S=window.__cmTrSt||(window.__cmTrSt={on:new Set(),cache:new Map(),busy:new Set()}), key=(pr.rid?'r':'c')+o.id;
       if(d.dataset.v==='orig'){ delete M[o.id]; delete LG[o.id]; S.on.delete(key); drawCm(); return; }
-      toast('Translating\u2026'); try{ const t=await window.__trFetch(String(o.txt||''),d.dataset.v); M[o.id]=t; LG[o.id]=d.dataset.v; S.on.delete(key); drawCm(); }catch(_){ toast('Translation unavailable'); } });
+      toast('Translating\u2026'); try{ const t=await window.__trList(String(o.txt||''),o.ts,q=>window.__trFetch(q,d.dataset.v)); M[o.id]=t; LG[o.id]=d.dataset.v; S.on.delete(key); drawCm(); }catch(_){ toast('Translation unavailable'); } });
   }
   // ---- Copy: লেখা অনুবাদ করা থাকলে Copy-তে তীরচিহ্ন; চাপলে Copy original text / Copy translated text ----
   { const sub=document.createElement('div'); sub.id='cmCpSub'; document.body.appendChild(sub);
@@ -11293,7 +11302,9 @@ function askDelete(title,cb,yesLabel,slideSel){
       let top=br.top; if(top+h>innerHeight-8) top=Math.max(8,innerHeight-h-8); sub.style.left=left+'px'; sub.style.top=top+'px'; sub.style.visibility=''; return true; };
     sub.addEventListener('click',e=>{ const d=e.target.closest('div[data-v]'); if(!d) return; const pr=sub._pr, o=pr&&objOf(pr), t=pr&&trOf(pr); close(); closeCP(); if(!o) return;
       const el=pr.rid?cmBody.querySelector('[data-rid="'+pr.rid+'"]'):cmBody.querySelector('.thr[data-cid="'+pr.cid+'"] .cmi');
-      if(d.dataset.v==='o') cmCopy(o.txt,'Copied',el); else if(t!=null) cmCopy(t,'Copied',el); });
+      if(d.dataset.v==='o'){ const M=window.__trMap, LG=window.__trLang, S=window.__cmTrSt; if(M) delete M[o.id]; if(LG) delete LG[o.id]; if(S) S.on.delete((pr.rid?'r':'c')+o.id); drawCm();   // অনুবাদ মূল লেখায় ফেরে
+        const el2=pr.rid?cmBody.querySelector('[data-rid="'+pr.rid+'"]'):cmBody.querySelector('.thr[data-cid="'+pr.cid+'"] .cmi'); cmCopy(o.txt,'Copied',el2||el); }
+      else if(t!=null) cmCopy(t,'Copied',el); });
   }
   // ---- Translation settings: Translate to dropdown-এর Search-এর ডান পাশের settings আইকন ----
   { const st=document.createElement('style'); st.textContent='#cmTrSub .ddsr .trset{margin-left:auto;cursor:pointer;color:#aaa;padding:4px;margin-right:-6px}#cmTrSub .ddsr.on .trset{display:none}'
